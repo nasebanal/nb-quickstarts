@@ -1,4 +1,4 @@
-SHELL := /bin/bash
+SHELL := /bin/zsh
 .DEFAULT_GOAL := default
 .PHONY: kafka default
 
