@@ -15,6 +15,10 @@ kafka:
 	@echo "  kafka:add-topics  - Create Kafka topics"
 	@echo "  kafka:list-topics - List Kafka topics"
 	@echo "  kafka:describe-topics - Describe Kafka topics"
+	@echo "  kafka:add-events  - Produce events to Kafka topic"
+	@echo "  kafka:get-all-events - Get all events from Kafka topic"
+	@echo "  kafka:consume-events - Consume events from Kafka topic"
+	@echo "  kafka:count-events - Count events in Kafka topic"
 	@echo ""
 	@echo "Usage: make kafka:run"
 
@@ -30,7 +34,6 @@ kafka-pull:
 
 kafka-run:
 	@echo "Starting Kafka containers (KRaft mode)..."
-# 	@docker run --name kafka -p 9092:9092 apache/kafka:4.1.0
 	@docker run --name kafka -p 9092:9092 -p 9093:9093 \
 		-e KAFKA_CFG_NODE_ID=0 \
 		-e KAFKA_CFG_PROCESS_ROLES=controller,broker \
@@ -72,6 +75,26 @@ kafka-describe-topics:
 	@echo "Describing Kafka topics..."
 	@docker exec kafka kafka-topics.sh --describe --topic quickstart-events --bootstrap-server localhost:9092
 	@echo "Kafka topic described."
+
+kafka-add-events:
+	@echo "Producing events to Kafka topic..."
+	@docker exec -i kafka kafka-console-producer.sh --topic quickstart-events --bootstrap-server localhost:9092
+	@echo "Events produced to Kafka topic."
+
+kafka-get-all-events:
+	@echo "Getting all events from Kafka topic..."
+	@docker exec kafka kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server localhost:9092 --timeout-ms 10000
+	@echo "All events retrieved from Kafka topic."
+
+kafka-consume-events:
+	@echo "Consuming events from Kafka topic..."
+	@docker exec kafka kafka-console-consumer.sh --topic quickstart-events --bootstrap-server localhost:9092 --group quickstart-group
+	@echo "Events consumed from Kafka topic."
+
+kafka-count-events:
+	@echo "Counting events in Kafka topic..."
+	@docker exec kafka kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group quickstart-group
+	@echo "Event count retrieved."
 
 
 #################### DEFAULT HELP ###################
