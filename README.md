@@ -26,13 +26,13 @@ This repository contains a curated collection of quickstart projects designed to
    ```
 
 3. **Check make's subcommands and run it**
-   '''bash
+   ```bash
    make kafka
    make kafka:pull
    make kafka:run
    make kafka:status
    make kafka:stop
-   '''
+   ```
 
 ## 📝 License
 
