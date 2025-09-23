@@ -20,14 +20,13 @@ This repository contains a curated collection of quickstart projects designed to
    cd nb-quickstarts
    ```
 
-2. **Choose a quickstart**
+2. **Check make's subcommand help**
    ```bash
-   cd <quickstart-name>
+   make kafka
    ```
 
 3. **Check make's subcommands and run it**
    ```bash
-   make kafka
    make kafka:pull
    make kafka:run
    make kafka:status
