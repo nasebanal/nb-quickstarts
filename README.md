@@ -25,8 +25,14 @@ This repository contains a curated collection of quickstart projects designed to
    cd <quickstart-name>
    ```
 
-3. **Follow the quickstart-specific README**
-   Each quickstart directory contains its own README with detailed setup instructions.
+3. **Check make's subcommands and run it**
+   '''bash
+   make kafka
+   make kafka:pull
+   make kafka:run
+   make kafka:status
+   make kafka:stop
+   '''
 
 ## 📝 License
 
