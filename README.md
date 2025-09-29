@@ -19,13 +19,17 @@ This repository contains a curated collection of quickstart projects designed to
    git clone https://github.com/nasebanal/nb-quickstarts.git
    cd nb-quickstarts
    ```
+2. **Check make's command menu**
+   ```bash
+   make
+   ```
 
-2. **Check make's subcommand help**
+3. **Check make's subcommand help**
    ```bash
    make kafka
    ```
 
-3. **Check make's subcommands and run it**
+4. **Check make's subcommands and run it**
    ```bash
    make kafka:pull
    make kafka:run
