@@ -29,7 +29,7 @@ kafka\:%:
 
 kafka-pull:
 	@echo "Pulling Kafka images..."
-	@docker pull bitnami/kafka:latest
+	@docker pull bitnami/kafka:4.1
 	@echo "Kafka images pulled successfully."
 
 kafka-run:
@@ -131,12 +131,12 @@ consul\:%:
 
 consul-pull:
 	@echo "Pulling Consul Docker image..."
-	@docker pull hashicorp/consul:latest
+	@docker pull hashicorp/consul:1.21
 	@echo "Consul image pulled successfully."
 
 consul-run:
 	@echo "Starting Consul container..."
-	@docker run --name consul -p 8500:8500 hashicorp/consul:latest
+	@docker run --name consul -p 8500:8500 hashicorp/consul:1.21
 	@echo "Consul container started."
 
 consul-stop:
