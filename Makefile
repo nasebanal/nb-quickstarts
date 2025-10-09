@@ -221,26 +221,74 @@ http:
 
 http\:%:
 	@$(MAKE) http-$(subst http:,,$@)
+
 ##################### SIMPLE HTTP SERVER ACTIONS ###################
 
 http-run:
-	@echo "Starting a simple HTTP server on port 8080..."
-	@cd http/www && python3 ../bin/server.py
+	@echo "Starting HTTP server in Docker container on port 8080..."
+	@docker run -d --name http-server -p 8080:8080 -v $(PWD)/http:/app -w /app/www python:3.12-slim python3 ../bin/server.py
+	@echo "HTTP server started. Access at http://localhost:8080"
 
 http-stop:
-	@echo "Stopping the simple HTTP server..."
-	@pkill -f "server.py" || pkill -f "python3 -m http.server 8080" || true
-	@echo "Simple HTTP server stopped."
+	@echo "Stopping HTTP server container..."
+	@docker stop http-server || true
+	@docker rm http-server || true
+	@echo "HTTP server stopped."
 
 http-status:
-	@echo "Checking if the simple HTTP server is running..."
-	@if pgrep -f "server.py" > /dev/null || pgrep -f "python3 -m http.server 8080" > /dev/null; then \
-		echo "Simple HTTP server is running."; \
-	else \
-		echo "Simple HTTP server is not running."; \
-	fi
+	@echo "Checking HTTP server container status..."
+	@docker ps -f "name=http-server"
 
 http-restart: http-stop http-run
+
+
+#################### LOCUST MANAGEMENT ###################
+
+locust:
+	@echo "🚀 Locust Load Testing Commands:"
+	@echo ""
+	@echo "  locust:pull        - Pull Locust Docker image"
+	@echo "  locust:run         - Start Locust master and worker containers"
+	@echo "  locust:stop        - Stop and remove Locust containers"
+	@echo "  locust:restart     - Restart Locust containers"
+	@echo "  locust:status      - Check Locust container status"
+	@echo ""
+	@echo "Usage: make locust:run"
+
+locust\:%:
+	@$(MAKE) locust-$(subst locust:,,$@)
+
+#################### LOCUST ACTIONS ###################
+
+locust-pull:
+	@echo "Pulling Locust Docker image..."
+	@docker pull locustio/locust:latest
+	@echo "Locust image pulled successfully."
+
+locust-run:
+	@echo "Starting HTTP server and Locust containers..."
+	@docker network create locust-network || true
+	@docker run -d --name http-server --network locust-network -p 8080:8080 -v $(PWD)/locust:/app -w /app/www python:3.12-slim python3 ../bin/server.py
+	@echo "HTTP server started on port 8080"
+	@docker run -d --name locust-master --network locust-network -p 8089:8089 -v $(PWD)/locust:/mnt/locust locustio/locust:latest -f /mnt/locust/bin/locustfile.py --master --host=http://http-server:8080
+	@sleep 5
+	@docker run -d --name locust-worker --network locust-network -v $(PWD)/locust:/mnt/locust locustio/locust:latest -f /mnt/locust/bin/locustfile.py --worker --master-host=locust-master
+	@echo "Locust containers started. Access Locust UI at http://localhost:8089 and HTTP server at http://localhost:8080"
+
+locust-stop:
+	@echo "Stopping HTTP server and Locust containers..."
+	@docker stop http-server locust-master locust-worker || true
+	@docker rm http-server locust-master locust-worker || true
+	@docker network rm locust-network || true
+	@echo "All containers stopped and removed."
+
+locust-restart: locust-stop locust-run
+
+locust-status:
+	@echo "Checking Locust container status..."
+	@docker ps -f "name=locust-master"
+	@docker ps -f "name=locust-worker"
+	@echo "Locust container status checked."
 
 #################### DEFAULT HELP ###################
 default:
@@ -250,4 +298,5 @@ default:
 	@echo "  make kafka              - Show Kafka-related commands"
 	@echo "  make consul             - Show Consul-related commands"
 	@echo "  make http               - Show Simple HTTP Server commands"
+	@echo "  make locust             - Show Locust Load Testing commands"
 	@echo	""
