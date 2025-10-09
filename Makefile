@@ -206,11 +206,48 @@ consul-deregister-db:
 	@echo ""
 	@echo "Database service deregistered."
 
+
+#################### SIMPLE HTTP SERVER MANAGEMENT ###################
+
+http:
+	@echo "🚀 Simple HTTP Server Commands:"
+	@echo ""
+	@echo "  http:run  - Start a simple HTTP server on port 8080"
+	@echo "  http:stop - Stop the simple HTTP server"
+	@echo "  http:status - Check if the simple HTTP server is running"
+	@echo "  http:restart - Restart the simple HTTP server"
+	@echo ""
+	@echo "Usage: make http:start"
+
+http\:%:
+	@$(MAKE) http-$(subst http:,,$@)
+##################### SIMPLE HTTP SERVER ACTIONS ###################
+
+http-run:
+	@echo "Starting a simple HTTP server on port 8080..."
+	@cd http/www && python3 ../bin/server.py
+
+http-stop:
+	@echo "Stopping the simple HTTP server..."
+	@pkill -f "server.py" || pkill -f "python3 -m http.server 8080" || true
+	@echo "Simple HTTP server stopped."
+
+http-status:
+	@echo "Checking if the simple HTTP server is running..."
+	@if pgrep -f "server.py" > /dev/null || pgrep -f "python3 -m http.server 8080" > /dev/null; then \
+		echo "Simple HTTP server is running."; \
+	else \
+		echo "Simple HTTP server is not running."; \
+	fi
+
+http-restart: http-stop http-run
+
 #################### DEFAULT HELP ###################
 default:
-	@echo "🚀 Quick Start"
+	@echo "🚀 NASEBANAL Quick Start"
 	@echo ""
 	@echo "Hierarchical Commands:"
 	@echo "  make kafka              - Show Kafka-related commands"
 	@echo "  make consul             - Show Consul-related commands"
-	@echo ""
+	@echo "  make http               - Show Simple HTTP Server commands"
+	@echo	""
