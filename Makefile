@@ -207,41 +207,6 @@ consul-deregister-db:
 	@echo "Database service deregistered."
 
 
-#################### SIMPLE HTTP SERVER MANAGEMENT ###################
-
-http:
-	@echo "🚀 Simple HTTP Server Commands:"
-	@echo ""
-	@echo "  http:run  - Start a simple HTTP server on port 8080"
-	@echo "  http:stop - Stop the simple HTTP server"
-	@echo "  http:status - Check if the simple HTTP server is running"
-	@echo "  http:restart - Restart the simple HTTP server"
-	@echo ""
-	@echo "Usage: make http:start"
-
-http\:%:
-	@$(MAKE) http-$(subst http:,,$@)
-
-##################### SIMPLE HTTP SERVER ACTIONS ###################
-
-http-run:
-	@echo "Starting HTTP server in Docker container on port 8080..."
-	@docker run -d --name http-server -p 8080:8080 -v $(PWD)/http:/app -w /app/www python:3.12-slim python3 ../bin/server.py
-	@echo "HTTP server started. Access at http://localhost:8080"
-
-http-stop:
-	@echo "Stopping HTTP server container..."
-	@docker stop http-server || true
-	@docker rm http-server || true
-	@echo "HTTP server stopped."
-
-http-status:
-	@echo "Checking HTTP server container status..."
-	@docker ps -f "name=http-server"
-
-http-restart: http-stop http-run
-
-
 #################### LOCUST MANAGEMENT ###################
 
 locust:
@@ -290,6 +255,7 @@ locust-status:
 	@docker ps -f "name=locust-worker"
 	@echo "Locust container status checked."
 
+
 #################### DEFAULT HELP ###################
 default:
 	@echo "🚀 NASEBANAL Quick Start"
@@ -297,6 +263,5 @@ default:
 	@echo "Hierarchical Commands:"
 	@echo "  make kafka              - Show Kafka-related commands"
 	@echo "  make consul             - Show Consul-related commands"
-	@echo "  make http               - Show Simple HTTP Server commands"
 	@echo "  make locust             - Show Locust Load Testing commands"
 	@echo	""
