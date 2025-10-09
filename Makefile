@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 .DEFAULT_GOAL := default
-.PHONY: kafka default
+.PHONY: kafka consul locust default
 
 #################### KAFKA MANAGEMENT ###################
 
