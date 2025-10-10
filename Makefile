@@ -218,7 +218,8 @@ locust:
 	@echo "  locust:restart     - Restart Locust containers"
 	@echo "  locust:status      - Check Locust container status"
 	@echo ""
-	@echo "Usage: make locust:run"
+	@echo "Usage: make locust:run [WORKERS=n]"
+	@echo "  WORKERS=n          - Number of worker containers to start (default: 1)"
 
 locust\:%:
 	@$(MAKE) locust-$(subst locust:,,$@)
@@ -237,13 +238,19 @@ locust-run:
 	@echo "HTTP server started on port 8080"
 	@docker run -d --name locust-master --network locust-network -p 8089:8089 -v $(PWD)/locust:/mnt/locust locustio/locust:latest -f /mnt/locust/bin/locustfile.py --master --host=http://http-server:8080
 	@sleep 5
-	@docker run -d --name locust-worker --network locust-network -v $(PWD)/locust:/mnt/locust locustio/locust:latest -f /mnt/locust/bin/locustfile.py --worker --master-host=locust-master
+	@WORKER_COUNT=$${WORKERS:-1}; \
+	echo "Starting $$WORKER_COUNT Locust workers..."; \
+	for i in $$(seq 1 $$WORKER_COUNT); do \
+		docker run -d --name locust-worker-$$i --network locust-network -v $(PWD)/locust:/mnt/locust locustio/locust:latest -f /mnt/locust/bin/locustfile.py --worker --master-host=locust-master; \
+	done
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089 and HTTP server at http://localhost:8080"
 
 locust-stop:
 	@echo "Stopping HTTP server and Locust containers..."
-	@docker stop http-server locust-master locust-worker || true
-	@docker rm http-server locust-master locust-worker || true
+	@docker stop http-server locust-master || true
+	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
+	@docker rm http-server locust-master || true
+	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
 	@docker network rm locust-network || true
 	@echo "All containers stopped and removed."
 
@@ -251,8 +258,10 @@ locust-restart: locust-stop locust-run
 
 locust-status:
 	@echo "Checking Locust container status..."
+	@echo "Master container:"
 	@docker ps -f "name=locust-master"
-	@docker ps -f "name=locust-worker"
+	@echo "Worker containers:"
+	@docker ps -f "name=locust-worker-"
 	@echo "Locust container status checked."
 
 
