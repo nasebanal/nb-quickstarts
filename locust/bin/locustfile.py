@@ -6,9 +6,9 @@ class WebsiteUser(HttpUser):
     def load_homepage(self):
         self.client.get("/")
 
-    # @task(3)
-    # def test_login(self):
-    #     self.client.post("/login", json={
-    #         "username": "admin",
-    #         "password": "password"
-    #     })
+    @task
+    def test_login(self):
+        self.client.post("/login", json={
+            "username": "admin",
+            "password": "password"
+        })

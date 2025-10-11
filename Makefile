@@ -218,7 +218,7 @@ locust:
 	@echo "  locust:restart     - Restart Locust containers"
 	@echo "  locust:status      - Check Locust container status"
 	@echo ""
-	@echo "Usage: make locust:run [WORKERS=n]"
+	@echo "Usage: make locust:run [WORKERS=n] | make locust:restart [WORKERS=n]"
 	@echo "  WORKERS=n          - Number of worker containers to start (default: 1)"
 
 locust\:%:
@@ -254,7 +254,9 @@ locust-stop:
 	@docker network rm locust-network || true
 	@echo "All containers stopped and removed."
 
-locust-restart: locust-stop locust-run
+locust-restart:
+	@$(MAKE) locust-stop
+	@$(MAKE) locust-run WORKERS=$(WORKERS)
 
 locust-status:
 	@echo "Checking Locust container status..."
