@@ -19,23 +19,63 @@ This repository contains a curated collection of quickstart projects designed to
    git clone https://github.com/nasebanal/nb-quickstarts.git
    cd nb-quickstarts
    ```
-2. **Check make's command menu**
+
+2. **Configure environment variables (optional)**
+   ```bash
+   # Copy the example .env file and customize it
+   cp .env.example .env
+   # Edit .env with your preferred settings
+   ```
+
+3. **Check make's command menu**
    ```bash
    make
    ```
 
-3. **Check make's subcommand help**
+4. **Check make's subcommand help**
    ```bash
    make kafka
+   make locust
    ```
 
-4. **Check make's subcommands and run it**
+5. **Check make's subcommands and run it**
    ```bash
+   # Kafka example
    make kafka:pull
    make kafka:run
    make kafka:status
    make kafka:stop
+
+   # Locust load testing example
+   make locust:build
+   make locust:run
+   make locust:test-http   # HTTP load testing
+   make locust:test-mysql  # MySQL load testing
    ```
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+The project uses a `.env` file to manage configuration. Create one from the example:
+
+```bash
+cp .env.example .env
+```
+
+**MySQL Configuration:**
+- `MYSQL_HOST` - MySQL server hostname (default: `mysql-server`)
+- `MYSQL_PORT` - MySQL server port (default: `3306`)
+- `MYSQL_USER` - MySQL username (default: `testuser`)
+- `MYSQL_PASSWORD` - MySQL password (default: `testpassword`)
+- `MYSQL_DATABASE` - MySQL database name (default: `testdb`)
+
+**HTTP Server Configuration:**
+- `HTTP_HOST` - HTTP server target URL (default: `http://http-server:8080`)
+
+You can override these values by:
+1. Editing the `.env` file
+2. Passing them as command-line arguments: `make locust:test-mysql MYSQL_HOST=prod-db`
 
 ## 📝 License
 

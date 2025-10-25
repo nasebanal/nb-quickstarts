@@ -2,6 +2,10 @@ SHELL := /bin/zsh
 .DEFAULT_GOAL := default
 .PHONY: kafka consul locust default
 
+# Load environment variables from .env file if it exists
+-include .env
+export
+
 #################### KAFKA MANAGEMENT ###################
 
 kafka:
@@ -212,19 +216,41 @@ consul-deregister-db:
 locust:
 	@echo "🚀 Locust Load Testing Commands:"
 	@echo ""
+	@echo "Container Management:"
+	@echo "  locust:build       - Build custom Locust Docker image with MySQL support"
 	@echo "  locust:pull        - Pull Locust Docker image"
 	@echo "  locust:run         - Start Locust master and worker containers"
 	@echo "  locust:stop        - Stop and remove Locust containers"
 	@echo "  locust:restart     - Restart Locust containers"
 	@echo "  locust:status      - Check Locust container status"
 	@echo ""
-	@echo "Usage: make locust:run [WORKERS=n] | make locust:restart [WORKERS=n]"
-	@echo "  WORKERS=n          - Number of worker containers to start (default: 1)"
+	@echo "Load Testing:"
+	@echo "  locust:test-http   - Run HTTP server load test with UI (http://localhost:8090)"
+	@echo "  locust:test-mysql  - Run MySQL load test with UI (http://localhost:8091)"
+	@echo ""
+	@echo "Usage:"
+	@echo "  make locust:run [WORKERS=n]"
+	@echo "  make locust:test-http [HTTP_HOST=url]"
+	@echo "  make locust:test-mysql [MYSQL_HOST=host] [MYSQL_PORT=port] [MYSQL_USER=user] [MYSQL_PASSWORD=pass] [MYSQL_DATABASE=db]"
+	@echo ""
+	@echo "Parameters:"
+	@echo "  WORKERS=n          - Number of worker containers (default: 1)"
+	@echo "  HTTP_HOST=url      - HTTP server target URL (default: http://http-server:8080)"
+	@echo "  MYSQL_HOST=host    - MySQL server hostname (default: mysql-server)"
+	@echo "  MYSQL_PORT=port    - MySQL server port (default: 3306)"
+	@echo "  MYSQL_USER=user    - MySQL username (default: testuser)"
+	@echo "  MYSQL_PASSWORD=pw  - MySQL password (default: testpassword)"
+	@echo "  MYSQL_DATABASE=db  - MySQL database name (default: testdb)"
 
 locust\:%:
 	@$(MAKE) locust-$(subst locust:,,$@)
 
 #################### LOCUST ACTIONS ###################
+
+locust-build:
+	@echo "Building custom Locust Docker image with MySQL support..."
+	@docker build -t locust-mysql:latest locust/
+	@echo "Custom Locust image built successfully."
 
 locust-pull:
 	@echo "Pulling Locust Docker image..."
@@ -232,24 +258,31 @@ locust-pull:
 	@echo "Locust image pulled successfully."
 
 locust-run:
-	@echo "Starting HTTP server and Locust containers..."
+	@echo "Starting HTTP server, MySQL, and Locust containers..."
 	@docker network create locust-network || true
+	@docker run -d --name mysql-server --network locust-network -p 3306:3306 \
+		-e MYSQL_ROOT_PASSWORD=rootpassword \
+		-e MYSQL_DATABASE=testdb \
+		-e MYSQL_USER=testuser \
+		-e MYSQL_PASSWORD=testpassword \
+		mysql:latest
+	@echo "MySQL server started on port 3306"
 	@docker run -d --name http-server --network locust-network -p 8080:8080 -v $(PWD)/locust:/app -w /app/www python:3.12-slim python3 ../bin/server.py
 	@echo "HTTP server started on port 8080"
-	@docker run -d --name locust-master --network locust-network -p 8089:8089 -v $(PWD)/locust:/mnt/locust locustio/locust:latest -f /mnt/locust/bin/locustfile.py --master --host=http://http-server:8080
+	@docker run -d --name locust-master --network locust-network -p 8089:8089 -v $(PWD)/locust:/mnt/locust locust-mysql:latest -f /mnt/locust/bin/locustfile.py --master --host=http://http-server:8080
 	@sleep 5
 	@WORKER_COUNT=$${WORKERS:-1}; \
 	echo "Starting $$WORKER_COUNT Locust workers..."; \
 	for i in $$(seq 1 $$WORKER_COUNT); do \
-		docker run -d --name locust-worker-$$i --network locust-network -v $(PWD)/locust:/mnt/locust locustio/locust:latest -f /mnt/locust/bin/locustfile.py --worker --master-host=locust-master; \
+		docker run -d --name locust-worker-$$i --network locust-network -v $(PWD)/locust:/mnt/locust locust-mysql:latest -f /mnt/locust/bin/locustfile.py --worker --master-host=locust-master; \
 	done
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089 and HTTP server at http://localhost:8080"
 
 locust-stop:
-	@echo "Stopping HTTP server and Locust containers..."
-	@docker stop http-server locust-master || true
+	@echo "Stopping HTTP server, MySQL, and Locust containers..."
+	@docker stop mysql-server http-server locust-master || true
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
-	@docker rm http-server locust-master || true
+	@docker rm mysql-server http-server locust-master || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
 	@docker network rm locust-network || true
 	@echo "All containers stopped and removed."
@@ -265,6 +298,42 @@ locust-status:
 	@echo "Worker containers:"
 	@docker ps -f "name=locust-worker-"
 	@echo "Locust container status checked."
+
+locust-test-http:
+	@echo "Starting HTTP server load test..."
+	@echo "Locust UI available at http://localhost:8090"
+	@HTTP_HOST=$${HTTP_HOST:-http://http-server:8080}; \
+	echo "Target: WebsiteUser class against $$HTTP_HOST"; \
+	echo "Press Ctrl+C to stop the test"; \
+	docker run --rm --name locust-test-http --network locust-network \
+		-p 8090:8089 \
+		-v $(PWD)/locust:/mnt/locust \
+		locust-mysql:latest \
+		-f /mnt/locust/bin/locustfile.py \
+		--host $$HTTP_HOST \
+		WebsiteUser
+
+locust-test-mysql:
+	@echo "Starting MySQL load test..."
+	@echo "Locust UI available at http://localhost:8091"
+	@MYSQL_HOST=$${MYSQL_HOST:-mysql-server}; \
+	MYSQL_PORT=$${MYSQL_PORT:-3306}; \
+	MYSQL_USER=$${MYSQL_USER:-testuser}; \
+	MYSQL_PASSWORD=$${MYSQL_PASSWORD:-testpassword}; \
+	MYSQL_DATABASE=$${MYSQL_DATABASE:-testdb}; \
+	echo "Target: MySQLUser class against $$MYSQL_HOST:$$MYSQL_PORT (database: $$MYSQL_DATABASE)"; \
+	echo "Press Ctrl+C to stop the test"; \
+	docker run --rm --name locust-test-mysql --network locust-network \
+		-p 8091:8089 \
+		-v $(PWD)/locust:/mnt/locust \
+		-e MYSQL_HOST=$$MYSQL_HOST \
+		-e MYSQL_PORT=$$MYSQL_PORT \
+		-e MYSQL_USER=$$MYSQL_USER \
+		-e MYSQL_PASSWORD=$$MYSQL_PASSWORD \
+		-e MYSQL_DATABASE=$$MYSQL_DATABASE \
+		locust-mysql:latest \
+		-f /mnt/locust/bin/locustfile.py \
+		MySQLUser
 
 
 #################### DEFAULT HELP ###################
