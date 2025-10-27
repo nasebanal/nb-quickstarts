@@ -1,4 +1,4 @@
-from locust import HttpUser, User, task, between, events
+from locust import HttpUser, User, task, between, events, tag
 import pymysql
 import time
 import logging
@@ -14,12 +14,15 @@ MYSQL_POOL_SIZE = 10
 
 class WebsiteUser(HttpUser):
     wait_time = between(1, 3)
+    host = os.getenv("LOCUST_HTTP_HOST", "http://localhost:8080")
 
     @task
+    @tag('http-root')
     def load_homepage(self):
         self.client.get("/")
 
     @task
+    @tag('http-login')
     def test_login(self):
         self.client.post("/login", json={
             "username": "admin",
@@ -75,6 +78,7 @@ class MySQLUser(User):
 
 
     @task
+    @tag('mysql-select')
     def select_query(self):
         """Execute SELECT query"""
         if not self.connection:
@@ -85,7 +89,7 @@ class MySQLUser(User):
         start_time = time.time()
         try:
             with self.connection.cursor() as cursor:
-                cursor.execute("SELECT * FROM columns LIMIT 10")
+                cursor.execute("SELECT * FROM information_schema.COLUMNS LIMIT 10")
                 results = cursor.fetchall()
 
             total_time = int((time.time() - start_time) * 1000)
@@ -102,6 +106,47 @@ class MySQLUser(User):
             events.request.fire(
                 request_type="MySQL",
                 name="SELECT",
+                response_time=total_time,
+                response_length=0,
+                exception=e,
+                context={}
+            )
+            self.connection = None
+
+    @task
+    @tag('mysql-cartesian')
+    def cartesian_join_query(self):
+        """Execute heavy memory consumption cartesian join query"""
+        if not self.connection:
+            self.connect_to_mysql()
+            if not self.connection:
+                return
+
+        start_time = time.time()
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT c1.*, c2.COLUMN_NAME as col2
+                    FROM information_schema.COLUMNS c1
+                    CROSS JOIN information_schema.COLUMNS c2
+                    LIMIT 10000
+                """)
+                results = cursor.fetchall()
+
+            total_time = int((time.time() - start_time) * 1000)
+            events.request.fire(
+                request_type="MySQL",
+                name="CARTESIAN_JOIN",
+                response_time=total_time,
+                response_length=len(results),
+                exception=None,
+                context={}
+            )
+        except Exception as e:
+            total_time = int((time.time() - start_time) * 1000)
+            events.request.fire(
+                request_type="MySQL",
+                name="CARTESIAN_JOIN",
                 response_time=total_time,
                 response_length=0,
                 exception=e,
