@@ -230,17 +230,18 @@ locust:
 	@echo ""
 	@echo "Usage:"
 	@echo "  make locust:run [WORKERS=n]"
-	@echo "  make locust:test-http [HTTP_HOST=url]"
-	@echo "  make locust:test-mysql [MYSQL_HOST=host] [MYSQL_PORT=port] [MYSQL_USER=user] [MYSQL_PASSWORD=pass] [MYSQL_DATABASE=db]"
+	@echo "  make locust:test-http [LOCUST_HTTP_HOST=url]"
+	@echo "  make locust:test-mysql [LOCUST_MYSQL_HOST=host] [LOCUST_MYSQL_PORT=port] [LOCUST_MYSQL_USER=user] [LOCUST_MYSQL_PASSWORD=pass] [LOCUST_MYSQL_DATABASE=db]"
 	@echo ""
 	@echo "Parameters:"
-	@echo "  WORKERS=n          - Number of worker containers (default: 1)"
-	@echo "  HTTP_HOST=url      - HTTP server target URL (default: http://http-server:8080)"
-	@echo "  MYSQL_HOST=host    - MySQL server hostname (default: mysql-server)"
-	@echo "  MYSQL_PORT=port    - MySQL server port (default: 3306)"
-	@echo "  MYSQL_USER=user    - MySQL username (default: testuser)"
-	@echo "  MYSQL_PASSWORD=pw  - MySQL password (default: testpassword)"
-	@echo "  MYSQL_DATABASE=db  - MySQL database name (default: testdb)"
+	@echo "  LOCUST_IMAGE=img        - Custom Locust Docker image"
+	@echo "  WORKERS=n               - Number of worker containers (default: 1)"
+	@echo "  LOCUST_HTTP_HOST=url     - HTTP server target URL"
+	@echo "  LOCUST_MYSQL_HOST=host   - MySQL server hostname"
+	@echo "  LOCUST_MYSQL_PORT=port   - MySQL server port"
+	@echo "  LOCUST_MYSQL_USER=user   - MySQL username"
+	@echo "  LOCUST_MYSQL_PASSWORD=pw - MySQL password"
+	@echo "  LOCUST_MYSQL_DATABASE=db - MySQL database name"
 
 locust\:%:
 	@$(MAKE) locust-$(subst locust:,,$@)
@@ -249,7 +250,7 @@ locust\:%:
 
 locust-build:
 	@echo "Building custom Locust Docker image with MySQL support..."
-	@docker build -t locust-mysql:latest locust/
+	@docker build -t $${LOCUST_IMAGE} locust/
 	@echo "Custom Locust image built successfully."
 
 locust-pull:
@@ -269,12 +270,12 @@ locust-run:
 	@echo "MySQL server started on port 3306"
 	@docker run -d --name http-server --network locust-network -p 8080:8080 -v $(PWD)/locust:/app -w /app/www python:3.12-slim python3 ../bin/server.py
 	@echo "HTTP server started on port 8080"
-	@docker run -d --name locust-master --network locust-network -p 8089:8089 -v $(PWD)/locust:/mnt/locust locust-mysql:latest -f /mnt/locust/bin/locustfile.py --master --host=http://http-server:8080
+	@docker run -d --name locust-master --network locust-network -p 8089:8089 -v $(PWD)/locust:/mnt/locust $${LOCUST_IMAGE} -f /mnt/locust/bin/locustfile.py --master --host=http://http-server:8080
 	@sleep 5
 	@WORKER_COUNT=$${WORKERS:-1}; \
 	echo "Starting $$WORKER_COUNT Locust workers..."; \
 	for i in $$(seq 1 $$WORKER_COUNT); do \
-		docker run -d --name locust-worker-$$i --network locust-network -v $(PWD)/locust:/mnt/locust locust-mysql:latest -f /mnt/locust/bin/locustfile.py --worker --master-host=locust-master; \
+		docker run -d --name locust-worker-$$i --network locust-network -v $(PWD)/locust:/mnt/locust $${LOCUST_IMAGE} -f /mnt/locust/bin/locustfile.py --worker --master-host=locust-master; \
 	done
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089 and HTTP server at http://localhost:8080"
 
@@ -302,36 +303,30 @@ locust-status:
 locust-test-http:
 	@echo "Starting HTTP server load test..."
 	@echo "Locust UI available at http://localhost:8090"
-	@HTTP_HOST=$${HTTP_HOST:-http://http-server:8080}; \
-	echo "Target: WebsiteUser class against $$HTTP_HOST"; \
+	@echo "Target: WebsiteUser class against $${LOCUST_HTTP_HOST}"; \
 	echo "Press Ctrl+C to stop the test"; \
 	docker run --rm --name locust-test-http --network locust-network \
 		-p 8090:8089 \
 		-v $(PWD)/locust:/mnt/locust \
-		locust-mysql:latest \
+		$${LOCUST_IMAGE} \
 		-f /mnt/locust/bin/locustfile.py \
-		--host $$HTTP_HOST \
+		--host $${LOCUST_HTTP_HOST} \
 		WebsiteUser
 
 locust-test-mysql:
 	@echo "Starting MySQL load test..."
 	@echo "Locust UI available at http://localhost:8091"
-	@MYSQL_HOST=$${MYSQL_HOST:-mysql-server}; \
-	MYSQL_PORT=$${MYSQL_PORT:-3306}; \
-	MYSQL_USER=$${MYSQL_USER:-testuser}; \
-	MYSQL_PASSWORD=$${MYSQL_PASSWORD:-testpassword}; \
-	MYSQL_DATABASE=$${MYSQL_DATABASE:-testdb}; \
-	echo "Target: MySQLUser class against $$MYSQL_HOST:$$MYSQL_PORT (database: $$MYSQL_DATABASE)"; \
+	@echo "Target: MySQLUser class against $${LOCUST_MYSQL_HOST}:$${LOCUST_MYSQL_PORT} (database: $${LOCUST_MYSQL_DATABASE})"; \
 	echo "Press Ctrl+C to stop the test"; \
 	docker run --rm --name locust-test-mysql --network locust-network \
 		-p 8091:8089 \
 		-v $(PWD)/locust:/mnt/locust \
-		-e MYSQL_HOST=$$MYSQL_HOST \
-		-e MYSQL_PORT=$$MYSQL_PORT \
-		-e MYSQL_USER=$$MYSQL_USER \
-		-e MYSQL_PASSWORD=$$MYSQL_PASSWORD \
-		-e MYSQL_DATABASE=$$MYSQL_DATABASE \
-		locust-mysql:latest \
+		-e MYSQL_HOST=$${LOCUST_MYSQL_HOST} \
+		-e MYSQL_PORT=$${LOCUST_MYSQL_PORT} \
+		-e MYSQL_USER=$${LOCUST_MYSQL_USER} \
+		-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD} \
+		-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE} \
+		$${LOCUST_IMAGE} \
 		-f /mnt/locust/bin/locustfile.py \
 		MySQLUser
 
