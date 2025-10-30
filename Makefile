@@ -225,17 +225,21 @@ locust:
 	@echo "  locust:status      - Check Locust container status"
 	@echo ""
 	@echo "Load Testing:"
-	@echo "  locust:test-http   - Run HTTP server load test with UI (http://localhost:8090)"
-	@echo "  locust:test-mysql  - Run MySQL load test with UI (http://localhost:8091)"
-	@echo "  locust:test-http-root    - Run HTTP root page test with tag 'http-root' (http://localhost:8092)"
-	@echo "  locust:test-http-login   - Run HTTP login test with tag 'http-login' (http://localhost:8093)"
-	@echo "  locust:test-mysql-select - Run MySQL select test with tag 'mysql-select' (http://localhost:8094)"
-	@echo "  locust:test-mysql-cartesian - Run MySQL cartesian join test with tag 'mysql-cartesian' (http://localhost:8095)"
+	@echo "  locust:test-http         - Run HTTP server load test with UI (http://localhost:8089)"
+	@echo "  locust:test-http-root    - Run HTTP root page test with tag 'http-root' (http://localhost:8089)"
+	@echo "  locust:test-http-login   - Run HTTP login test with tag 'http-login' (http://localhost:8089)"
+	@echo "  locust:test-mysql        - Run MySQL load test with UI (http://localhost:8089)"
+	@echo "  locust:test-mysql-select - Run MySQL select test with tag 'mysql-select' (http://localhost:8089)"
+	@echo "  locust:test-mysql-cartesian - Run MySQL cartesian join test with tag 'mysql-cartesian' (http://localhost:8089)"
+	@echo ""
+	@echo "Cluster Management:"
+	@echo "  locust:join-cluster - Join an existing Locust cluster as worker from remote PC"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make locust:run [LOCUST_WORKERS=n]"
 	@echo "  make locust:test-http [LOCUST_HTTP_HOST=url]"
 	@echo "  make locust:test-mysql [LOCUST_MYSQL_HOST=host] [LOCUST_MYSQL_PORT=port] [LOCUST_MYSQL_USER=user] [LOCUST_MYSQL_PASSWORD=pass] [LOCUST_MYSQL_DATABASE=db]"
+	@echo "  make locust:join-cluster [LOCUST_MASTER_HOST=ip] [LOCUST_WORKERS=n]"
 	@echo ""
 	@echo "Parameters:"
 	@echo "  LOCUST_IMAGE=img        - Custom Locust Docker image"
@@ -246,6 +250,7 @@ locust:
 	@echo "  LOCUST_MYSQL_USER=user   - MySQL username"
 	@echo "  LOCUST_MYSQL_PASSWORD=pw - MySQL password"
 	@echo "  LOCUST_MYSQL_DATABASE=db - MySQL database name"
+	@echo "  LOCUST_MASTER_HOST=ip    - Master node IP address for joining cluster"
 
 locust\:%:
 	@$(MAKE) locust-$(subst locust:,,$@)
@@ -309,46 +314,87 @@ locust-test-http:
 	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@echo "Locust UI available at http://localhost:8090"
-	@echo "Target: WebsiteUser class against $${LOCUST_HTTP_HOST}"
-	@if ! docker ps --filter "name=locust-master" --format "{{.Names}}" | grep -q "locust-master"; then \
+	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
+		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT HTTP test workers for cluster..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i \
+				--network host \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=$${LOCUST_MASTER_HOST} \
+				WebsiteUser; \
+		done; \
+		echo "$$WORKER_COUNT HTTP workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+	else \
+		echo "Standalone mode: starting local master and workers"; \
+		echo "Locust UI available at http://localhost:8089"; \
+		echo "Target: WebsiteUser class against $${LOCUST_HTTP_HOST}"; \
+		echo "Stopping existing master container..."; \
+		docker stop locust-master || true; \
+		docker rm locust-master || true; \
 		echo "Starting locust-master container..."; \
 		docker run -d --name locust-master --network locust-network \
-			-p 8090:8089 \
+			-p 8089:8089 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
-			--host $${LOCUST_HTTP_HOST} \
+			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
 			WebsiteUser; \
 		sleep 5; \
-	else \
-		echo "Using existing locust-master container"; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT Locust workers..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i --network locust-network \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=locust-master \
+				WebsiteUser; \
+		done; \
+		echo "HTTP load test started with $$WORKER_COUNT workers"; \
 	fi
-	@WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
-	echo "Starting $$WORKER_COUNT Locust workers..."; \
-	for i in $$(seq 1 $$WORKER_COUNT); do \
-		docker run -d --name locust-worker-$$i --network locust-network \
-			-v $(PWD)/locust:/mnt/locust \
-			$${LOCUST_IMAGE} \
-			-f /mnt/locust/bin/locustfile.py \
-			--worker \
-			--master-host=locust-master \
-			WebsiteUser; \
-	done
-	@echo "HTTP load test started with $$WORKER_COUNT workers"
 
 locust-test-mysql:
 	@echo "Starting MySQL load test..."
 	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@echo "Locust UI available at http://localhost:8091"
-	@echo "Target: MySQLUser class against $${LOCUST_MYSQL_HOST}:$${LOCUST_MYSQL_PORT} (database: $${LOCUST_MYSQL_DATABASE})"
-	@if ! docker ps --filter "name=locust-master" --format "{{.Names}}" | grep -q "locust-master"; then \
+	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
+		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT MySQL test workers for cluster..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i \
+				--network host \
+				-v $(PWD)/locust:/mnt/locust \
+				-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
+				-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
+				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
+				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
+				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=$${LOCUST_MASTER_HOST} \
+				MySQLUser; \
+		done; \
+		echo "$$WORKER_COUNT MySQL workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+	else \
+		echo "Standalone mode: starting local master and workers"; \
+		echo "Locust UI available at http://localhost:8089"; \
+		echo "Target: MySQLUser class against $${LOCUST_MYSQL_HOST}:$${LOCUST_MYSQL_PORT} (database: $${LOCUST_MYSQL_DATABASE})"; \
+		echo "Stopping existing master container..."; \
+		docker stop locust-master || true; \
+		docker rm locust-master || true; \
 		echo "Starting locust-master container..."; \
 		docker run -d --name locust-master --network locust-network \
-			-p 8091:8089 \
+			-p 8089:8089 \
 			-v $(PWD)/locust:/mnt/locust \
 			-e MYSQL_HOST=$${LOCUST_MYSQL_HOST} \
 			-e MYSQL_PORT=$${LOCUST_MYSQL_PORT} \
@@ -358,120 +404,162 @@ locust-test-mysql:
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
-			--host mysql://$${LOCUST_MYSQL_HOST}:$${LOCUST_MYSQL_PORT}/$${LOCUST_MYSQL_DATABASE} \
+			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-testdb} \
 			MySQLUser; \
 		sleep 5; \
-	else \
-		echo "Using existing locust-master container"; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT Locust workers..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i --network locust-network \
+				-v $(PWD)/locust:/mnt/locust \
+				-e MYSQL_HOST=$${LOCUST_MYSQL_HOST} \
+				-e MYSQL_PORT=$${LOCUST_MYSQL_PORT} \
+				-e MYSQL_USER=$${LOCUST_MYSQL_USER} \
+				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD} \
+				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE} \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=locust-master \
+				MySQLUser; \
+		done; \
+		echo "MySQL load test started with $$WORKER_COUNT workers"; \
 	fi
-	@WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
-	echo "Starting $$WORKER_COUNT Locust workers..."; \
-	for i in $$(seq 1 $$WORKER_COUNT); do \
-		docker run -d --name locust-worker-$$i --network locust-network \
-			-v $(PWD)/locust:/mnt/locust \
-			-e MYSQL_HOST=$${LOCUST_MYSQL_HOST} \
-			-e MYSQL_PORT=$${LOCUST_MYSQL_PORT} \
-			-e MYSQL_USER=$${LOCUST_MYSQL_USER} \
-			-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD} \
-			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE} \
-			$${LOCUST_IMAGE} \
-			-f /mnt/locust/bin/locustfile.py \
-			--worker \
-			--master-host=locust-master \
-			MySQLUser; \
-	done
-	@echo "MySQL load test started with $$WORKER_COUNT workers"
 
 locust-test-http-root:
 	@echo "Starting HTTP root page load test..."
-	@echo "Stopping existing master and worker containers..."
-	@docker stop locust-master || true
-	@docker rm locust-master || true
+	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@echo "Locust UI available at http://localhost:8092"
-	@echo "Target: HTTP root page test with tag 'http-root'"
-	@docker run -d --name locust-master --network locust-network \
-		-p 8092:8089 \
-		-v $(PWD)/locust:/mnt/locust \
-		$${LOCUST_IMAGE} \
-		-f /mnt/locust/bin/locustfile.py \
-		--master \
-		--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		--tags http-root \
-		WebsiteUser
-	@sleep 5
-	@WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
-	echo "Starting $$WORKER_COUNT Locust workers..."; \
-	for i in $$(seq 1 $$WORKER_COUNT); do \
-		docker run -d --name locust-worker-$$i --network locust-network \
+	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
+		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT HTTP root test workers for cluster..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i \
+				--network host \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=$${LOCUST_MASTER_HOST} \
+				WebsiteUser; \
+		done; \
+		echo "$$WORKER_COUNT HTTP root workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+	else \
+		echo "Standalone mode: starting local master and workers"; \
+		echo "Stopping existing master container..."; \
+		docker stop locust-master || true; \
+		docker rm locust-master || true; \
+		echo "Locust UI available at http://localhost:8089"; \
+		echo "Target: HTTP root page test with tag 'http-root'"; \
+		docker run -d --name locust-master --network locust-network \
+			-p 8089:8089 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
-			--worker \
-			--master-host=locust-master; \
-	done
-	@echo "HTTP root page test started with $$WORKER_COUNT workers"
+			--master \
+			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
+			--tags http-root \
+			WebsiteUser; \
+		sleep 5; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT Locust workers..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i --network locust-network \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=locust-master; \
+		done; \
+		echo "HTTP root page test started with $$WORKER_COUNT workers"; \
+	fi
 
 locust-test-http-login:
 	@echo "Starting HTTP login load test..."
-	@echo "Stopping existing master and worker containers..."
-	@docker stop locust-master || true
-	@docker rm locust-master || true
+	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@echo "Locust UI available at http://localhost:8093"
-	@echo "Target: HTTP login test with tag 'http-login'"
-	@docker run -d --name locust-master --network locust-network \
-		-p 8093:8089 \
-		-v $(PWD)/locust:/mnt/locust \
-		$${LOCUST_IMAGE} \
-		-f /mnt/locust/bin/locustfile.py \
-		--master \
-		--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		--tags http-login \
-		WebsiteUser
-	@sleep 5
-	@WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
-	echo "Starting $$WORKER_COUNT Locust workers..."; \
-	for i in $$(seq 1 $$WORKER_COUNT); do \
-		docker run -d --name locust-worker-$$i --network locust-network \
+	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
+		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT HTTP login test workers for cluster..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i \
+				--network host \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=$${LOCUST_MASTER_HOST} \
+				WebsiteUser; \
+		done; \
+		echo "$$WORKER_COUNT HTTP login workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+	else \
+		echo "Standalone mode: starting local master and workers"; \
+		echo "Stopping existing master container..."; \
+		docker stop locust-master || true; \
+		docker rm locust-master || true; \
+		echo "Locust UI available at http://localhost:8089"; \
+		echo "Target: HTTP login test with tag 'http-login'"; \
+		docker run -d --name locust-master --network locust-network \
+			-p 8089:8089 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
-			--worker \
-			--master-host=locust-master; \
-	done
-	@echo "HTTP login test started with $$WORKER_COUNT workers"
+			--master \
+			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
+			--tags http-login \
+			WebsiteUser; \
+		sleep 5; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT Locust workers..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i --network locust-network \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=locust-master; \
+		done; \
+		echo "HTTP login test started with $$WORKER_COUNT workers"; \
+	fi
 
 locust-test-mysql-select:
 	@echo "Starting MySQL select load test..."
-	@echo "Stopping existing master and worker containers..."
-	@docker stop locust-master || true
-	@docker rm locust-master || true
+	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@echo "Locust UI available at http://localhost:8094"
-	@echo "Target: MySQL select test with tag 'mysql-select'"
-	@docker run -d --name locust-master --network locust-network \
-		-p 8094:8089 \
-		-v $(PWD)/locust:/mnt/locust \
-		-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
-		-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
-		-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
-		-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
-		-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
-		$${LOCUST_IMAGE} \
-		-f /mnt/locust/bin/locustfile.py \
-		--master \
-		--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-testdb} \
-		--tags mysql-select \
-		MySQLUser
-	@sleep 5
-	@WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
-	echo "Starting $$WORKER_COUNT Locust workers..."; \
-	for i in $$(seq 1 $$WORKER_COUNT); do \
-		docker run -d --name locust-worker-$$i --network locust-network \
+	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
+		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT MySQL select test workers for cluster..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i \
+				--network host \
+				-v $(PWD)/locust:/mnt/locust \
+				-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
+				-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
+				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
+				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
+				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=$${LOCUST_MASTER_HOST} \
+				MySQLUser; \
+		done; \
+		echo "$$WORKER_COUNT MySQL select workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+	else \
+		echo "Standalone mode: starting local master and workers"; \
+		echo "Stopping existing master container..."; \
+		docker stop locust-master || true; \
+		docker rm locust-master || true; \
+		echo "Locust UI available at http://localhost:8089"; \
+		echo "Target: MySQL select test with tag 'mysql-select'"; \
+		docker run -d --name locust-master --network locust-network \
+			-p 8089:8089 \
 			-v $(PWD)/locust:/mnt/locust \
 			-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
 			-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
@@ -480,39 +568,63 @@ locust-test-mysql-select:
 			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
-			--worker \
-			--master-host=locust-master; \
-	done
-	@echo "MySQL select test started with $$WORKER_COUNT workers"
+			--master \
+			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-testdb} \
+			--tags mysql-select \
+			MySQLUser; \
+		sleep 5; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT Locust workers..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i --network locust-network \
+				-v $(PWD)/locust:/mnt/locust \
+				-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
+				-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
+				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
+				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
+				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=locust-master; \
+		done; \
+		echo "MySQL select test started with $$WORKER_COUNT workers"; \
+	fi
 
 locust-test-mysql-cartesian:
 	@echo "Starting MySQL cartesian join load test..."
-	@echo "Stopping existing master and worker containers..."
-	@docker stop locust-master || true
-	@docker rm locust-master || true
+	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@echo "Locust UI available at http://localhost:8095"
-	@echo "Target: MySQL cartesian join test with tag 'mysql-cartesian' (heavy memory consumption)"
-	@docker run -d --name locust-master --network locust-network \
-		-p 8095:8089 \
-		-v $(PWD)/locust:/mnt/locust \
-		-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
-		-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
-		-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
-		-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
-		-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
-		$${LOCUST_IMAGE} \
-		-f /mnt/locust/bin/locustfile.py \
-		--master \
-		--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-testdb} \
-		--tags mysql-cartesian \
-		MySQLUser
-	@sleep 5
-	@WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
-	echo "Starting $$WORKER_COUNT Locust workers..."; \
-	for i in $$(seq 1 $$WORKER_COUNT); do \
-		docker run -d --name locust-worker-$$i --network locust-network \
+	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
+		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT MySQL cartesian test workers for cluster..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i \
+				--network host \
+				-v $(PWD)/locust:/mnt/locust \
+				-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
+				-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
+				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
+				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
+				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=$${LOCUST_MASTER_HOST} \
+				MySQLUser; \
+		done; \
+		echo "$$WORKER_COUNT MySQL cartesian workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+	else \
+		echo "Standalone mode: starting local master and workers"; \
+		echo "Stopping existing master container..."; \
+		docker stop locust-master || true; \
+		docker rm locust-master || true; \
+		echo "Locust UI available at http://localhost:8089"; \
+		echo "Target: MySQL cartesian join test with tag 'mysql-cartesian' (heavy memory consumption)"; \
+		docker run -d --name locust-master --network locust-network \
+			-p 8089:8089 \
 			-v $(PWD)/locust:/mnt/locust \
 			-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
 			-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
@@ -521,11 +633,40 @@ locust-test-mysql-cartesian:
 			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
-			--worker \
-			--master-host=locust-master; \
-	done
-	@echo "MySQL cartesian join test started with $$WORKER_COUNT workers"
+			--master \
+			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-testdb} \
+			--tags mysql-cartesian \
+			MySQLUser; \
+		sleep 5; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT Locust workers..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i --network locust-network \
+				-v $(PWD)/locust:/mnt/locust \
+				-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
+				-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
+				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
+				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
+				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=locust-master; \
+		done; \
+		echo "MySQL cartesian join test started with $$WORKER_COUNT workers"; \
+	fi
 
+locust-join-cluster:
+	@echo "Joining existing Locust cluster..."
+	@if [ -z "$${LOCUST_MASTER_HOST}" ]; then \
+		echo "Error: LOCUST_MASTER_HOST is required"; \
+		echo "Usage: make locust:join-cluster LOCUST_MASTER_HOST=<master-ip> [LOCUST_WORKERS=n]"; \
+		echo "After joining, run specific test commands like: make locust:test-http-login"; \
+		exit 1; \
+	fi
+	@echo "Building Locust image if needed..."
+	@docker build -t $${LOCUST_IMAGE:-locust-mysql:latest} locust/ || true
+	@echo "Ready to join cluster at $${LOCUST_MASTER_HOST}. Use specific test commands to start workers."
 
 #################### DEFAULT HELP ###################
 default:
