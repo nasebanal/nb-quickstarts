@@ -10,3 +10,6 @@ __pycache__/
 
 # Environment variables (contains sensitive information)
 .env
+
+# Locust cluster mode flag file
+.locust_cluster_mode

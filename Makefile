@@ -295,6 +295,7 @@ locust-stop:
 	@docker rm mysql-server http-server locust-master || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
 	@docker network rm locust-network || true
+	@rm -f .locust_cluster_mode
 	@echo "All containers stopped and removed."
 
 locust-restart:
@@ -314,8 +315,9 @@ locust-test-http:
 	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
-		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+	@if [ -f .locust_cluster_mode ]; then \
+		CLUSTER_MASTER=$$(cat .locust_cluster_mode); \
+		echo "Joining cluster mode: connecting to master at $$CLUSTER_MASTER"; \
 		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
 		echo "Starting $$WORKER_COUNT HTTP test workers for cluster..."; \
 		for i in $$(seq 1 $$WORKER_COUNT); do \
@@ -325,10 +327,10 @@ locust-test-http:
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
-				--master-host=$${LOCUST_MASTER_HOST} \
+				--master-host=$$CLUSTER_MASTER \
 				WebsiteUser; \
 		done; \
-		echo "$$WORKER_COUNT HTTP workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+		echo "$$WORKER_COUNT HTTP workers connected to cluster at $$CLUSTER_MASTER"; \
 	else \
 		echo "Standalone mode: starting local master and workers"; \
 		echo "Locust UI available at http://localhost:8089"; \
@@ -365,8 +367,9 @@ locust-test-mysql:
 	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
-		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+	@if [ -f .locust_cluster_mode ]; then \
+		CLUSTER_MASTER=$$(cat .locust_cluster_mode); \
+		echo "Joining cluster mode: connecting to master at $$CLUSTER_MASTER"; \
 		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
 		echo "Starting $$WORKER_COUNT MySQL test workers for cluster..."; \
 		for i in $$(seq 1 $$WORKER_COUNT); do \
@@ -381,10 +384,10 @@ locust-test-mysql:
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
-				--master-host=$${LOCUST_MASTER_HOST} \
+				--master-host=$$CLUSTER_MASTER \
 				MySQLUser; \
 		done; \
-		echo "$$WORKER_COUNT MySQL workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+		echo "$$WORKER_COUNT MySQL workers connected to cluster at $$CLUSTER_MASTER"; \
 	else \
 		echo "Standalone mode: starting local master and workers"; \
 		echo "Locust UI available at http://localhost:8089"; \
@@ -431,8 +434,9 @@ locust-test-http-root:
 	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
-		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+	@if [ -f .locust_cluster_mode ]; then \
+		CLUSTER_MASTER=$$(cat .locust_cluster_mode); \
+		echo "Joining cluster mode: connecting to master at $$CLUSTER_MASTER"; \
 		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
 		echo "Starting $$WORKER_COUNT HTTP root test workers for cluster..."; \
 		for i in $$(seq 1 $$WORKER_COUNT); do \
@@ -442,10 +446,10 @@ locust-test-http-root:
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
-				--master-host=$${LOCUST_MASTER_HOST} \
+				--master-host=$$CLUSTER_MASTER \
 				WebsiteUser; \
 		done; \
-		echo "$$WORKER_COUNT HTTP root workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+		echo "$$WORKER_COUNT HTTP root workers connected to cluster at $$CLUSTER_MASTER"; \
 	else \
 		echo "Standalone mode: starting local master and workers"; \
 		echo "Stopping existing master container..."; \
@@ -481,8 +485,9 @@ locust-test-http-login:
 	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
-		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+	@if [ -f .locust_cluster_mode ]; then \
+		CLUSTER_MASTER=$$(cat .locust_cluster_mode); \
+		echo "Joining cluster mode: connecting to master at $$CLUSTER_MASTER"; \
 		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
 		echo "Starting $$WORKER_COUNT HTTP login test workers for cluster..."; \
 		for i in $$(seq 1 $$WORKER_COUNT); do \
@@ -492,10 +497,10 @@ locust-test-http-login:
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
-				--master-host=$${LOCUST_MASTER_HOST} \
+				--master-host=$$CLUSTER_MASTER \
 				WebsiteUser; \
 		done; \
-		echo "$$WORKER_COUNT HTTP login workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+		echo "$$WORKER_COUNT HTTP login workers connected to cluster at $$CLUSTER_MASTER"; \
 	else \
 		echo "Standalone mode: starting local master and workers"; \
 		echo "Stopping existing master container..."; \
@@ -531,8 +536,9 @@ locust-test-mysql-select:
 	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
-		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+	@if [ -f .locust_cluster_mode ]; then \
+		CLUSTER_MASTER=$$(cat .locust_cluster_mode); \
+		echo "Joining cluster mode: connecting to master at $$CLUSTER_MASTER"; \
 		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
 		echo "Starting $$WORKER_COUNT MySQL select test workers for cluster..."; \
 		for i in $$(seq 1 $$WORKER_COUNT); do \
@@ -547,10 +553,10 @@ locust-test-mysql-select:
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
-				--master-host=$${LOCUST_MASTER_HOST} \
+				--master-host=$$CLUSTER_MASTER \
 				MySQLUser; \
 		done; \
-		echo "$$WORKER_COUNT MySQL select workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+		echo "$$WORKER_COUNT MySQL select workers connected to cluster at $$CLUSTER_MASTER"; \
 	else \
 		echo "Standalone mode: starting local master and workers"; \
 		echo "Stopping existing master container..."; \
@@ -596,8 +602,9 @@ locust-test-mysql-cartesian:
 	@echo "Stopping existing worker containers..."
 	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
 	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@if [ -n "$${LOCUST_MASTER_HOST}" ]; then \
-		echo "Joining cluster mode: connecting to master at $${LOCUST_MASTER_HOST}"; \
+	@if [ -f .locust_cluster_mode ]; then \
+		CLUSTER_MASTER=$$(cat .locust_cluster_mode); \
+		echo "Joining cluster mode: connecting to master at $$CLUSTER_MASTER"; \
 		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
 		echo "Starting $$WORKER_COUNT MySQL cartesian test workers for cluster..."; \
 		for i in $$(seq 1 $$WORKER_COUNT); do \
@@ -612,10 +619,10 @@ locust-test-mysql-cartesian:
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
-				--master-host=$${LOCUST_MASTER_HOST} \
+				--master-host=$$CLUSTER_MASTER \
 				MySQLUser; \
 		done; \
-		echo "$$WORKER_COUNT MySQL cartesian workers connected to cluster at $${LOCUST_MASTER_HOST}"; \
+		echo "$$WORKER_COUNT MySQL cartesian workers connected to cluster at $$CLUSTER_MASTER"; \
 	else \
 		echo "Standalone mode: starting local master and workers"; \
 		echo "Stopping existing master container..."; \
@@ -666,6 +673,8 @@ locust-join-cluster:
 	fi
 	@echo "Building Locust image if needed..."
 	@docker build -t $${LOCUST_IMAGE:-locust-mysql:latest} locust/ || true
+	@echo "$${LOCUST_MASTER_HOST}" > .locust_cluster_mode
+	@echo "Cluster mode activated. Workers will connect to $${LOCUST_MASTER_HOST}"
 	@echo "Ready to join cluster at $${LOCUST_MASTER_HOST}. Use specific test commands to start workers."
 
 #################### DEFAULT HELP ###################
