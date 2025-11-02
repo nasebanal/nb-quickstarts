@@ -279,7 +279,7 @@ locust-run:
 	@echo "MySQL server started on port 3306"
 	@docker run -d --name http-server --network locust-network -p 8080:8080 -v $(PWD)/locust:/app -w /app/www python:3.12-slim python3 ../bin/server.py
 	@echo "HTTP server started on port 8080"
-	@docker run -d --name locust-master --network locust-network -p 8089:8089 -v $(PWD)/locust:/mnt/locust $${LOCUST_IMAGE} -f /mnt/locust/bin/locustfile.py --master --host=http://http-server:8080
+	@docker run -d --name locust-master --network locust-network -p 8089:8089 -p 5557:5557 -p 5558:5558 -v $(PWD)/locust:/mnt/locust $${LOCUST_IMAGE} -f /mnt/locust/bin/locustfile.py --master --master-bind-host=0.0.0.0 --host=http://http-server:8080
 	@sleep 5
 	@WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
 	echo "Starting $$WORKER_COUNT Locust workers..."; \
@@ -340,11 +340,12 @@ locust-test-http:
 		docker rm locust-master || true; \
 		echo "Starting locust-master container..."; \
 		docker run -d --name locust-master --network locust-network \
-			-p 8089:8089 \
+			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
+			--master-bind-host=0.0.0.0 \
 			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
 			WebsiteUser; \
 		sleep 5; \
@@ -397,7 +398,7 @@ locust-test-mysql:
 		docker rm locust-master || true; \
 		echo "Starting locust-master container..."; \
 		docker run -d --name locust-master --network locust-network \
-			-p 8089:8089 \
+			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			-e MYSQL_HOST=$${LOCUST_MYSQL_HOST} \
 			-e MYSQL_PORT=$${LOCUST_MYSQL_PORT} \
@@ -407,6 +408,7 @@ locust-test-mysql:
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
+			--master-bind-host=0.0.0.0 \
 			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-testdb} \
 			MySQLUser; \
 		sleep 5; \
@@ -458,11 +460,12 @@ locust-test-http-root:
 		echo "Locust UI available at http://localhost:8089"; \
 		echo "Target: HTTP root page test with tag 'http-root'"; \
 		docker run -d --name locust-master --network locust-network \
-			-p 8089:8089 \
+			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
+			--master-bind-host=0.0.0.0 \
 			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
 			--tags http-root \
 			WebsiteUser; \
@@ -509,11 +512,12 @@ locust-test-http-login:
 		echo "Locust UI available at http://localhost:8089"; \
 		echo "Target: HTTP login test with tag 'http-login'"; \
 		docker run -d --name locust-master --network locust-network \
-			-p 8089:8089 \
+			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
+			--master-bind-host=0.0.0.0 \
 			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
 			--tags http-login \
 			WebsiteUser; \
@@ -565,7 +569,7 @@ locust-test-mysql-select:
 		echo "Locust UI available at http://localhost:8089"; \
 		echo "Target: MySQL select test with tag 'mysql-select'"; \
 		docker run -d --name locust-master --network locust-network \
-			-p 8089:8089 \
+			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
 			-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
@@ -575,6 +579,7 @@ locust-test-mysql-select:
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
+			--master-bind-host=0.0.0.0 \
 			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-testdb} \
 			--tags mysql-select \
 			MySQLUser; \
@@ -631,7 +636,7 @@ locust-test-mysql-cartesian:
 		echo "Locust UI available at http://localhost:8089"; \
 		echo "Target: MySQL cartesian join test with tag 'mysql-cartesian' (heavy memory consumption)"; \
 		docker run -d --name locust-master --network locust-network \
-			-p 8089:8089 \
+			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
 			-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
@@ -641,6 +646,7 @@ locust-test-mysql-cartesian:
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
+			--master-bind-host=0.0.0.0 \
 			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-testdb} \
 			--tags mysql-cartesian \
 			MySQLUser; \
