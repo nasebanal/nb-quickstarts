@@ -38,6 +38,7 @@ This repository contains a curated collection of quickstart projects designed to
 4. **Check make's subcommand help**
    ```bash
    make kafka
+   make consul
    make locust
    ```
 
@@ -49,7 +50,17 @@ This repository contains a curated collection of quickstart projects designed to
    make kafka:status
    make kafka:stop
 
+   # Consul example
+   make consul:pull
+   make consul:run
+   make consul:open                # Open Consul UI at http://localhost:8500
+   make consul:register-service    # Register sample web service
+   make consul:get-services        # List all registered services
+   make consul:discover-web        # Discover web service endpoints
+   make consul:stop
+
    # Locust load testing example
+   make locust:pull
    make locust:build
    make locust:run
    make locust:test-http   # HTTP load testing
@@ -57,8 +68,9 @@ This repository contains a curated collection of quickstart projects designed to
 
    # Cluster load testing (multiple PCs)
    # PC1 (Master): Run normal commands above
-   # PC2 (Worker): Set master host then run specific test commands
-   export LOCUST_MASTER_HOST=<PC1-IP>
+   # PC2 (Worker): Build image, join cluster, then run test commands
+   make locust:build
+   make locust:join-cluster LOCUST_MASTER_HOST=<PC1-IP>
    make locust:test-http-login  # Join cluster and run login test workers
    ```
 
