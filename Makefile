@@ -270,13 +270,13 @@ locust-pull:
 locust-run:
 	@echo "Starting HTTP server, MySQL, and Locust containers..."
 	@docker network create locust-network || true
-	@docker run -d --name mysql-server --network locust-network -p 3306:3306 \
-		-e MYSQL_ROOT_PASSWORD=rootpassword \
+	@docker run -d --name mysql-server --network locust-network -p $${LOCUST_MYSQL_PORT:-3306}:3306 \
+		-e MYSQL_ROOT_PASSWORD=$${LOCUST_MYSQL_ROOT_PASSWORD:-rootpassword} \
 		-e MYSQL_DATABASE=testdb \
-		-e MYSQL_USER=testuser \
-		-e MYSQL_PASSWORD=testpassword \
+		-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
+		-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
 		mysql:latest
-	@echo "MySQL server started on port 3306"
+	@echo "MySQL server started on port $${LOCUST_MYSQL_PORT:-3306}"
 	@docker run -d --name http-server --network locust-network -p 8080:8080 -v $(PWD)/locust:/app -w /app/www python:3.12-slim python3 ../bin/server.py
 	@echo "HTTP server started on port 8080"
 	@docker run -d --name locust-master --network locust-network -p 8089:8089 -p 5557:5557 -p 5558:5558 -v $(PWD)/locust:/mnt/locust $${LOCUST_IMAGE} -f /mnt/locust/bin/locustfile.py --master --master-bind-host=0.0.0.0 --host=http://http-server:8080
@@ -381,7 +381,7 @@ locust-test-mysql:
 				-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
 				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
 				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
-				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
@@ -409,7 +409,7 @@ locust-test-mysql:
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
-			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-testdb} \
+			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
 			MySQLUser; \
 		sleep 5; \
 		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
@@ -553,7 +553,7 @@ locust-test-mysql-select:
 				-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
 				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
 				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
-				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
@@ -575,12 +575,12 @@ locust-test-mysql-select:
 			-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
 			-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
 			-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
-			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
-			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-testdb} \
+			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
 			--tags mysql-select \
 			MySQLUser; \
 		sleep 5; \
@@ -593,7 +593,7 @@ locust-test-mysql-select:
 				-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
 				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
 				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
-				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
@@ -620,7 +620,7 @@ locust-test-mysql-cartesian:
 				-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
 				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
 				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
-				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
@@ -642,12 +642,12 @@ locust-test-mysql-cartesian:
 			-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
 			-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
 			-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
-			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
-			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-testdb} \
+			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
 			--tags mysql-cartesian \
 			MySQLUser; \
 		sleep 5; \
@@ -660,7 +660,7 @@ locust-test-mysql-cartesian:
 				-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
 				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
 				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
-				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-testdb} \
+				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \

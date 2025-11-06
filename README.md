@@ -84,14 +84,14 @@ cp .env.example .env
 ```
 
 **MySQL Configuration:**
-- `MYSQL_HOST` - MySQL server hostname (default: `mysql-server`)
-- `MYSQL_PORT` - MySQL server port (default: `3306`)
-- `MYSQL_USER` - MySQL username (default: `testuser`)
-- `MYSQL_PASSWORD` - MySQL password (default: `testpassword`)
-- `MYSQL_DATABASE` - MySQL database name (default: `testdb`)
+- `LOCUST_MYSQL_HOST` - MySQL server hostname (default: `mysql-server`)
+- `LOCUST_MYSQL_PORT` - MySQL server port (default: `3306`)
+- `LOCUST_MYSQL_USER` - MySQL username (default: `testuser`)
+- `LOCUST_MYSQL_PASSWORD` - MySQL password (default: `testpassword`)
+- `LOCUST_MYSQL_DATABASE` - MySQL database name (default: `information_schema`)
 
 **HTTP Server Configuration:**
-- `HTTP_HOST` - HTTP server target URL (default: `http://http-server:8080`)
+- `LOCUST_HTTP_HOST` - HTTP server target URL (default: `http://http-server:8080`)
 
 **Cluster Configuration:**
 - `LOCUST_MASTER_HOST` - Master node IP address for joining cluster (e.g., `192.168.1.100`)
@@ -99,7 +99,7 @@ cp .env.example .env
 
 You can override these values by:
 1. Editing the `.env` file
-2. Passing them as command-line arguments: `make locust:test-mysql MYSQL_HOST=prod-db`
+2. Passing them as command-line arguments: `make locust:test-mysql LOCUST_MYSQL_HOST=prod-db`
 
 ## 🔗 Cluster Load Testing
 
@@ -125,11 +125,11 @@ This project supports distributed load testing across multiple PCs using Locust'
    ```bash
    make locust:build
    ```
-3. Set the master host environment variable:
+3. Join the cluster by specifying the master host:
    ```bash
-   export LOCUST_MASTER_HOST=<PC1-IP>
+   make locust:join-cluster LOCUST_MASTER_HOST=<PC1-IP>
    ```
-4. Run the *same test command* as the master to join the cluster:
+4. Run the *same test command* as the master to start workers:
    ```bash
    # For HTTP login testing (if PC1 runs locust:test-http-login)
    make locust:test-http-login LOCUST_WORKERS=2
@@ -137,13 +137,13 @@ This project supports distributed load testing across multiple PCs using Locust'
    # For MySQL select testing (if PC1 runs locust:test-mysql-select)
    make locust:test-mysql-select LOCUST_WORKERS=2
 
-   # Any test command will automatically detect cluster mode when LOCUST_MASTER_HOST is set
+   # Any test command will automatically connect to the cluster after running locust:join-cluster
    ```
 
 ### Network Requirements
 
 - All PCs must be on the same network or have network connectivity
-- Port 8089 must be accessible from worker nodes to master node
+- Ports 8089 (Web UI), 5557, and 5558 (Locust communication) must be accessible from worker nodes to master node
 - For MySQL testing, ensure MySQL connection parameters are correctly configured
 
 ### Monitoring
