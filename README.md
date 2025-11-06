@@ -63,8 +63,7 @@ This repository contains a curated collection of quickstart projects designed to
    make locust:pull
    make locust:build
    make locust:run
-   make locust:test-http   # HTTP load testing
-   make locust:test-mysql  # MySQL load testing
+   make locust:test-http-login   # HTTP login load testing
 
    # Cluster load testing (multiple PCs)
    # PC1 (Master): Run normal commands above
@@ -116,10 +115,8 @@ This project supports distributed load testing across multiple PCs using Locust'
    # or
    make locust:test-mysql  # For MySQL testing
    ```
-3. Access the Locust web UI at:
-   - HTTP tests: `http://localhost:8090`
-   - MySQL tests: `http://localhost:8091`
-   - Basic run: `http://localhost:8089`
+3. Access the Locust web UI (`http://localhost:8089`)
+
 4. Note your PC1's IP address for PC2 to connect to
 
 **PC2+ (Worker Nodes):**
@@ -132,7 +129,7 @@ This project supports distributed load testing across multiple PCs using Locust'
    ```bash
    export LOCUST_MASTER_HOST=<PC1-IP>
    ```
-4. Run the same test command as the master to join the cluster:
+4. Run the *same test command* as the master to join the cluster:
    ```bash
    # For HTTP login testing (if PC1 runs locust:test-http-login)
    make locust:test-http-login LOCUST_WORKERS=2
