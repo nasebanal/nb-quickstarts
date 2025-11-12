@@ -33,35 +33,6 @@ def resolve_graphql_query(query, variables=None):
 
     query = query.strip()
 
-    # Query: user(id: "1")
-    if "user(" in query and "query" in query.lower():
-        match = re.search(r'user\(id:\s*"(\d+)"\)', query)
-        if match:
-            user_id = match.group(1)
-            user = USERS.get(user_id)
-            if user:
-                return {"data": {"user": user}}
-            return {"data": {"user": None}}
-
-    # Query: users
-    if "users" in query and "query" in query.lower():
-        return {"data": {"users": list(USERS.values())}}
-
-    # Query: post(id: "1")
-    if "post(" in query and "query" in query.lower():
-        match = re.search(r'post\(id:\s*"(\d+)"\)', query)
-        if match:
-            post_id = match.group(1)
-            post = POSTS.get(post_id)
-            if post:
-                # Add author info if requested
-                if "author" in query:
-                    post_with_author = post.copy()
-                    post_with_author["author"] = USERS.get(post["authorId"])
-                    return {"data": {"post": post_with_author}}
-                return {"data": {"post": post}}
-            return {"data": {"post": None}}
-
     # Query: posts
     if "posts" in query and "query" in query.lower():
         posts = list(POSTS.values())
@@ -96,32 +67,7 @@ def resolve_graphql_query(query, variables=None):
             POSTS[str(POST_ID_COUNTER)] = new_post
             POST_ID_COUNTER += 1
 
-            # Add author info if requested
-            if "author" in query:
-                new_post_with_author = new_post.copy()
-                new_post_with_author["author"] = USERS.get(author_id)
-                return {"data": {"createPost": new_post_with_author}}
-
             return {"data": {"createPost": new_post}}
-
-    # Mutation: updatePost
-    if "updatePost" in query and "mutation" in query.lower():
-        id_match = re.search(r'id:\s*"(\d+)"', query)
-        title_match = re.search(r'title:\s*"([^"]+)"', query)
-        content_match = re.search(r'content:\s*"([^"]+)"', query)
-
-        if id_match:
-            post_id = id_match.group(1)
-            post = POSTS.get(post_id)
-
-            if post:
-                if title_match:
-                    post["title"] = title_match.group(1)
-                if content_match:
-                    post["content"] = content_match.group(1)
-
-                return {"data": {"updatePost": post}}
-            return {"data": {"updatePost": None}}
 
     return {"errors": [{"message": "Query not recognized"}]}
 

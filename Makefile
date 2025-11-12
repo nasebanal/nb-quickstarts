@@ -239,22 +239,24 @@ locust:
 	@echo "  locust:join-cluster - Join an existing Locust cluster as worker from remote PC"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make locust:run [LOCUST_WORKERS=n]"
+	@echo "  1. Copy .env.example to .env:  cp .env.example .env"
+	@echo "  2. Edit .env to configure test parameters"
+	@echo "  3. Run load test:  make locust:run"
+	@echo ""
+	@echo "Configuration (.env file):"
+	@echo "  LOCUST_FILE=locustfile_http.py     # Choose: locustfile_http.py, locustfile_graphql.py, locustfile_mysql.py"
+	@echo "  LOCUST_TAGS=                       # Optional: http-root, http-login, graphql-query, graphql-mutation, mysql-select, mysql-cartesian"
+	@echo "  LOCUST_WORKERS=1                   # Number of worker containers"
+	@echo "  LOCUST_IMAGE=locust-mysql:latest   # Docker image"
+	@echo "  LOCUST_HTTP_HOST=http://...        # HTTP/GraphQL target URL"
+	@echo "  LOCUST_MYSQL_HOST=mysql-server     # MySQL hostname"
+	@echo "  LOCUST_MYSQL_DATABASE=...          # MySQL database name"
+	@echo "  LOCUST_MYSQL_CARTESIAN_LIMIT=10000 # Cartesian join LIMIT value"
+	@echo ""
+	@echo "Other commands (with optional parameters):"
 	@echo "  make locust:test-http [LOCUST_HTTP_HOST=url]"
 	@echo "  make locust:test-mysql [LOCUST_MYSQL_HOST=host] [LOCUST_MYSQL_PORT=port] [LOCUST_MYSQL_USER=user] [LOCUST_MYSQL_PASSWORD=pass] [LOCUST_MYSQL_DATABASE=db]"
 	@echo "  make locust:join-cluster [LOCUST_MASTER_HOST=ip] [LOCUST_WORKERS=n]"
-	@echo ""
-	@echo "Parameters:"
-	@echo "  LOCUST_IMAGE=img                - Custom Locust Docker image"
-	@echo "  LOCUST_WORKERS=n                - Number of worker containers (default: 1)"
-	@echo "  LOCUST_HTTP_HOST=url            - HTTP server target URL"
-	@echo "  LOCUST_MYSQL_HOST=host          - MySQL server hostname"
-	@echo "  LOCUST_MYSQL_PORT=port          - MySQL server port"
-	@echo "  LOCUST_MYSQL_USER=user          - MySQL username"
-	@echo "  LOCUST_MYSQL_PASSWORD=pw        - MySQL password"
-	@echo "  LOCUST_MYSQL_DATABASE=db        - MySQL database name"
-	@echo "  LOCUST_MYSQL_CARTESIAN_LIMIT=n  - LIMIT value for cartesian join query (default: 10000)"
-	@echo "  LOCUST_MASTER_HOST=ip           - Master node IP address for joining cluster"
 
 locust\:%:
 	@$(MAKE) locust-$(subst locust:,,$@)
@@ -283,22 +285,46 @@ locust-run:
 	@echo "MySQL server started on port $${LOCUST_MYSQL_PORT:-3306}"
 	@docker run -d --name http-server --network locust-network -p 8080:8080 -v $(PWD)/locust:/app -w /app/www python:3.12-slim python3 ../bin/server.py
 	@echo "HTTP server started on port 8080"
-	@docker run -d --name locust-master --network locust-network -p 8089:8089 -p 5557:5557 -p 5558:5558 -v $(PWD)/locust:/mnt/locust $${LOCUST_IMAGE} -f /mnt/locust/bin/locustfile_http.py --master --master-bind-host=0.0.0.0 --host=http://http-server:8080
+	@LOCUST_FILE_PATH=$${LOCUST_FILE:-locustfile_http.py}; \
+	LOCUST_TAGS_ARG=""; \
+	if [ -n "$${LOCUST_TAGS}" ]; then \
+		LOCUST_TAGS_ARG="--tags $${LOCUST_TAGS}"; \
+	fi; \
+	echo "Using Locust file: $$LOCUST_FILE_PATH"; \
+	echo "Tags: $${LOCUST_TAGS:-none}"; \
+	docker run -d --name locust-master --network locust-network -p 8089:8089 -p 5557:5557 -p 5558:5558 \
+		-v $(PWD)/locust:/mnt/locust \
+		-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
+		-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
+		-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
+		-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
+		-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
+		-e MYSQL_CARTESIAN_LIMIT=$${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000} \
+		$${LOCUST_IMAGE} -f /mnt/locust/bin/$$LOCUST_FILE_PATH --master --master-bind-host=0.0.0.0 --host=http://http-server:8080 $$LOCUST_TAGS_ARG
 	@sleep 5
-	@WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+	@LOCUST_FILE_PATH=$${LOCUST_FILE:-locustfile_http.py}; \
+	WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
 	echo "Starting $$WORKER_COUNT Locust workers..."; \
 	for i in $$(seq 1 $$WORKER_COUNT); do \
-		docker run -d --name locust-worker-$$i --network locust-network -v $(PWD)/locust:/mnt/locust $${LOCUST_IMAGE} -f /mnt/locust/bin/locustfile_http.py --worker --master-host=locust-master; \
+		docker run -d --name locust-worker-$$i --network locust-network \
+			-v $(PWD)/locust:/mnt/locust \
+			-e MYSQL_HOST=$${LOCUST_MYSQL_HOST:-mysql-server} \
+			-e MYSQL_PORT=$${LOCUST_MYSQL_PORT:-3306} \
+			-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
+			-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
+			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
+			-e MYSQL_CARTESIAN_LIMIT=$${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000} \
+			$${LOCUST_IMAGE} -f /mnt/locust/bin/$$LOCUST_FILE_PATH --worker --master-host=locust-master; \
 	done
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089 and HTTP server at http://localhost:8080"
 
 locust-stop:
 	@echo "Stopping HTTP server, MySQL, and Locust containers..."
-	@docker stop mysql-server http-server locust-master || true
-	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
-	@docker rm mysql-server http-server locust-master || true
-	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
-	@docker network rm locust-network || true
+	@docker stop mysql-server http-server locust-master 2>/dev/null || true
+	@docker ps -q --filter "name=locust-worker-" | xargs -r docker stop 2>/dev/null || true
+	@docker rm mysql-server http-server locust-master 2>/dev/null || true
+	@docker ps -aq --filter "name=locust-worker-" | xargs -r docker rm 2>/dev/null || true
+	@docker network rm locust-network 2>/dev/null || true
 	@rm -f .locust_cluster_mode
 	@echo "All containers stopped and removed."
 
