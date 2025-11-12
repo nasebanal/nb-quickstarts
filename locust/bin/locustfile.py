@@ -10,6 +10,7 @@ MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
 MYSQL_USER = os.getenv("MYSQL_USER", "testuser")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "testpassword")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "testdb")
+MYSQL_CARTESIAN_LIMIT = int(os.getenv("MYSQL_CARTESIAN_LIMIT", "10000"))
 MYSQL_POOL_SIZE = 10
 
 class WebsiteUser(HttpUser):
@@ -172,11 +173,11 @@ class MySQLUser(User):
         start_time = time.time()
         try:
             with self.connection.cursor() as cursor:
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT c1.*, c2.COLUMN_NAME as col2
                     FROM information_schema.COLUMNS c1
                     CROSS JOIN information_schema.COLUMNS c2
-                    LIMIT 10000
+                    LIMIT {MYSQL_CARTESIAN_LIMIT}
                 """)
                 results = cursor.fetchall()
 

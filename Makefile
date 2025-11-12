@@ -245,15 +245,16 @@ locust:
 	@echo "  make locust:join-cluster [LOCUST_MASTER_HOST=ip] [LOCUST_WORKERS=n]"
 	@echo ""
 	@echo "Parameters:"
-	@echo "  LOCUST_IMAGE=img        - Custom Locust Docker image"
-	@echo "  LOCUST_WORKERS=n        - Number of worker containers (default: 1)"
-	@echo "  LOCUST_HTTP_HOST=url     - HTTP server target URL"
-	@echo "  LOCUST_MYSQL_HOST=host   - MySQL server hostname"
-	@echo "  LOCUST_MYSQL_PORT=port   - MySQL server port"
-	@echo "  LOCUST_MYSQL_USER=user   - MySQL username"
-	@echo "  LOCUST_MYSQL_PASSWORD=pw - MySQL password"
-	@echo "  LOCUST_MYSQL_DATABASE=db - MySQL database name"
-	@echo "  LOCUST_MASTER_HOST=ip    - Master node IP address for joining cluster"
+	@echo "  LOCUST_IMAGE=img                - Custom Locust Docker image"
+	@echo "  LOCUST_WORKERS=n                - Number of worker containers (default: 1)"
+	@echo "  LOCUST_HTTP_HOST=url            - HTTP server target URL"
+	@echo "  LOCUST_MYSQL_HOST=host          - MySQL server hostname"
+	@echo "  LOCUST_MYSQL_PORT=port          - MySQL server port"
+	@echo "  LOCUST_MYSQL_USER=user          - MySQL username"
+	@echo "  LOCUST_MYSQL_PASSWORD=pw        - MySQL password"
+	@echo "  LOCUST_MYSQL_DATABASE=db        - MySQL database name"
+	@echo "  LOCUST_MYSQL_CARTESIAN_LIMIT=n  - LIMIT value for cartesian join query (default: 10000)"
+	@echo "  LOCUST_MASTER_HOST=ip           - Master node IP address for joining cluster"
 
 locust\:%:
 	@$(MAKE) locust-$(subst locust:,,$@)
@@ -780,6 +781,7 @@ locust-test-mysql-cartesian:
 				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
 				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
 				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
+				-e MYSQL_CARTESIAN_LIMIT=$${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000} \
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
@@ -802,6 +804,7 @@ locust-test-mysql-cartesian:
 			-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
 			-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
 			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
+			-e MYSQL_CARTESIAN_LIMIT=$${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000} \
 			$${LOCUST_IMAGE} \
 			-f /mnt/locust/bin/locustfile.py \
 			--master \
@@ -820,6 +823,7 @@ locust-test-mysql-cartesian:
 				-e MYSQL_USER=$${LOCUST_MYSQL_USER:-testuser} \
 				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
 				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
+				-e MYSQL_CARTESIAN_LIMIT=$${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000} \
 				$${LOCUST_IMAGE} \
 				-f /mnt/locust/bin/locustfile.py \
 				--worker \
