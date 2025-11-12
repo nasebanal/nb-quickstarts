@@ -228,6 +228,9 @@ locust:
 	@echo "  locust:test-http         - Run HTTP server load test with UI (http://localhost:8089)"
 	@echo "  locust:test-http-root    - Run HTTP root page test with tag 'http-root' (http://localhost:8089)"
 	@echo "  locust:test-http-login   - Run HTTP login test with tag 'http-login' (http://localhost:8089)"
+	@echo "  locust:test-graphql         - Run GraphQL load test (all GraphQL operations) (http://localhost:8089)"
+	@echo "  locust:test-graphql-select  - Run GraphQL select test with tag 'graphql-query' (http://localhost:8089)"
+	@echo "  locust:test-graphql-create  - Run GraphQL create test with tag 'graphql-create' (http://localhost:8089)"
 	@echo "  locust:test-mysql        - Run MySQL load test with UI (http://localhost:8089)"
 	@echo "  locust:test-mysql-select - Run MySQL select test with tag 'mysql-select' (http://localhost:8089)"
 	@echo "  locust:test-mysql-cartesian - Run MySQL cartesian join test with tag 'mysql-cartesian' (http://localhost:8089)"
@@ -533,6 +536,162 @@ locust-test-http-login:
 				--master-host=locust-master; \
 		done; \
 		echo "HTTP login test started with $$WORKER_COUNT workers"; \
+	fi
+
+locust-test-graphql:
+	@echo "Starting GraphQL load test (all operations)..."
+	@echo "Stopping existing worker containers..."
+	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
+	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
+	@if [ -f .locust_cluster_mode ]; then \
+		CLUSTER_MASTER=$$(cat .locust_cluster_mode); \
+		echo "Joining cluster mode: connecting to master at $$CLUSTER_MASTER"; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT GraphQL test workers for cluster..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i \
+				--network host \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=$$CLUSTER_MASTER \
+				WebsiteUser; \
+		done; \
+		echo "$$WORKER_COUNT GraphQL workers connected to cluster at $$CLUSTER_MASTER"; \
+	else \
+		echo "Standalone mode: starting local master and workers"; \
+		echo "Stopping existing master container..."; \
+		docker stop locust-master || true; \
+		docker rm locust-master || true; \
+		echo "Locust UI available at http://localhost:8089"; \
+		echo "Target: GraphQL load test (all operations)"; \
+		docker run -d --name locust-master --network locust-network \
+			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
+			-v $(PWD)/locust:/mnt/locust \
+			$${LOCUST_IMAGE} \
+			-f /mnt/locust/bin/locustfile.py \
+			--master \
+			--master-bind-host=0.0.0.0 \
+			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
+			--tags graphql-query graphql-create \
+			WebsiteUser; \
+		sleep 5; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT Locust workers..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i --network locust-network \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=locust-master; \
+		done; \
+		echo "GraphQL load test started with $$WORKER_COUNT workers"; \
+	fi
+
+locust-test-graphql-select:
+	@echo "Starting GraphQL select load test (read operations)..."
+	@echo "Stopping existing worker containers..."
+	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
+	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
+	@if [ -f .locust_cluster_mode ]; then \
+		CLUSTER_MASTER=$$(cat .locust_cluster_mode); \
+		echo "Joining cluster mode: connecting to master at $$CLUSTER_MASTER"; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT GraphQL select test workers for cluster..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i \
+				--network host \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=$$CLUSTER_MASTER \
+				WebsiteUser; \
+		done; \
+		echo "$$WORKER_COUNT GraphQL select workers connected to cluster at $$CLUSTER_MASTER"; \
+	else \
+		echo "Standalone mode: starting local master and workers"; \
+		echo "Stopping existing master container..."; \
+		docker stop locust-master || true; \
+		docker rm locust-master || true; \
+		echo "Locust UI available at http://localhost:8089"; \
+		echo "Target: GraphQL select test with tag 'graphql-query'"; \
+		docker run -d --name locust-master --network locust-network \
+			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
+			-v $(PWD)/locust:/mnt/locust \
+			$${LOCUST_IMAGE} \
+			-f /mnt/locust/bin/locustfile.py \
+			--master \
+			--master-bind-host=0.0.0.0 \
+			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
+			--tags graphql-query \
+			WebsiteUser; \
+		sleep 5; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT Locust workers..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i --network locust-network \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=locust-master; \
+		done; \
+		echo "GraphQL select test started with $$WORKER_COUNT workers"; \
+	fi
+
+locust-test-graphql-create:
+	@echo "Starting GraphQL create load test (write operations)..."
+	@echo "Stopping existing worker containers..."
+	@docker stop $$(docker ps -q --filter "name=locust-worker-") || true
+	@docker rm $$(docker ps -aq --filter "name=locust-worker-") || true
+	@if [ -f .locust_cluster_mode ]; then \
+		CLUSTER_MASTER=$$(cat .locust_cluster_mode); \
+		echo "Joining cluster mode: connecting to master at $$CLUSTER_MASTER"; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT GraphQL create test workers for cluster..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i \
+				--network host \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=$$CLUSTER_MASTER \
+				WebsiteUser; \
+		done; \
+		echo "$$WORKER_COUNT GraphQL create workers connected to cluster at $$CLUSTER_MASTER"; \
+	else \
+		echo "Standalone mode: starting local master and workers"; \
+		echo "Stopping existing master container..."; \
+		docker stop locust-master || true; \
+		docker rm locust-master || true; \
+		echo "Locust UI available at http://localhost:8089"; \
+		echo "Target: GraphQL create test with tag 'graphql-create'"; \
+		docker run -d --name locust-master --network locust-network \
+			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
+			-v $(PWD)/locust:/mnt/locust \
+			$${LOCUST_IMAGE} \
+			-f /mnt/locust/bin/locustfile.py \
+			--master \
+			--master-bind-host=0.0.0.0 \
+			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
+			--tags graphql-create \
+			WebsiteUser; \
+		sleep 5; \
+		WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
+		echo "Starting $$WORKER_COUNT Locust workers..."; \
+		for i in $$(seq 1 $$WORKER_COUNT); do \
+			docker run -d --name locust-worker-$$i --network locust-network \
+				-v $(PWD)/locust:/mnt/locust \
+				$${LOCUST_IMAGE} \
+				-f /mnt/locust/bin/locustfile.py \
+				--worker \
+				--master-host=locust-master; \
+		done; \
+		echo "GraphQL create test started with $$WORKER_COUNT workers"; \
 	fi
 
 locust-test-mysql-select:
