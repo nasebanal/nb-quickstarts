@@ -33,7 +33,7 @@ class WebsiteUser(HttpUser):
     @tag('graphql-query')
     def graphql_query(self):
         """GraphQL: Query posts (read operation)"""
-        self.client.post("/graphql", json={
+        self.client.post("/graphql", name="/graphql (query)", json={
             "query": """
                 query {
                     posts {
@@ -58,7 +58,7 @@ class WebsiteUser(HttpUser):
         """GraphQL: Mutation - Create post (write operation)"""
         import random
         author_id = random.choice(["1", "2", "3"])
-        self.client.post("/graphql", json={
+        self.client.post("/graphql", name="/graphql (mutation)", json={
             "query": f"""
                 mutation {{
                     createPost(
@@ -142,7 +142,7 @@ class MySQLUser(User):
             total_time = int((time.time() - start_time) * 1000)
             events.request.fire(
                 request_type="MySQL",
-                name="SELECT",
+                name="select",
                 response_time=total_time,
                 response_length=len(results),
                 exception=None,
@@ -152,7 +152,7 @@ class MySQLUser(User):
             total_time = int((time.time() - start_time) * 1000)
             events.request.fire(
                 request_type="MySQL",
-                name="SELECT",
+                name="select",
                 response_time=total_time,
                 response_length=0,
                 exception=e,
@@ -183,7 +183,7 @@ class MySQLUser(User):
             total_time = int((time.time() - start_time) * 1000)
             events.request.fire(
                 request_type="MySQL",
-                name="CARTESIAN_JOIN",
+                name="cartesian_join",
                 response_time=total_time,
                 response_length=len(results),
                 exception=None,
@@ -193,7 +193,7 @@ class MySQLUser(User):
             total_time = int((time.time() - start_time) * 1000)
             events.request.fire(
                 request_type="MySQL",
-                name="CARTESIAN_JOIN",
+                name="cartesian_join",
                 response_time=total_time,
                 response_length=0,
                 exception=e,
