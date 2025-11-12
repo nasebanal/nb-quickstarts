@@ -53,9 +53,9 @@ class WebsiteUser(HttpUser):
         })
 
     @task
-    @tag('graphql-create')
-    def graphql_create(self):
-        """GraphQL: Create post (write operation)"""
+    @tag('graphql-mutation')
+    def graphql_mutation(self):
+        """GraphQL: Mutation - Create post (write operation)"""
         import random
         author_id = random.choice(["1", "2", "3"])
         self.client.post("/graphql", json={
