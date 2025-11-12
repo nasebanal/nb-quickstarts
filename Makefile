@@ -283,12 +283,12 @@ locust-run:
 	@echo "MySQL server started on port $${LOCUST_MYSQL_PORT:-3306}"
 	@docker run -d --name http-server --network locust-network -p 8080:8080 -v $(PWD)/locust:/app -w /app/www python:3.12-slim python3 ../bin/server.py
 	@echo "HTTP server started on port 8080"
-	@docker run -d --name locust-master --network locust-network -p 8089:8089 -p 5557:5557 -p 5558:5558 -v $(PWD)/locust:/mnt/locust $${LOCUST_IMAGE} -f /mnt/locust/bin/locustfile.py --master --master-bind-host=0.0.0.0 --host=http://http-server:8080
+	@docker run -d --name locust-master --network locust-network -p 8089:8089 -p 5557:5557 -p 5558:5558 -v $(PWD)/locust:/mnt/locust $${LOCUST_IMAGE} -f /mnt/locust/bin/locustfile_http.py --master --master-bind-host=0.0.0.0 --host=http://http-server:8080
 	@sleep 5
 	@WORKER_COUNT=$${LOCUST_WORKERS:-1}; \
 	echo "Starting $$WORKER_COUNT Locust workers..."; \
 	for i in $$(seq 1 $$WORKER_COUNT); do \
-		docker run -d --name locust-worker-$$i --network locust-network -v $(PWD)/locust:/mnt/locust $${LOCUST_IMAGE} -f /mnt/locust/bin/locustfile.py --worker --master-host=locust-master; \
+		docker run -d --name locust-worker-$$i --network locust-network -v $(PWD)/locust:/mnt/locust $${LOCUST_IMAGE} -f /mnt/locust/bin/locustfile_http.py --worker --master-host=locust-master; \
 	done
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089 and HTTP server at http://localhost:8080"
 
@@ -329,7 +329,7 @@ locust-test-http:
 				--network host \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_http.py \
 				--worker \
 				--master-host=$$CLUSTER_MASTER \
 				WebsiteUser; \
@@ -347,7 +347,7 @@ locust-test-http:
 			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
-			-f /mnt/locust/bin/locustfile.py \
+			-f /mnt/locust/bin/locustfile_http.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
 			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
@@ -359,7 +359,7 @@ locust-test-http:
 			docker run -d --name locust-worker-$$i --network locust-network \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_http.py \
 				--worker \
 				--master-host=locust-master \
 				WebsiteUser; \
@@ -387,7 +387,7 @@ locust-test-mysql:
 				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
 				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_mysql.py \
 				--worker \
 				--master-host=$$CLUSTER_MASTER \
 				MySQLUser; \
@@ -410,7 +410,7 @@ locust-test-mysql:
 			-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD} \
 			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE} \
 			$${LOCUST_IMAGE} \
-			-f /mnt/locust/bin/locustfile.py \
+			-f /mnt/locust/bin/locustfile_mysql.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
 			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
@@ -427,7 +427,7 @@ locust-test-mysql:
 				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD} \
 				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE} \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_mysql.py \
 				--worker \
 				--master-host=locust-master \
 				MySQLUser; \
@@ -450,7 +450,7 @@ locust-test-http-root:
 				--network host \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_http.py \
 				--worker \
 				--master-host=$$CLUSTER_MASTER \
 				WebsiteUser; \
@@ -467,7 +467,7 @@ locust-test-http-root:
 			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
-			-f /mnt/locust/bin/locustfile.py \
+			-f /mnt/locust/bin/locustfile_http.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
 			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
@@ -480,7 +480,7 @@ locust-test-http-root:
 			docker run -d --name locust-worker-$$i --network locust-network \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_http.py \
 				--worker \
 				--master-host=locust-master; \
 		done; \
@@ -502,7 +502,7 @@ locust-test-http-login:
 				--network host \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_http.py \
 				--worker \
 				--master-host=$$CLUSTER_MASTER \
 				WebsiteUser; \
@@ -519,7 +519,7 @@ locust-test-http-login:
 			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
-			-f /mnt/locust/bin/locustfile.py \
+			-f /mnt/locust/bin/locustfile_http.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
 			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
@@ -532,7 +532,7 @@ locust-test-http-login:
 			docker run -d --name locust-worker-$$i --network locust-network \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_http.py \
 				--worker \
 				--master-host=locust-master; \
 		done; \
@@ -554,7 +554,7 @@ locust-test-graphql:
 				--network host \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_graphql.py \
 				--worker \
 				--master-host=$$CLUSTER_MASTER \
 				WebsiteUser; \
@@ -571,7 +571,7 @@ locust-test-graphql:
 			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
-			-f /mnt/locust/bin/locustfile.py \
+			-f /mnt/locust/bin/locustfile_graphql.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
 			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
@@ -584,7 +584,7 @@ locust-test-graphql:
 			docker run -d --name locust-worker-$$i --network locust-network \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_graphql.py \
 				--worker \
 				--master-host=locust-master; \
 		done; \
@@ -606,7 +606,7 @@ locust-test-graphql-query:
 				--network host \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_graphql.py \
 				--worker \
 				--master-host=$$CLUSTER_MASTER \
 				WebsiteUser; \
@@ -623,7 +623,7 @@ locust-test-graphql-query:
 			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
-			-f /mnt/locust/bin/locustfile.py \
+			-f /mnt/locust/bin/locustfile_graphql.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
 			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
@@ -636,7 +636,7 @@ locust-test-graphql-query:
 			docker run -d --name locust-worker-$$i --network locust-network \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_graphql.py \
 				--worker \
 				--master-host=locust-master; \
 		done; \
@@ -658,7 +658,7 @@ locust-test-graphql-mutation:
 				--network host \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_graphql.py \
 				--worker \
 				--master-host=$$CLUSTER_MASTER \
 				WebsiteUser; \
@@ -675,7 +675,7 @@ locust-test-graphql-mutation:
 			-p 8089:8089 -p 5557:5557 -p 5558:5558 \
 			-v $(PWD)/locust:/mnt/locust \
 			$${LOCUST_IMAGE} \
-			-f /mnt/locust/bin/locustfile.py \
+			-f /mnt/locust/bin/locustfile_graphql.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
 			--host $${LOCUST_HTTP_HOST:-http://http-server:8080} \
@@ -688,7 +688,7 @@ locust-test-graphql-mutation:
 			docker run -d --name locust-worker-$$i --network locust-network \
 				-v $(PWD)/locust:/mnt/locust \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_graphql.py \
 				--worker \
 				--master-host=locust-master; \
 		done; \
@@ -715,7 +715,7 @@ locust-test-mysql-select:
 				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
 				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_mysql.py \
 				--worker \
 				--master-host=$$CLUSTER_MASTER \
 				MySQLUser; \
@@ -737,7 +737,7 @@ locust-test-mysql-select:
 			-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
 			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 			$${LOCUST_IMAGE} \
-			-f /mnt/locust/bin/locustfile.py \
+			-f /mnt/locust/bin/locustfile_mysql.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
 			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
@@ -755,7 +755,7 @@ locust-test-mysql-select:
 				-e MYSQL_PASSWORD=$${LOCUST_MYSQL_PASSWORD:-testpassword} \
 				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_mysql.py \
 				--worker \
 				--master-host=locust-master; \
 		done; \
@@ -783,7 +783,7 @@ locust-test-mysql-cartesian:
 				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 				-e MYSQL_CARTESIAN_LIMIT=$${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000} \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_mysql.py \
 				--worker \
 				--master-host=$$CLUSTER_MASTER \
 				MySQLUser; \
@@ -806,7 +806,7 @@ locust-test-mysql-cartesian:
 			-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 			-e MYSQL_CARTESIAN_LIMIT=$${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000} \
 			$${LOCUST_IMAGE} \
-			-f /mnt/locust/bin/locustfile.py \
+			-f /mnt/locust/bin/locustfile_mysql.py \
 			--master \
 			--master-bind-host=0.0.0.0 \
 			--host mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
@@ -825,7 +825,7 @@ locust-test-mysql-cartesian:
 				-e MYSQL_DATABASE=$${LOCUST_MYSQL_DATABASE:-information_schema} \
 				-e MYSQL_CARTESIAN_LIMIT=$${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000} \
 				$${LOCUST_IMAGE} \
-				-f /mnt/locust/bin/locustfile.py \
+				-f /mnt/locust/bin/locustfile_mysql.py \
 				--worker \
 				--master-host=locust-master; \
 		done; \

@@ -1,82 +1,16 @@
-from locust import HttpUser, User, task, between, events, tag
+from locust import User, task, between, events, tag
 import pymysql
 import time
 import logging
 import os
 
-# MySQL Connection Pool Configuration (from environment variables)
+# MySQL Connection Configuration (from environment variables)
 MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql-server")
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
 MYSQL_USER = os.getenv("MYSQL_USER", "testuser")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "testpassword")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "testdb")
 MYSQL_CARTESIAN_LIMIT = int(os.getenv("MYSQL_CARTESIAN_LIMIT", "10000"))
-MYSQL_POOL_SIZE = 10
-
-class WebsiteUser(HttpUser):
-    wait_time = between(1, 3)
-    host = os.getenv("LOCUST_HTTP_HOST", "http://localhost:8080")
-
-    @task
-    @tag('http-root')
-    def load_homepage(self):
-        self.client.get("/")
-
-    @task
-    @tag('http-login')
-    def test_login(self):
-        self.client.post("/login", json={
-            "username": "admin",
-            "password": "password"
-        })
-
-    @task
-    @tag('graphql-query')
-    def graphql_query(self):
-        """GraphQL: Query posts (read operation)"""
-        self.client.post("/graphql", name="/graphql (query)", json={
-            "query": """
-                query {
-                    posts {
-                        id
-                        title
-                        content
-                        authorId
-                        createdAt
-                        author {
-                            id
-                            name
-                            email
-                        }
-                    }
-                }
-            """
-        })
-
-    @task
-    @tag('graphql-mutation')
-    def graphql_mutation(self):
-        """GraphQL: Mutation - Create post (write operation)"""
-        import random
-        author_id = random.choice(["1", "2", "3"])
-        self.client.post("/graphql", name="/graphql (mutation)", json={
-            "query": f"""
-                mutation {{
-                    createPost(
-                        title: "Load Test Post",
-                        content: "This is a test post from Locust",
-                        authorId: "{author_id}"
-                    ) {{
-                        id
-                        title
-                        content
-                        authorId
-                        createdAt
-                    }}
-                }}
-            """
-        })
-
 
 class MySQLUser(User):
     """MySQL load testing user with connection pool stress testing"""
