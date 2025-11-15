@@ -107,16 +107,7 @@ locust-run:
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089 and HTTP server at http://localhost:8080"
 
 locust-open:
-	@echo "Opening Locust UI in browser..."
-	@if command -v explorer.exe >/dev/null 2>&1; then \
-		explorer.exe http://localhost:8089 2>/dev/null || echo "WSL detected. Please open http://localhost:8089 in your browser"; \
-	elif command -v open >/dev/null 2>&1; then \
-		open http://localhost:8089; \
-	elif command -v xdg-open >/dev/null 2>&1; then \
-		xdg-open http://localhost:8089; \
-	else \
-		echo "Please open http://localhost:8089 in your browser"; \
-	fi
+	@bin/open_browser.sh http://localhost:8089
 
 locust-stop:
 	@echo "Stopping HTTP server, MySQL, and Locust containers..."

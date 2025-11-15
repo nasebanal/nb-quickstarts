@@ -55,16 +55,7 @@ consul-status:
 	@echo "Consul container status checked."
 
 consul-open:
-	@echo "Opening Consul UI..."
-	@if command -v explorer.exe >/dev/null 2>&1; then \
-		explorer.exe http://localhost:8500 2>/dev/null || echo "WSL detected. Please open http://localhost:8500 in your browser"; \
-	elif command -v open >/dev/null 2>&1; then \
-		open http://localhost:8500; \
-	elif command -v xdg-open >/dev/null 2>&1; then \
-		xdg-open http://localhost:8500; \
-	else \
-		echo "Please open http://localhost:8500 in your browser"; \
-	fi
+	@bin/open_browser.sh http://localhost:8500
 
 consul-register-service:
 	@echo "Registering sample service with Consul..."

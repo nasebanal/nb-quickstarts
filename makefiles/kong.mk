@@ -41,13 +41,4 @@ kong-status:
 	@echo "Kong container status checked."
 
 kong-open:
-	@echo "Opening Kong Admin UI..."
-	@if command -v explorer.exe >/dev/null 2>&1; then \
-		explorer.exe http://localhost:8001 2>/dev/null || echo "WSL detected. Please open http://localhost:8001 in your browser"; \
-	elif command -v open >/dev/null 2>&1; then \
-		open http://localhost:8001; \
-	elif command -v xdg-open >/dev/null 2>&1; then \
-		xdg-open http://localhost:8001; \
-	else \
-		echo "Please open http://localhost:8001 in your browser"; \
-	fi
+	@bin/open_browser.sh http://localhost:8001
