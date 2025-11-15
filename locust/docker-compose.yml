@@ -1,0 +1,77 @@
+services:
+  mysql-server:
+    image: mysql:latest
+    container_name: mysql-server
+    ports:
+      - "${LOCUST_MYSQL_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${LOCUST_MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
+      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
+    networks:
+      - locust-network
+
+  http-server:
+    image: python:3.12-slim
+    container_name: http-server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/app
+    working_dir: /app/www
+    command: python3 ../bin/server.py
+    networks:
+      - locust-network
+
+  locust-master:
+    image: ${LOCUST_IMAGE:-locust-mysql:latest}
+    container_name: locust-master
+    ports:
+      - "8089:8089"
+      - "5557:5557"
+      - "5558:5558"
+    volumes:
+      - ./:/mnt/locust
+    environment:
+      MYSQL_HOST: ${LOCUST_MYSQL_HOST:-mysql-server}
+      MYSQL_PORT: ${LOCUST_MYSQL_PORT:-3306}
+      MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
+      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
+      MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
+      MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
+    command: >
+      -f /mnt/locust/bin/${LOCUST_FILE:-locustfile_http.py}
+      --master
+      --master-bind-host=0.0.0.0
+      --host=${LOCUST_HOST:-http://http-server:8080}
+      ${LOCUST_TAGS:+--tags ${LOCUST_TAGS}}
+    networks:
+      - locust-network
+    depends_on:
+      - http-server
+      - mysql-server
+
+  locust-worker:
+    image: ${LOCUST_IMAGE:-locust-mysql:latest}
+    volumes:
+      - ./:/mnt/locust
+    environment:
+      MYSQL_HOST: ${LOCUST_MYSQL_HOST:-mysql-server}
+      MYSQL_PORT: ${LOCUST_MYSQL_PORT:-3306}
+      MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
+      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
+      MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
+      MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
+    command: >
+      -f /mnt/locust/bin/${LOCUST_FILE:-locustfile_http.py}
+      --worker
+      --master-host=locust-master
+    networks:
+      - locust-network
+    depends_on:
+      - locust-master
+
+networks:
+  locust-network:
+    name: locust-network
