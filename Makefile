@@ -7,10 +7,10 @@ SHELL := /bin/zsh
 export
 
 # Include service-specific Makefiles
-include makefiles/kafka.mk
-include makefiles/kong.mk
-include makefiles/consul.mk
-include makefiles/locust.mk
+include kafka/Makefile
+include consul/Makefile
+include kong/Makefile
+include locust/Makefile
 
 #################### DEFAULT HELP ###################
 default:

@@ -1,0 +1,30 @@
+services:
+  consul:
+    image: ${CONSUL_IMAGE:-hashicorp/consul}:${CONSUL_VERSION:-1.21}
+    container_name: consul
+    ports:
+      - "${CONSUL_HTTP_PORT:-8500}:8500"
+      - "${CONSUL_DNS_PORT:-8600}:8600"
+      - "${CONSUL_SERVER_RPC_PORT:-8300}:8300"
+    command: agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
+    environment:
+      CONSUL_BIND_INTERFACE: ${CONSUL_BIND_INTERFACE:-eth0}
+    networks:
+      - consul-net
+    volumes:
+      - consul-data:/consul/data
+      - consul-config:/consul/config
+    healthcheck:
+      test: ["CMD-SHELL", "consul members || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  consul-net:
+    name: consul-net
+
+volumes:
+  consul-data:
+  consul-config:

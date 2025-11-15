@@ -23,6 +23,11 @@ consul:
 	@echo "  consul:discover-db        - Discover database service endpoints (all)"
 	@echo "  consul:discover-healthy   - Discover only healthy service endpoints"
 	@echo ""
+	@echo "Configuration (.env file):"
+	@echo "  CONSUL_IMAGE=hashicorp/consul"
+	@echo "  CONSUL_VERSION=1.21"
+	@echo "  CONSUL_HTTP_PORT=8500"
+	@echo ""
 	@echo "Usage: make consul:run"
 
 consul\:%:
@@ -33,26 +38,33 @@ consul\:%:
 
 consul-pull:
 	@echo "Pulling Consul Docker image..."
-	@docker pull hashicorp/consul:1.21
+	@docker pull $${CONSUL_IMAGE:-hashicorp/consul}:$${CONSUL_VERSION:-1.21}
 	@echo "Consul image pulled successfully."
 
 consul-run:
-	@echo "Starting Consul container..."
-	@docker run --name consul -p 8500:8500 hashicorp/consul:1.21
-	@echo "Consul container started."
+	@echo "Starting Consul containers..."
+	@cd consul && docker-compose up -d
+	@echo ""
+	@echo "Consul started successfully!"
+	@echo "  HTTP API: http://localhost:$${CONSUL_HTTP_PORT:-8500}"
+	@echo "  DNS:      localhost:$${CONSUL_DNS_PORT:-8600}"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  make consul:open              # Open Consul UI in browser"
+	@echo "  make consul:get-services      # List all registered services"
 
 consul-stop:
-	@echo "Stopping Consul container..."
-	@docker stop consul
-	@docker rm consul
-	@echo "Consul container stopped and removed."
+	@echo "Stopping Consul containers..."
+	@cd consul && docker-compose down
+	@echo "Consul containers stopped and removed."
 
-consul-restart: consul-stop consul-run
+consul-restart:
+	@$(MAKE) consul-stop
+	@$(MAKE) consul-run
 
 consul-status:
 	@echo "Checking Consul container status..."
-	@docker ps -f "name=consul"
-	@echo "Consul container status checked."
+	@cd consul && docker-compose ps
 
 consul-open:
 	@bin/open_browser.sh http://localhost:8500

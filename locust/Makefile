@@ -53,12 +53,14 @@ locust\:%:
 
 locust-build:
 	@echo "Building custom Locust Docker image with MySQL support..."
-	@docker build -t $${LOCUST_IMAGE} locust/
-	@echo "Custom Locust image built successfully."
+	@docker build -t locust-mysql:$${LOCUSTIO_VERSION:-2.42.2} \
+		--build-arg LOCUSTIO_VERSION=$${LOCUSTIO_VERSION:-2.42.2} \
+		locust/
+	@echo "Custom Locust image built successfully as locust-mysql:$${LOCUSTIO_VERSION:-2.42.2}"
 
 locust-pull:
 	@echo "Pulling Locust Docker image..."
-	@docker pull locustio/locust:latest
+	@docker pull locustio/locust:$${LOCUSTIO_VERSION:-2.42.2}
 	@echo "Locust image pulled successfully."
 
 locust-run:
