@@ -11,10 +11,16 @@ kafka:
 	@echo "  kafka:add-topics  - Create Kafka topics"
 	@echo "  kafka:list-topics - List Kafka topics"
 	@echo "  kafka:describe-topics - Describe Kafka topics"
-	@echo "  kafka:add-events  - Produce events to Kafka topic"
-	@echo "  kafka:get-all-events - Get all events from Kafka topic"
-	@echo "  kafka:consume-events - Consume events from Kafka topic"
-	@echo "  kafka:count-events - Count events in Kafka topic"
+	@echo "  kafka:add-events  - Produce events to Kafka topic (interactive)"
+	@echo "  kafka:get-all-events - Get all events from Kafka topic (from beginning)"
+	@echo "  kafka:consume-events - Consume new events in real-time (Ctrl+C to exit)"
+	@echo "  kafka:count-events - Count total events in Kafka topic"
+	@echo ""
+	@echo "Configuration (.env file):"
+	@echo "  KAFKA_IMAGE=apache/kafka"
+	@echo "  KAFKA_VERSION=3.8.1"
+	@echo "  KAFKA_PORT=9092"
+	@echo "  KAFKA_TOPIC_NAME=quickstart-events"
 	@echo ""
 	@echo "Usage: make kafka:run"
 
@@ -25,69 +31,83 @@ kafka\:%:
 
 kafka-pull:
 	@echo "Pulling Kafka images..."
-	@docker pull bitnami/kafka:4.1
+	@docker pull $${KAFKA_IMAGE:-apache/kafka}:$${KAFKA_VERSION:-3.8.1}
 	@echo "Kafka images pulled successfully."
 
 kafka-run:
 	@echo "Starting Kafka containers (KRaft mode)..."
-	@docker run --name kafka -p 9092:9092 -p 9093:9093 \
-		-e KAFKA_CFG_NODE_ID=0 \
-		-e KAFKA_CFG_PROCESS_ROLES=controller,broker \
-		-e KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@localhost:9093 \
-		-e KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093 \
-		-e KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 \
-		-e KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT \
-		-e KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER \
-		-e KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT \
-		-e ALLOW_PLAINTEXT_LISTENER=yes \
-		bitnami/kafka:latest
-
-	@echo "Kafka containers started."
+	@cd kafka && docker-compose up -d
+	@echo ""
+	@echo "Kafka started successfully!"
+	@echo "  Broker:     localhost:${KAFKA_PORT:-9092}"
+	@echo "  Controller: localhost:${KAFKA_CONTROLLER_PORT:-9093}"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  make kafka:list-topics    # List topics"
+	@echo "  make kafka:add-topics     # Create sample topic"
 
 kafka-stop:
 	@echo "Stopping Kafka containers..."
-	@docker stop kafka
-	@docker rm kafka
+	@cd kafka && docker-compose down
 	@echo "Kafka containers stopped and removed."
 
-kafka-restart: kafka-stop kafka-run
+kafka-restart:
+	@$(MAKE) kafka-stop
+	@$(MAKE) kafka-run
 
 kafka-status:
 	@echo "Checking Kafka container status..."
-	@docker ps -f "name=kafka"
-	@echo "Kafka container status checked."
+	@cd kafka && docker-compose ps
 
 kafka-add-topics:
-	@echo "Creating Kafka topics..."
-	@docker exec kafka kafka-topics.sh --create --topic quickstart-events --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-	@echo "Kafka topics created."
+	@echo "Creating Kafka topic: $${KAFKA_TOPIC_NAME:-quickstart-events}..."
+	@docker exec kafka /opt/kafka/bin/kafka-topics.sh --create \
+		--topic $${KAFKA_TOPIC_NAME:-quickstart-events} \
+		--bootstrap-server localhost:9092 \
+		--partitions $${KAFKA_TOPIC_PARTITIONS:-1} \
+		--replication-factor $${KAFKA_TOPIC_REPLICATION_FACTOR:-1} \
+		--if-not-exists
+	@echo "Kafka topic created successfully."
 
 kafka-list-topics:
 	@echo "Listing Kafka topics..."
-	@docker exec kafka kafka-topics.sh --list --bootstrap-server localhost:9092
-	@echo "Kafka topics listed."
+	@docker exec kafka /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092
 
 kafka-describe-topics:
-	@echo "Describing Kafka topics..."
-	@docker exec kafka kafka-topics.sh --describe --topic quickstart-events --bootstrap-server localhost:9092
-	@echo "Kafka topic described."
+	@echo "Describing Kafka topic: $${KAFKA_TOPIC_NAME:-quickstart-events}..."
+	@docker exec kafka /opt/kafka/bin/kafka-topics.sh --describe \
+		--topic $${KAFKA_TOPIC_NAME:-quickstart-events} \
+		--bootstrap-server localhost:9092
 
 kafka-add-events:
-	@echo "Producing events to Kafka topic..."
-	@docker exec -i kafka kafka-console-producer.sh --topic quickstart-events --bootstrap-server localhost:9092
-	@echo "Events produced to Kafka topic."
+	@echo "Producing events to Kafka topic: $${KAFKA_TOPIC_NAME:-quickstart-events}..."
+	@echo "Type your messages (one per line). Press Ctrl+C to exit."
+	@docker exec -i kafka /opt/kafka/bin/kafka-console-producer.sh \
+		--topic $${KAFKA_TOPIC_NAME:-quickstart-events} \
+		--bootstrap-server localhost:9092
 
 kafka-get-all-events:
-	@echo "Getting all events from Kafka topic..."
-	@docker exec kafka kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server localhost:9092 --timeout-ms 10000
-	@echo "All events retrieved from Kafka topic."
+	@echo "Getting all events from Kafka topic: $${KAFKA_TOPIC_NAME:-quickstart-events}..."
+	@timeout 5 docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+		--topic $${KAFKA_TOPIC_NAME:-quickstart-events} \
+		--from-beginning \
+		--bootstrap-server localhost:9092 \
+		--partition 0 2>&1 || true
 
 kafka-consume-events:
-	@echo "Consuming events from Kafka topic..."
-	@docker exec kafka kafka-console-consumer.sh --topic quickstart-events --bootstrap-server localhost:9092 --group quickstart-group
-	@echo "Events consumed from Kafka topic."
+	@echo "Consuming new events from Kafka topic: $${KAFKA_TOPIC_NAME:-quickstart-events}..."
+	@echo "This will show only NEW messages. Use kafka:get-all-events to see all messages."
+	@echo "Press Ctrl+C to exit."
+	@docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+		--topic $${KAFKA_TOPIC_NAME:-quickstart-events} \
+		--bootstrap-server localhost:9092 \
+		--partition 0
 
 kafka-count-events:
-	@echo "Counting events in Kafka topic..."
-	@docker exec kafka kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group quickstart-group
-	@echo "Event count retrieved."
+	@echo "Counting events in Kafka topic: $${KAFKA_TOPIC_NAME:-quickstart-events}..."
+	@count=$$(timeout 3 docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+		--topic $${KAFKA_TOPIC_NAME:-quickstart-events} \
+		--from-beginning \
+		--bootstrap-server localhost:9092 \
+		--partition 0 2>/dev/null | wc -l); \
+	echo "Total messages: $$count"
