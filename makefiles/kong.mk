@@ -3,14 +3,20 @@
 kong:
 	@echo "🚀 Kong Management Commands:"
 	@echo ""
-	@echo "  kong:pull        - Pull Kong Docker image"
-	@echo "  kong:run         - Start Kong container"
-	@echo "  kong:stop        - Stop and remove Kong container"
-	@echo "  kong:restart     - Restart Kong container"
-	@echo "  kong:status      - Check Kong container status"
-	@echo "  kong:open        - Open Kong Admin UI in browser"
+	@echo "  kong:pull         - Pull Kong Docker image"
+	@echo "  kong:run          - Start Kong (mode: KONG_DB env variable)"
+	@echo "  kong:stop         - Stop and remove Kong containers"
+	@echo "  kong:restart      - Restart Kong containers"
+	@echo "  kong:status       - Check Kong container status"
+	@echo "  kong:open         - Open Kong Manager in browser"
 	@echo ""
-	@echo "Usage: make kong:run"
+	@echo "Configuration (.env file):"
+	@echo "  KONG_DB=off       - DB-less mode (uses kong/declarative/kong.yml)"
+	@echo "  KONG_DB=postgres  - Database mode (uses PostgreSQL)"
+	@echo ""
+	@echo "Usage:"
+	@echo "  make kong:run                  # Use mode from .env (default: off)"
+	@echo "  KONG_DB=postgres make kong:run # Override to use database mode"
 
 kong\:%:
 	@$(MAKE) kong-$(subst kong:,,$@)
@@ -19,26 +25,47 @@ kong\:%:
 
 kong-pull:
 	@echo "Pulling Kong Docker image..."
-	@docker pull kong:3.6
+	@docker pull kong:${KONG_VERSION:-3.6}
 	@echo "Kong image pulled successfully."
 
 kong-run:
-	@echo "Starting Kong container..."
-	@docker run --name kong -p 8000:8000 -p 8443:8443 -p 8001:8001 -p 8444:8444 kong:3.6
-	@echo "Kong container started."
+	@if [ "$${KONG_DB:-off}" = "postgres" ]; then \
+		echo "Starting Kong with PostgreSQL database..."; \
+		cd kong && KONG_DATABASE=postgres docker-compose --profile database up -d; \
+		echo ""; \
+		echo "Waiting for database migration to complete..."; \
+		sleep 5; \
+		cd kong && docker-compose logs kong-migration-bootstrap | tail -10; \
+		echo ""; \
+		echo "Kong started successfully with database!"; \
+	else \
+		echo "Starting Kong in DB-less mode..."; \
+		echo "Using declarative config: kong/declarative/kong.yml"; \
+		cd kong && docker-compose up -d kong; \
+		echo ""; \
+		echo "Kong started successfully!"; \
+	fi
+	@echo "  Admin API:     http://localhost:8001"
+	@echo "  Kong Manager:  http://localhost:8002"
+	@echo "  Proxy:         http://localhost:8000"
+	@echo ""
+	@if [ "$${KONG_DB:-off}" = "off" ]; then \
+		echo "Test the example service:"; \
+		echo "  curl http://localhost:8000/mock"; \
+	fi
 
 kong-stop:
-	@echo "Stopping Kong container..."
-	@docker stop kong
-	@docker rm kong
-	@echo "Kong container stopped and removed."
+	@echo "Stopping Kong containers..."
+	@cd kong && docker-compose --profile database down
+	@echo "Kong containers stopped and removed."
 
-kong-restart: kong-stop kong-run
+kong-restart:
+	@$(MAKE) kong-stop
+	@$(MAKE) kong-run
 
 kong-status:
 	@echo "Checking Kong container status..."
-	@docker ps -f "name=kong"
-	@echo "Kong container status checked."
+	@cd kong && docker-compose ps
 
 kong-open:
-	@bin/open_browser.sh http://localhost:8001
+	@bin/open_browser.sh http://localhost:8002

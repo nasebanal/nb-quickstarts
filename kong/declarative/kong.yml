@@ -1,0 +1,35 @@
+_format_version: "3.0"
+_transform: true
+
+# Sample service configuration
+services:
+  - name: example_service
+    url: https://httpbin.konghq.com
+    routes:
+      - name: example_route
+        paths:
+          - /mock
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 5
+          policy: local
+
+  - name: echo_service
+    url: https://httpbin.org
+    routes:
+      - name: echo_route
+        paths:
+          - /echo
+        methods:
+          - GET
+          - POST
+
+# You can add more services, routes, plugins here
+# Example:
+# - name: my_api
+#   url: http://my-backend:8080
+#   routes:
+#     - name: my_route
+#       paths:
+#         - /api
