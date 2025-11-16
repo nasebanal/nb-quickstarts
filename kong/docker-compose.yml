@@ -42,14 +42,14 @@ services:
     container_name: kong
     environment:
       # Database settings (for database mode)
-      KONG_DATABASE: ${KONG_DATABASE:-off}
+      KONG_DATABASE: ${KONG_DB:-off}
       KONG_PG_HOST: ${KONG_PG_HOST:-kong-database}
       KONG_PG_USER: ${KONG_PG_USER:-kong}
       KONG_PG_PASSWORD: ${KONG_PG_PASSWORD:-kongpass}
       KONG_PG_DATABASE: ${KONG_PG_DATABASE:-kong}
 
       # DB-less mode settings
-      KONG_DECLARATIVE_CONFIG: ${KONG_DECLARATIVE_CONFIG:-/kong/declarative/kong.yml}
+      KONG_DECLARATIVE_CONFIG: ${KONG_DECLARATIVE_CONFIG:-/kong/conf/declarative.yml}
 
       # Proxy settings
       KONG_PROXY_ACCESS_LOG: /dev/stdout
@@ -70,7 +70,7 @@ services:
     networks:
       - kong-net
     volumes:
-      - ./declarative:/kong/declarative:ro
+      - ./conf:/kong/conf:ro
     healthcheck:
       test: ["CMD", "kong", "health"]
       interval: 10s

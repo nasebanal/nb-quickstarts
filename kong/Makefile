@@ -3,20 +3,26 @@
 kong:
 	@echo "🚀 Kong Management Commands:"
 	@echo ""
-	@echo "  kong:pull         - Pull Kong Docker image"
-	@echo "  kong:run          - Start Kong (mode: KONG_DB env variable)"
-	@echo "  kong:stop         - Stop and remove Kong containers"
-	@echo "  kong:restart      - Restart Kong containers"
-	@echo "  kong:status       - Check Kong container status"
-	@echo "  kong:open         - Open Kong Manager in browser"
+	@echo "  kong:pull            - Pull Kong Docker image"
+	@echo "  kong:run             - Start Kong (mode: KONG_DB env variable)"
+	@echo "  kong:stop            - Stop and remove Kong containers"
+	@echo "  kong:restart         - Restart Kong containers"
+	@echo "  kong:status          - Check Kong container status"
+	@echo "  kong:open            - Open Kong Manager in browser"
+	@echo "  kong:list            - List all services and routes"
+	@echo "  kong:reset-config    - Reset configuration (reload declarative.yml)"
 	@echo ""
 	@echo "Configuration (.env file):"
-	@echo "  KONG_DB=off       - DB-less mode (uses kong/declarative/kong.yml)"
+	@echo "  KONG_DB=off       - DB-less mode (uses kong/conf/declarative.yml)"
 	@echo "  KONG_DB=postgres  - Database mode (uses PostgreSQL)"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make kong:run                  # Use mode from .env (default: off)"
 	@echo "  KONG_DB=postgres make kong:run # Override to use database mode"
+	@echo ""
+	@echo "Test endpoints:"
+	@echo "  curl http://localhost:8000/mock"
+	@echo "  curl http://localhost:8000/echo/get"
 
 kong\:%:
 	@$(MAKE) kong-$(subst kong:,,$@)
@@ -40,7 +46,7 @@ kong-run:
 		echo "Kong started successfully with database!"; \
 	else \
 		echo "Starting Kong in DB-less mode..."; \
-		echo "Using declarative config: kong/declarative/kong.yml"; \
+		echo "Using declarative config: kong/conf/declarative.yml"; \
 		cd kong && docker-compose up -d kong; \
 		echo ""; \
 		echo "Kong started successfully!"; \
@@ -69,3 +75,9 @@ kong-status:
 
 kong-open:
 	@bin/open_browser.sh http://localhost:8002
+
+kong-reset-config:
+	@cd kong && ./bin/reset_config.sh
+
+kong-list:
+	@cd kong && ./bin/list_services.sh
