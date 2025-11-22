@@ -50,6 +50,7 @@ kong-run:
 		fi; \
 	fi
 	@if [ "$${KONG_DB:-off}" = "postgres" ]; then \
+		IS_FIRST_RUN=$$(docker volume ls -q | grep -q '^kong_kong-db-data$$' && echo "no" || echo "yes"); \
 		echo "Starting Kong with PostgreSQL database..."; \
 		KONG_DATABASE=postgres docker-compose -f kong/docker-compose.yml --profile database up -d; \
 		echo ""; \
@@ -58,10 +59,16 @@ kong-run:
 		docker-compose -f kong/docker-compose.yml logs kong-migration-bootstrap | tail -10; \
 		echo ""; \
 		echo "Kong started successfully with database!"; \
-		echo ""; \
-		echo "Importing configuration from kong/conf/declarative.yml..."; \
-		sleep 3; \
-		./kong/bin/import_config.sh; \
+		if [ "$$IS_FIRST_RUN" = "yes" ]; then \
+			echo ""; \
+			echo "First run detected. Importing configuration from kong/conf/declarative.yml..."; \
+			sleep 3; \
+			./kong/bin/import_config.sh; \
+		else \
+			echo ""; \
+			echo "Existing database found. Skipping configuration import."; \
+			echo "To re-import configuration, run: make kong:reset"; \
+		fi; \
 	else \
 		echo "Starting Kong in DB-less mode..."; \
 		echo "Using declarative config: kong/conf/declarative.yml"; \
