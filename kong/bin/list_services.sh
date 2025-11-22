@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Load .env if exists
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
