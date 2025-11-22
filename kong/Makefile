@@ -11,6 +11,7 @@ kong:
 	@echo "  kong:open            - Open Kong Manager in browser"
 	@echo "  kong:list            - List all services and routes"
 	@echo "  kong:reset           - Reset configuration (reload declarative.yml)"
+	@echo "  kong:test-rate-limit - Test rate limiting with multiple requests"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  KONG_DB=off       - DB-less mode (uses kong/conf/declarative.yml)"
@@ -104,3 +105,6 @@ kong-reset:
 
 kong-list:
 	@cd kong && ./bin/list_services.sh
+
+kong-test-rate-limit:
+	@./kong/bin/test_rate_limit.sh
