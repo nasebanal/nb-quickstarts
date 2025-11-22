@@ -48,7 +48,7 @@ This repository contains a curated collection of quickstart projects designed to
 
    # Kong API Gateway
    make kong:run
-   make kong:open              # Open Kong Manager
+   make kong:open
 
    # Locust Load Testing
    make locust:run

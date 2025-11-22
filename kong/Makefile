@@ -18,11 +18,13 @@ kong:
 	@echo ""
 	@echo "Usage:"
 	@echo "  make kong:run                  # Use mode from .env (default: off)"
-	@echo "  KONG_DB=postgres make kong:run # Override to use database mode"
+	@echo "  make kong:run KONG_DB=postgres # Override to use database mode"
 	@echo ""
 	@echo "Test endpoints:"
 	@echo "  curl http://localhost:8000/mock"
 	@echo "  curl http://localhost:8000/echo/get"
+
+export KONG_DB
 
 kong\:%:
 	@$(MAKE) kong-$(subst kong:,,$@)
@@ -37,17 +39,17 @@ kong-pull:
 kong-run:
 	@if [ "$${KONG_DB:-off}" = "postgres" ]; then \
 		echo "Starting Kong with PostgreSQL database..."; \
-		cd kong && KONG_DATABASE=postgres docker-compose --profile database up -d; \
+		KONG_DATABASE=postgres docker-compose -f kong/docker-compose.yml --profile database up -d; \
 		echo ""; \
 		echo "Waiting for database migration to complete..."; \
 		sleep 5; \
-		cd kong && docker-compose logs kong-migration-bootstrap | tail -10; \
+		docker-compose -f kong/docker-compose.yml logs kong-migration-bootstrap | tail -10; \
 		echo ""; \
 		echo "Kong started successfully with database!"; \
 	else \
 		echo "Starting Kong in DB-less mode..."; \
 		echo "Using declarative config: kong/conf/declarative.yml"; \
-		cd kong && docker-compose up -d kong; \
+		docker-compose -f kong/docker-compose.yml up -d kong; \
 		echo ""; \
 		echo "Kong started successfully!"; \
 	fi
@@ -62,7 +64,7 @@ kong-run:
 
 kong-stop:
 	@echo "Stopping Kong containers..."
-	@cd kong && docker-compose --profile database down
+	@docker-compose -f kong/docker-compose.yml --profile database down
 	@echo "Kong containers stopped and removed."
 
 kong-restart:
@@ -71,7 +73,7 @@ kong-restart:
 
 kong-status:
 	@echo "Checking Kong container status..."
-	@cd kong && docker-compose ps
+	@docker-compose -f kong/docker-compose.yml ps
 
 kong-open:
 	@bin/open_browser.sh http://localhost:8002
