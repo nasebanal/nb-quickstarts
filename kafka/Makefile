@@ -36,7 +36,7 @@ kafka-pull:
 
 kafka-run:
 	@echo "Starting Kafka containers (KRaft mode)..."
-	@cd kafka && docker-compose up -d
+	@docker-compose -f kafka/docker-compose.yml up -d
 	@echo ""
 	@echo "Kafka started successfully!"
 	@echo "  Broker:     localhost:${KAFKA_PORT:-9092}"
@@ -48,7 +48,7 @@ kafka-run:
 
 kafka-stop:
 	@echo "Stopping Kafka containers..."
-	@cd kafka && docker-compose down
+	@docker-compose -f kafka/docker-compose.yml down
 	@echo "Kafka containers stopped and removed."
 
 kafka-restart:
@@ -57,7 +57,7 @@ kafka-restart:
 
 kafka-status:
 	@echo "Checking Kafka container status..."
-	@cd kafka && docker-compose ps
+	@docker-compose -f kafka/docker-compose.yml ps
 
 kafka-add-topics:
 	@echo "Creating Kafka topic: $${KAFKA_TOPIC_NAME:-quickstart-events}..."

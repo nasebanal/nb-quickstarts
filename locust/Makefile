@@ -68,7 +68,10 @@ locust-run:
 	@echo "Using Locust file: $${LOCUST_FILE:-locustfile_http.py}"
 	@echo "Tags: $${LOCUST_TAGS:-none}"
 	@echo "Workers: $${LOCUST_WORKERS:-1}"
-	@cd locust && docker-compose up -d --scale locust-worker=$${LOCUST_WORKERS:-1}
+	@LOCUST_FILE=$${LOCUST_FILE:-locustfile_http.py} \
+		LOCUST_TAGS=$${LOCUST_TAGS:-} \
+		LOCUST_HOST=$${LOCUST_HOST:-http://http-server:8080} \
+		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-1}
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089 and HTTP server at http://localhost:8080"
 
 locust-open:
@@ -76,7 +79,7 @@ locust-open:
 
 locust-stop:
 	@echo "Stopping HTTP server, MySQL, and Locust containers..."
-	@cd locust && docker-compose down
+	@docker-compose -f locust/docker-compose.yml down
 	@rm -f .locust_cluster_mode
 	@echo "All containers stopped and removed."
 
@@ -86,63 +89,93 @@ locust-restart:
 
 locust-status:
 	@echo "Checking Locust container status..."
-	@cd locust && docker-compose ps
+	@docker-compose -f locust/docker-compose.yml ps
 
 locust-test-http:
 	@echo "Starting HTTP server load test..."
-	@LOCUST_FILE=locustfile_http.py LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		$(MAKE) locust-run
+	@$(MAKE) locust-stop
+	@echo "Starting Locust containers..."
+	@LOCUST_FILE=locustfile_http.py \
+		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
+		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-http-root:
 	@echo "Starting HTTP root page load test..."
-	@LOCUST_FILE=locustfile_http.py LOCUST_TAGS=http-root LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		$(MAKE) locust-run
+	@$(MAKE) locust-stop
+	@echo "Starting Locust containers..."
+	@LOCUST_FILE=locustfile_http.py \
+		LOCUST_TAGS=http-root \
+		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
+		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-http-login:
 	@echo "Starting HTTP login load test..."
-	@LOCUST_FILE=locustfile_http.py LOCUST_TAGS=http-login LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		$(MAKE) locust-run
+	@$(MAKE) locust-stop
+	@echo "Starting Locust containers..."
+	@LOCUST_FILE=locustfile_http.py \
+		LOCUST_TAGS=http-login \
+		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
+		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-graphql:
 	@echo "Starting GraphQL load test (all operations)..."
-	@LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS="graphql-query graphql-mutation" LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		$(MAKE) locust-run
+	@$(MAKE) locust-stop
+	@echo "Starting Locust containers..."
+	@LOCUST_FILE=locustfile_graphql.py \
+		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
+		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-graphql-query:
 	@echo "Starting GraphQL query load test (read operations)..."
-	@LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS=graphql-query LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		$(MAKE) locust-run
+	@$(MAKE) locust-stop
+	@echo "Starting Locust containers..."
+	@LOCUST_FILE=locustfile_graphql.py \
+		LOCUST_TAGS=graphql-query \
+		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
+		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-graphql-mutation:
 	@echo "Starting GraphQL mutation load test (write operations)..."
-	@LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS=graphql-mutation LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		$(MAKE) locust-run
+	@$(MAKE) locust-stop
+	@echo "Starting Locust containers..."
+	@LOCUST_FILE=locustfile_graphql.py \
+		LOCUST_TAGS=graphql-mutation \
+		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
+		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-mysql:
 	@echo "Starting MySQL load test..."
+	@$(MAKE) locust-stop
+	@echo "Starting Locust containers..."
 	@LOCUST_FILE=locustfile_mysql.py \
 		LOCUST_HOST=mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
-		$(MAKE) locust-run
+		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-mysql-select:
 	@echo "Starting MySQL select load test..."
-	@LOCUST_FILE=locustfile_mysql.py LOCUST_TAGS=mysql-select \
+	@$(MAKE) locust-stop
+	@echo "Starting Locust containers..."
+	@LOCUST_FILE=locustfile_mysql.py \
+		LOCUST_TAGS=mysql-select \
 		LOCUST_HOST=mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
-		$(MAKE) locust-run
+		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-mysql-cartesian:
 	@echo "Starting MySQL cartesian join load test..."
-	@LOCUST_FILE=locustfile_mysql.py LOCUST_TAGS=mysql-cartesian \
+	@$(MAKE) locust-stop
+	@echo "Starting Locust containers..."
+	@LOCUST_FILE=locustfile_mysql.py \
+		LOCUST_TAGS=mysql-cartesian \
 		LOCUST_HOST=mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
-		$(MAKE) locust-run
+		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-join-cluster:

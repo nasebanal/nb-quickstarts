@@ -43,7 +43,7 @@ consul-pull:
 
 consul-run:
 	@echo "Starting Consul containers..."
-	@cd consul && docker-compose up -d
+	@docker-compose -f consul/docker-compose.yml up -d
 	@echo ""
 	@echo "Consul started successfully!"
 	@echo "  HTTP API: http://localhost:$${CONSUL_HTTP_PORT:-8500}"
@@ -55,7 +55,7 @@ consul-run:
 
 consul-stop:
 	@echo "Stopping Consul containers..."
-	@cd consul && docker-compose down
+	@docker-compose -f consul/docker-compose.yml down
 	@echo "Consul containers stopped and removed."
 
 consul-restart:
@@ -64,7 +64,7 @@ consul-restart:
 
 consul-status:
 	@echo "Checking Consul container status..."
-	@cd consul && docker-compose ps
+	@docker-compose -f consul/docker-compose.yml ps
 
 consul-open:
 	@bin/open_browser.sh http://localhost:8500
