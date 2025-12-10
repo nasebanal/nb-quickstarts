@@ -40,6 +40,7 @@ services:
       MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
       MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
       MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
+      DEBUG_MODE: ${DEBUG_MODE:-false}
     command: >
       -f /mnt/locust/bin/${LOCUST_FILE:-locustfile_http.py}
       --master
@@ -63,6 +64,7 @@ services:
       MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
       MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
       MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
+      DEBUG_MODE: ${DEBUG_MODE:-false}
     command: >
       -f /mnt/locust/bin/${LOCUST_FILE:-locustfile_http.py}
       --worker

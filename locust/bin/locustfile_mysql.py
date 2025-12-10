@@ -17,6 +17,7 @@ class MySQLUser(User):
     wait_time = between(0.1, 0.5)
     # Set host for display in Locust UI
     host = f"mysql://{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
+    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
 
     def on_start(self):
         """Initialize MySQL connection when user starts"""
@@ -83,6 +84,15 @@ class MySQLUser(User):
                 exception=None,
                 context={}
             )
+
+            # Debug logging
+            if self.debug_mode:
+                print(f"✅ [MySQL Select] Retrieved {len(results)} row(s) in {total_time}ms")
+                for row in results[:3]:  # Show first 3 rows only
+                    print(f"  - {row[:3]}...")  # Show first 3 columns of each row
+                if len(results) > 3:
+                    print(f"  ... and {len(results) - 3} more rows")
+
         except Exception as e:
             total_time = int((time.time() - start_time) * 1000)
             events.request.fire(
@@ -93,6 +103,8 @@ class MySQLUser(User):
                 exception=e,
                 context={}
             )
+            if self.debug_mode:
+                print(f"❌ [MySQL Select] Error: {e}")
             self.connection = None
 
     @task

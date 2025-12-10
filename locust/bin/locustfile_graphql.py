@@ -4,12 +4,13 @@ import os
 class WebsiteUser(HttpUser):
     wait_time = between(1, 3)
     host = os.getenv("LOCUST_HTTP_HOST", "http://localhost:8080")
+    debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
 
     @task
     @tag('graphql-query')
     def graphql_query(self):
         """GraphQL: Query posts (read operation)"""
-        self.client.post("/graphql", name="/graphql (query)", json={
+        response = self.client.post("/graphql", name="/graphql (query)", json={
             "query": """
                 query {
                     posts {
@@ -27,6 +28,20 @@ class WebsiteUser(HttpUser):
                 }
             """
         })
+
+        # Debug logging
+        if self.debug_mode and response.status_code == 200:
+            try:
+                data = response.json()
+                if "data" in data and "posts" in data["data"]:
+                    posts = data["data"]["posts"]
+                    print(f"✅ [GraphQL Query] Retrieved {len(posts)} post(s)")
+                    for post in posts[:3]:  # Show first 3 only
+                        print(f"  - Post ID:{post.get('id')} Title:{post.get('title')} Author:{post.get('author', {}).get('name', 'N/A')}")
+                    if len(posts) > 3:
+                        print(f"  ... and {len(posts) - 3} more")
+            except Exception as e:
+                print(f"⚠️  [GraphQL Query] Failed to parse response: {e}")
 
     @task
     @tag('graphql-mutation')

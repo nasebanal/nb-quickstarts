@@ -1,3 +1,11 @@
+#################### ENVIRONMENT SETUP ###################
+
+# Load .env file if it exists
+ifneq (,$(wildcard ../.env))
+    include ../.env
+    export
+endif
+
 #################### KONG MANAGEMENT ###################
 
 kong:
