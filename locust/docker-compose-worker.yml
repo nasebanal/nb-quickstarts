@@ -1,0 +1,18 @@
+services:
+  locust-worker:
+    image: ${LOCUST_IMAGE:-locust-mysql:latest}
+    network_mode: host
+    volumes:
+      - ./:/mnt/locust
+    environment:
+      MYSQL_HOST: ${LOCUST_MYSQL_HOST:-mysql-server}
+      MYSQL_PORT: ${LOCUST_MYSQL_PORT:-3306}
+      MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
+      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
+      MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
+      MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
+      DEBUG_MODE: ${DEBUG_MODE:-false}
+    command: >
+      -f /mnt/locust/bin/${LOCUST_FILE:-locustfile_http.py}
+      --worker
+      --master-host=${LOCUST_MASTER_HOST}

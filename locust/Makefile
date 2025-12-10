@@ -25,6 +25,7 @@ locust:
 	@echo ""
 	@echo "Cluster Management:"
 	@echo "  locust:join-cluster - Join an existing Locust cluster as worker from remote PC"
+	@echo "  locust:stop-workers - Stop remote worker containers"
 	@echo ""
 	@echo "Usage:"
 	@echo "  1. Copy .env.example to .env:  cp .env.example .env"
@@ -71,7 +72,7 @@ locust-run:
 	@LOCUST_FILE=$${LOCUST_FILE:-locustfile_http.py} \
 		LOCUST_TAGS=$${LOCUST_TAGS:-} \
 		LOCUST_HOST=$${LOCUST_HOST:-http://http-server:8080} \
-		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-1}
+		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-1}
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089 and HTTP server at http://localhost:8080"
 
 locust-open:
@@ -79,7 +80,7 @@ locust-open:
 
 locust-stop:
 	@echo "Stopping HTTP server, MySQL, and Locust containers..."
-	@docker-compose -f locust/docker-compose.yml down
+	@docker compose -f locust/docker-compose.yml down
 	@rm -f .locust_cluster_mode
 	@echo "All containers stopped and removed."
 
@@ -89,7 +90,7 @@ locust-restart:
 
 locust-status:
 	@echo "Checking Locust container status..."
-	@docker-compose -f locust/docker-compose.yml ps
+	@docker compose -f locust/docker-compose.yml ps
 
 locust-test-http:
 	@echo "Starting HTTP server load test..."
@@ -97,7 +98,7 @@ locust-test-http:
 	@echo "Starting Locust containers..."
 	@LOCUST_FILE=locustfile_http.py \
 		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
+		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-http-root:
@@ -107,7 +108,7 @@ locust-test-http-root:
 	@LOCUST_FILE=locustfile_http.py \
 		LOCUST_TAGS=http-root \
 		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
+		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-http-login:
@@ -117,7 +118,7 @@ locust-test-http-login:
 	@LOCUST_FILE=locustfile_http.py \
 		LOCUST_TAGS=http-login \
 		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
+		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-graphql:
@@ -126,7 +127,7 @@ locust-test-graphql:
 	@echo "Starting Locust containers..."
 	@LOCUST_FILE=locustfile_graphql.py \
 		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
+		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-graphql-query:
@@ -136,7 +137,7 @@ locust-test-graphql-query:
 	@LOCUST_FILE=locustfile_graphql.py \
 		LOCUST_TAGS=graphql-query \
 		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
+		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-graphql-mutation:
@@ -146,7 +147,7 @@ locust-test-graphql-mutation:
 	@LOCUST_FILE=locustfile_graphql.py \
 		LOCUST_TAGS=graphql-mutation \
 		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
+		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-mysql:
@@ -155,7 +156,7 @@ locust-test-mysql:
 	@echo "Starting Locust containers..."
 	@LOCUST_FILE=locustfile_mysql.py \
 		LOCUST_HOST=mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
-		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
+		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-mysql-select:
@@ -165,7 +166,7 @@ locust-test-mysql-select:
 	@LOCUST_FILE=locustfile_mysql.py \
 		LOCUST_TAGS=mysql-select \
 		LOCUST_HOST=mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
-		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
+		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-mysql-cartesian:
@@ -175,19 +176,26 @@ locust-test-mysql-cartesian:
 	@LOCUST_FILE=locustfile_mysql.py \
 		LOCUST_TAGS=mysql-cartesian \
 		LOCUST_HOST=mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} \
-		docker-compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
+		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-join-cluster:
 	@echo "Joining existing Locust cluster..."
 	@if [ -z "$${LOCUST_MASTER_HOST}" ]; then \
 		echo "Error: LOCUST_MASTER_HOST is required"; \
-		echo "Usage: make locust:join-cluster LOCUST_MASTER_HOST=<master-ip> [LOCUST_WORKERS=n]"; \
-		echo "After joining, run specific test commands like: make locust:test-http-login"; \
+		echo "Usage: make locust:join-cluster LOCUST_MASTER_HOST=<master-ip> [LOCUST_WORKERS=n] [LOCUST_FILE=locustfile.py]"; \
 		exit 1; \
 	fi
 	@echo "Building Locust image if needed..."
 	@docker build -t $${LOCUST_IMAGE:-locust-mysql:latest} locust/ || true
-	@echo "$${LOCUST_MASTER_HOST}" > .locust_cluster_mode
-	@echo "Cluster mode activated. Workers will connect to $${LOCUST_MASTER_HOST}"
-	@echo "Ready to join cluster at $${LOCUST_MASTER_HOST}. Use specific test commands to start workers."
+	@echo "Starting $${LOCUST_WORKERS:-1} worker(s) to connect to $${LOCUST_MASTER_HOST}..."
+	@LOCUST_FILE=$${LOCUST_FILE:-locustfile_http.py} \
+		LOCUST_MASTER_HOST=$${LOCUST_MASTER_HOST} \
+		docker compose -f locust/docker-compose-worker.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-1}
+	@echo "Workers started and connected to cluster at $${LOCUST_MASTER_HOST}"
+	@echo "Check master UI at http://$${LOCUST_MASTER_HOST}:8089"
+
+locust-stop-workers:
+	@echo "Stopping remote worker containers..."
+	@docker compose -f locust/docker-compose-worker.yml down
+	@echo "Remote workers stopped and removed."
