@@ -12,7 +12,8 @@ services:
       MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
       MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
       DEBUG_MODE: ${DEBUG_MODE:-false}
-    command: >
-      -f /mnt/locust/bin/${LOCUST_FILE:-locustfile_http.py}
-      --worker
-      --master-host=${LOCUST_MASTER_HOST}
+    command:
+      - "-f"
+      - "/mnt/locust/bin/${LOCUST_FILE:-locustfile_http.py}"
+      - "--worker"
+      - "--master-host=${LOCUST_MASTER_HOST}"

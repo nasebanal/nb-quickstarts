@@ -1,5 +1,11 @@
 #################### LOCUST MANAGEMENT ###################
 
+# Load .env file if it exists
+ifneq (,$(wildcard .env))
+	include .env
+	export
+endif
+
 locust:
 	@echo "🚀 Locust Load Testing Commands:"
 	@echo ""
@@ -25,7 +31,6 @@ locust:
 	@echo ""
 	@echo "Cluster Management:"
 	@echo "  locust:join-cluster - Join an existing Locust cluster as worker from remote PC"
-	@echo "  locust:stop-workers - Stop remote worker containers"
 	@echo ""
 	@echo "Usage:"
 	@echo "  1. Copy .env.example to .env:  cp .env.example .env"
@@ -81,6 +86,7 @@ locust-open:
 locust-stop:
 	@echo "Stopping HTTP server, MySQL, and Locust containers..."
 	@docker compose -f locust/docker-compose.yml down
+	@docker compose -f locust/docker-compose-worker.yml down 2>/dev/null || true
 	@rm -f .locust_cluster_mode
 	@echo "All containers stopped and removed."
 
@@ -181,21 +187,17 @@ locust-test-mysql-cartesian:
 
 locust-join-cluster:
 	@echo "Joining existing Locust cluster..."
-	@if [ -z "$${LOCUST_MASTER_HOST}" ]; then \
+	@if [ -z "$(LOCUST_MASTER_HOST)" ]; then \
 		echo "Error: LOCUST_MASTER_HOST is required"; \
-		echo "Usage: make locust:join-cluster LOCUST_MASTER_HOST=<master-ip> [LOCUST_WORKERS=n] [LOCUST_FILE=locustfile.py]"; \
+		echo "Set it in .env file or pass as argument: make locust:join-cluster LOCUST_MASTER_HOST=<master-ip>"; \
+		echo "Usage: make locust:join-cluster [LOCUST_MASTER_HOST=<master-ip>] [LOCUST_WORKERS=n] [LOCUST_FILE=locustfile.py]"; \
 		exit 1; \
 	fi
 	@echo "Building Locust image if needed..."
-	@docker build -t $${LOCUST_IMAGE:-locust-mysql:latest} locust/ || true
-	@echo "Starting $${LOCUST_WORKERS:-1} worker(s) to connect to $${LOCUST_MASTER_HOST}..."
-	@LOCUST_FILE=$${LOCUST_FILE:-locustfile_http.py} \
-		LOCUST_MASTER_HOST=$${LOCUST_MASTER_HOST} \
-		docker compose -f locust/docker-compose-worker.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-1}
-	@echo "Workers started and connected to cluster at $${LOCUST_MASTER_HOST}"
-	@echo "Check master UI at http://$${LOCUST_MASTER_HOST}:8089"
-
-locust-stop-workers:
-	@echo "Stopping remote worker containers..."
-	@docker compose -f locust/docker-compose-worker.yml down
-	@echo "Remote workers stopped and removed."
+	@docker build -t $(LOCUST_IMAGE) locust/ 2>/dev/null || docker build -t locust-mysql:latest locust/ || true
+	@echo "Starting $(LOCUST_WORKERS) worker(s) to connect to $(LOCUST_MASTER_HOST)..."
+	@LOCUST_FILE=$(LOCUST_FILE) \
+		LOCUST_MASTER_HOST=$(LOCUST_MASTER_HOST) \
+		docker compose -f locust/docker-compose-worker.yml up -d --scale locust-worker=$(LOCUST_WORKERS)
+	@echo "Workers started and connected to cluster at $(LOCUST_MASTER_HOST)"
+	@echo "Check master UI at http://$(LOCUST_MASTER_HOST):8089"
