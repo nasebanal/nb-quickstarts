@@ -77,7 +77,7 @@ locust-run:
 	@LOCUST_FILE=$${LOCUST_FILE:-locustfile_http.py} \
 		LOCUST_TAGS=$${LOCUST_TAGS:-} \
 		LOCUST_HOST=$${LOCUST_HOST:-http://http-server:8080} \
-		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-1}
+		docker compose -f locust/docker-compose.yml up -d --scale worker=$${LOCUST_WORKERS:-1}
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089 and HTTP server at http://localhost:8080"
 
 locust-open:
@@ -104,7 +104,7 @@ locust-test-http:
 	@echo "Starting Locust containers..."
 	@LOCUST_FILE=locustfile_http.py \
 		LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} \
-		docker compose -f locust/docker-compose.yml up -d --scale locust-worker=$${LOCUST_WORKERS:-5}
+		docker compose -f locust/docker-compose.yml up -d --scale worker=$${LOCUST_WORKERS:-5}
 	@echo "Locust UI available at http://localhost:8089"
 
 locust-test-http-root:
@@ -198,6 +198,6 @@ locust-join-cluster:
 	@echo "Starting $(LOCUST_WORKERS) worker(s) to connect to $(LOCUST_MASTER_HOST)..."
 	@LOCUST_FILE=$(LOCUST_FILE) \
 		LOCUST_MASTER_HOST=$(LOCUST_MASTER_HOST) \
-		docker compose -f locust/docker-compose-worker.yml up -d --scale locust-worker=$(LOCUST_WORKERS)
+		docker compose -f locust/docker-compose-worker.yml up -d --scale worker=$(LOCUST_WORKERS)
 	@echo "Workers started and connected to cluster at $(LOCUST_MASTER_HOST)"
 	@echo "Check master UI at http://$(LOCUST_MASTER_HOST):8089"

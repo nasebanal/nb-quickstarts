@@ -53,7 +53,7 @@ services:
       - http-server
       - mysql-server
 
-  locust-worker:
+  worker:
     image: ${LOCUST_IMAGE:-locust-mysql:latest}
     volumes:
       - ./:/mnt/locust
