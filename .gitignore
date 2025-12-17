@@ -13,3 +13,6 @@ __pycache__/
 
 # Locust cluster mode flag file
 .locust_cluster_mode
+locust/logs/
+locust/.result_log_pid
+locust/.debug_log_pid

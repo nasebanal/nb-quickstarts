@@ -40,13 +40,25 @@ services:
       MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
       MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
       MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
-      DEBUG_MODE: ${DEBUG_MODE:-false}
+      DEBUG_MODE: ${LOCUST_DEBUG_MODE:-false}
+      HTTP_HOST: ${LOCUST_HTTP_HOST:-http://http-server:8080}
+      PYTHONUNBUFFERED: 1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: >
       -f /mnt/locust/bin/${LOCUST_FILE:-locustfile_http.py}
       --master
       --master-bind-host=0.0.0.0
       --host=${LOCUST_HOST:-http://http-server:8080}
       ${LOCUST_TAGS:+--tags ${LOCUST_TAGS}}
+      ${LOCUST_HEADLESS_FLAG}
+      ${LOCUST_USERS:+--users ${LOCUST_USERS}}
+      ${LOCUST_SPAWN_RATE:+--spawn-rate ${LOCUST_SPAWN_RATE}}
+      ${LOCUST_RUN_TIME:+--run-time ${LOCUST_RUN_TIME}}
+      ${LOCUST_LOGFILE:+--logfile ${LOCUST_LOGFILE}}
+      ${LOCUST_LOGLEVEL:+--loglevel ${LOCUST_LOGLEVEL}}
+      ${LOCUST_CSV_PREFIX:+--csv ${LOCUST_CSV_PREFIX}}
+      ${LOCUST_HTML_FILE:+--html ${LOCUST_HTML_FILE}}
     networks:
       - locust-network
     depends_on:
@@ -64,7 +76,11 @@ services:
       MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
       MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
       MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
-      DEBUG_MODE: ${DEBUG_MODE:-false}
+      DEBUG_MODE: ${LOCUST_DEBUG_MODE:-false}
+      HTTP_HOST: ${LOCUST_HTTP_HOST:-http://http-server:8080}
+      PYTHONUNBUFFERED: 1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: >
       -f /mnt/locust/bin/${LOCUST_FILE:-locustfile_http.py}
       --worker

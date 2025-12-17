@@ -3,7 +3,7 @@ import os
 
 class WebsiteUser(HttpUser):
     wait_time = between(1, 3)
-    host = os.getenv("LOCUST_HTTP_HOST", "http://localhost:8080")
+    host = os.getenv("HTTP_HOST", "http://localhost:8080")
 
     @task
     @tag('http-root')

@@ -1,5 +1,5 @@
 services:
-  worker:
+  locust-worker:
     image: ${LOCUST_IMAGE:-locust-mysql:latest}
     network_mode: host
     volumes:
