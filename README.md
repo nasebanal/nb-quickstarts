@@ -114,11 +114,16 @@ LOCUST_MYSQL_CARTESIAN_LIMIT=10000 # LIMIT for cartesian join queries
 LOCUST_HEADLESS_FLAG=              # Set to --headless for headless mode
 LOCUST_USERS=10                    # Number of concurrent users
 LOCUST_SPAWN_RATE=1                # User spawn rate (users/second)
-LOCUST_RUN_TIME=                   # Test duration (e.g., 1h30m, 60s)
+LOCUST_RUN_TIME=60s                # [REQUIRED in headless mode] Test duration (e.g., 1h30m, 60s)
 
 # Cluster Configuration
 LOCUST_MASTER_HOST=192.168.1.100   # Master IP for distributed testing
 ```
+
+> **Warning: Headless mode runs without user intervention.**
+> In headless mode (`LOCUST_HEADLESS_FLAG=--headless`), the load test starts automatically and continues until explicitly stopped.
+> **Always set `LOCUST_RUN_TIME`** to limit the test duration and prevent unintended sustained load on the target system.
+> If `LOCUST_RUN_TIME` is not set, `make locust:run` will exit with an error to avoid runaway load tests.
 
 **Log Files:**
 

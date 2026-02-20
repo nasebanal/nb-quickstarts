@@ -90,6 +90,11 @@ locust-pull:
 	@echo "Locust image pulled successfully."
 
 locust-run:
+	@if [ "$${LOCUST_HEADLESS_FLAG}" = "--headless" ] && [ -z "$${LOCUST_RUN_TIME}" ]; then \
+		echo "Error: LOCUST_RUN_TIME is required in headless mode"; \
+		echo "Set it in .env file (e.g., LOCUST_RUN_TIME=60s)"; \
+		exit 1; \
+	fi
 	@echo "Starting HTTP server, MySQL, and Locust containers with Docker Compose..."
 	@echo "Using Locust file: $${LOCUST_FILE:-locustfile_http.py}"
 	@echo "Tags: $${LOCUST_TAGS:-none}"
