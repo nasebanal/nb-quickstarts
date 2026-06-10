@@ -11,6 +11,9 @@ __pycache__/
 # Environment variables (contains sensitive information)
 .env
 
+# Claude Code local instructions
+CLAUDE.md
+
 # Locust cluster mode flag file
 .locust_cluster_mode
 locust/logs/

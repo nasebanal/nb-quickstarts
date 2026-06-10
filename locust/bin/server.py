@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 import http.server
 import socketserver
-import urllib.parse
 import json
 import os
 import re
-from functools import partial
 from datetime import datetime
 
 PORT = 8080
@@ -527,11 +525,11 @@ if __name__ == "__main__":
         print(f"Document root: {os.path.abspath(DOCUMENT_ROOT)}")
         print(f"Access at: http://localhost:{PORT}")
         print(f"Multi-threaded server ready for high concurrency (queue size: {httpd.request_queue_size})")
-        print(f"Endpoints:")
-        print(f"  - /api/auth/login (POST) - Employee authentication")
-        print(f"  - /api/graphql (POST) - GraphQL API with auth (transfer vouchers)")
-        print(f"  - /login (POST) - Basic login")
-        print(f"  - /graphql (POST) - GraphQL API (posts)")
+        print("Endpoints:")
+        print("  - /api/auth/login (POST) - Employee authentication")
+        print("  - /api/graphql (POST) - GraphQL API with auth (transfer vouchers)")
+        print("  - /login (POST) - Basic login")
+        print("  - /graphql (POST) - GraphQL API (posts)")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

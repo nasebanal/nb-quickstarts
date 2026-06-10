@@ -1,0 +1,91 @@
+name: CI
+
+# このリポジトリは docker-compose / Makefile / Python(locust) / シェルスクリプトの
+# 構成ファイル集なので、CI では「各成果物が壊れていないか」を検証する。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 同一ブランチで新しい push があったら古い実行はキャンセル
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---- docker-compose 定義の文法チェック ----
+  compose:
+    name: Validate docker-compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # .env が無くても compose が解決できるよう example をコピー
+      - name: Prepare .env
+        run: cp .env.example .env
+
+      - name: Validate compose files
+        run: |
+          set -e
+          for f in $(find . -name 'docker-compose*.yml' -not -path './.git/*'); do
+            echo "::group::$f"
+            docker compose -f "$f" --env-file .env config -q
+            echo "::endgroup::"
+          done
+
+  # ---- Python(locust) の lint / 文法チェック ----
+  python:
+    name: Lint Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Syntax check (py_compile)
+        run: python -m py_compile $(find . -name '*.py' -not -path './.git/*')
+
+      - name: Ruff lint
+        run: ruff check locust/bin
+
+  # ---- シェルスクリプトの構文チェック ----
+  # スクリプトは #!/bin/zsh（Makefile も SHELL := /bin/zsh）。
+  # shellcheck は zsh 非対応なので、正しいインタプリタ zsh の構文チェックを使う。
+  shell:
+    name: Syntax check (zsh)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
+      - name: zsh -n
+        run: |
+          set -e
+          for f in $(find . -name '*.sh' -not -path './.git/*'); do
+            echo "checking $f"
+            zsh -n "$f"
+          done
+
+  # ---- Dockerfile の lint と build 確認 ----
+  docker:
+    name: Lint & build Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: locust/Dockerfile
+          # ARG のバージョン固定など軽微な指摘は失敗扱いにしない
+          failure-threshold: error
+
+      - name: Build image
+        run: docker build -t nb-quickstarts/locust:ci locust
