@@ -2,6 +2,8 @@ services:
   mysql-server:
     image: mysql:${LOCUST_MYSQL_VERSION:-8.4.7}
     container_name: mysql-server
+    profiles:
+      - mysql
     ports:
       - "${LOCUST_MYSQL_PORT:-3306}:3306"
     environment:
@@ -15,6 +17,8 @@ services:
   http-server:
     image: python:3.12-slim
     container_name: http-server
+    profiles:
+      - http
     ports:
       - "8080:8080"
     volumes:
@@ -61,9 +65,6 @@ services:
       ${LOCUST_HTML_FILE:+--html ${LOCUST_HTML_FILE}}
     networks:
       - locust-network
-    depends_on:
-      - http-server
-      - mysql-server
 
   worker:
     image: ${LOCUST_IMAGE:-locust-mysql:latest}
