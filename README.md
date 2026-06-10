@@ -50,9 +50,8 @@ This repository contains a curated collection of quickstart projects designed to
    make kong:run
    make kong:open
 
-   # Locust Load Testing
+   # Locust Load Testing (configure in .env, then run)
    make locust:run
-   make locust:test-http-login
    make locust:open
    ```
 
@@ -69,28 +68,37 @@ All services use `.env` file for configuration:
 Override via `.env` file or command-line:
 ```bash
 make kong:run KONG_DB=postgres
-make locust:test-mysql LOCUST_MYSQL_HOST=prod-db
+make locust:run LOCUST_FILE=locustfile_mysql.py LOCUST_MOCK_SERVICE=mysql LOCUST_MYSQL_HOST=prod-db
 ```
 
 ### Locust Configuration
 
+Load tests are driven by a single command, `make locust:run`. Pick the test
+by setting `LOCUST_FILE` (which test), `LOCUST_MOCK_SERVICE` (which bundled mock
+to start), and optionally `LOCUST_TAGS` (which subset) — in `.env` or on the
+command line. To switch test types cleanly, use `make locust:restart` (or
+`make locust:stop` then `make locust:run`).
+
 **Test Types:**
 ```bash
 # HTTP Load Testing
-make locust:test-http              # All HTTP tests
-make locust:test-http-root         # Root page only (tag: http-root)
-make locust:test-http-login        # Login test only (tag: http-login)
+make locust:run LOCUST_FILE=locustfile_http.py LOCUST_MOCK_SERVICE=http
+make locust:run LOCUST_FILE=locustfile_http.py LOCUST_MOCK_SERVICE=http LOCUST_TAGS=http-root
+make locust:run LOCUST_FILE=locustfile_http.py LOCUST_MOCK_SERVICE=http LOCUST_TAGS=http-login
 
 # GraphQL Load Testing
-make locust:test-graphql           # All GraphQL operations
-make locust:test-graphql-query     # Query operations (tag: graphql-query)
-make locust:test-graphql-mutation  # Mutation operations (tag: graphql-mutation)
+make locust:run LOCUST_FILE=locustfile_graphql.py LOCUST_MOCK_SERVICE=http
+make locust:run LOCUST_FILE=locustfile_graphql.py LOCUST_MOCK_SERVICE=http LOCUST_TAGS=graphql-query
+make locust:run LOCUST_FILE=locustfile_graphql.py LOCUST_MOCK_SERVICE=http LOCUST_TAGS=graphql-mutation
 
 # MySQL Load Testing
-make locust:test-mysql             # All MySQL tests
-make locust:test-mysql-select      # SELECT queries (tag: mysql-select)
-make locust:test-mysql-cartesian   # Cartesian join queries (tag: mysql-cartesian)
+make locust:run LOCUST_FILE=locustfile_mysql.py LOCUST_MOCK_SERVICE=mysql
+make locust:run LOCUST_FILE=locustfile_mysql.py LOCUST_MOCK_SERVICE=mysql LOCUST_TAGS=mysql-select
+make locust:run LOCUST_FILE=locustfile_mysql.py LOCUST_MOCK_SERVICE=mysql LOCUST_TAGS=mysql-cartesian
 ```
+
+> `LOCUST_MOCK_SERVICE` selects which bundled mock container(s) to start
+> (`http`, `mysql`, comma-separated `http,mysql`, or empty to target an external host).
 
 **Configuration Parameters (.env):**
 ```bash
@@ -145,7 +153,7 @@ Distributed load testing across multiple PCs:
 
 **Master (PC1):**
 ```bash
-make locust:test-http
+make locust:run LOCUST_FILE=locustfile_http.py LOCUST_MOCK_SERVICE=http
 # Access UI at http://localhost:8089
 ```
 
