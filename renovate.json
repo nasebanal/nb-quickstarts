@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+
+  "//": "PR 作成頻度を下げるための設定。実行・PR 作成を毎週月曜の朝にまとめ、同時/毎時の本数も絞る。",
+  "schedule": ["before 9am on monday"],
+  "prHourlyLimit": 1,
+  "prConcurrentLimit": 3,
+
+  "//2": "更新をまとめて1つの PR にし、PR 数自体を減らす。",
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    }
+  ]
+}

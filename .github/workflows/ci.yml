@@ -55,17 +55,23 @@ jobs:
       - name: Ruff lint
         run: ruff check locust/bin
 
-  # ---- シェルスクリプトの静的解析 ----
-  shellcheck:
-    name: ShellCheck
+  # ---- シェルスクリプトの構文チェック ----
+  # スクリプトは #!/bin/zsh（Makefile も SHELL := /bin/zsh）。
+  # shellcheck は zsh 非対応なので、正しいインタプリタ zsh の構文チェックを使う。
+  shell:
+    name: Syntax check (zsh)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run shellcheck
+      - name: Install zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
+      - name: zsh -n
         run: |
-          sudo apt-get update && sudo apt-get install -y shellcheck
-          find . -name '*.sh' -not -path './.git/*' -print0 \
-            | xargs -0 shellcheck --severity=warning
+          set -e
+          for f in $(find . -name '*.sh' -not -path './.git/*'); do
+            echo "checking $f"
+            zsh -n "$f"
+          done
 
   # ---- Dockerfile の lint と build 確認 ----
   docker:

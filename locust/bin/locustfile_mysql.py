@@ -154,5 +154,5 @@ class MySQLUser(User):
         if self.connection:
             try:
                 self.connection.close()
-            except:
+            except Exception:
                 pass
