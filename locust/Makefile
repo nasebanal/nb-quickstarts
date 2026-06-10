@@ -6,6 +6,13 @@ ifneq (,$(wildcard ../.env))
     export
 endif
 
+#################### TARGET HOST ###################
+# 対象ホストは Makefile では決めない。各 locustfile が環境変数から自分で設定する:
+#   - HTTP/GraphQL: locustfile が HTTP_HOST を読む（compose が LOCUST_HTTP_HOST を渡す）
+#   - MySQL:        locustfile が MYSQL_HOST/PORT/USER/... を読んで接続する
+# よって別ホストを叩くときは .env の LOCUST_HTTP_HOST / LOCUST_MYSQL_* を変更する。
+# 起動するモックは LOCUST_MOCK_SERVICE で制御する（カンマ区切りで複数可、空=外部のみ）。
+
 #################### LOCUST MANAGEMENT ###################
 
 locust:
@@ -20,16 +27,12 @@ locust:
 	@echo "  locust:restart     - Restart Locust containers"
 	@echo "  locust:status      - Check Locust container status"
 	@echo ""
-	@echo "Load Testing:"
-	@echo "  locust:test-http         - Run HTTP server load test with UI (http://localhost:8089)"
-	@echo "  locust:test-http-root    - Run HTTP root page test with tag 'http-root' (http://localhost:8089)"
-	@echo "  locust:test-http-login   - Run HTTP login test with tag 'http-login' (http://localhost:8089)"
-	@echo "  locust:test-graphql         - Run GraphQL load test (all GraphQL operations) (http://localhost:8089)"
-	@echo "  locust:test-graphql-query   - Run GraphQL query test with tag 'graphql-query' (http://localhost:8089)"
-	@echo "  locust:test-graphql-mutation - Run GraphQL mutation test with tag 'graphql-mutation' (http://localhost:8089)"
-	@echo "  locust:test-mysql        - Run MySQL load test with UI (http://localhost:8089)"
-	@echo "  locust:test-mysql-select - Run MySQL select test with tag 'mysql-select' (http://localhost:8089)"
-	@echo "  locust:test-mysql-cartesian - Run MySQL cartesian join test with tag 'mysql-cartesian' (http://localhost:8089)"
+	@echo "Load Testing (configure via .env or CLI, then run locust:run):"
+	@echo "  make locust:run                                          # uses .env settings"
+	@echo "  make locust:run LOCUST_FILE=locustfile_http.py    LOCUST_MOCK_SERVICE=http"
+	@echo "  make locust:run LOCUST_FILE=locustfile_graphql.py LOCUST_MOCK_SERVICE=http  LOCUST_TAGS=graphql-query"
+	@echo "  make locust:run LOCUST_FILE=locustfile_mysql.py   LOCUST_MOCK_SERVICE=mysql LOCUST_TAGS=mysql-select"
+	@echo "  (to switch test types cleanly, run locust:restart, or locust:stop then locust:run)"
 	@echo ""
 	@echo "Cluster Management:"
 	@echo "  locust:join-cluster - Join an existing Locust cluster as worker from remote PC"
@@ -40,7 +43,8 @@ locust:
 	@echo "  3. Run load test:  make locust:run"
 	@echo ""
 	@echo "Configuration (.env file):"
-	@echo "  LOCUST_FILE=locustfile_http.py     # Choose: locustfile_http.py, locustfile_graphql.py"
+	@echo "  LOCUST_FILE=locustfile_http.py     # Choose: locustfile_http.py, locustfile_graphql.py, locustfile_mysql.py"
+	@echo "  LOCUST_MOCK_SERVICE=http           # Mock(s) to start: http / mysql / http,mysql / empty=external"
 	@echo "  LOCUST_TAGS=                       # Optional: http-root, http-login, graphql-query, graphql-mutation, mysql-select, mysql-cartesian"
 	@echo "  LOCUST_WORKERS=1                   # Number of worker containers"
 	@echo "  LOCUST_IMAGE=locust-mysql:latest   # Docker image"
@@ -68,8 +72,7 @@ locust:
 	@echo "    - report.html (final test report)"
 	@echo ""
 	@echo "Other commands (with optional parameters):"
-	@echo "  make locust:test-http [LOCUST_HTTP_HOST=url]"
-	@echo "  make locust:test-mysql [LOCUST_MYSQL_HOST=host] [LOCUST_MYSQL_PORT=port] [LOCUST_MYSQL_USER=user] [LOCUST_MYSQL_PASSWORD=pass] [LOCUST_MYSQL_DATABASE=db]"
+	@echo "  make locust:run [LOCUST_HTTP_HOST=url] [LOCUST_MYSQL_HOST=host] [LOCUST_WORKERS=n]"
 	@echo "  make locust:join-cluster [LOCUST_MASTER_HOST=ip] [LOCUST_WORKERS=n]"
 
 locust\:%:
@@ -95,19 +98,21 @@ locust-run:
 		echo "Set it in .env file (e.g., LOCUST_RUN_TIME=60s)"; \
 		exit 1; \
 	fi
-	@PROFILE=$${LOCUST_PROFILE:-}; \
-		case "$$PROFILE" in \
-			mysql) TARGET_SVC="MySQL server" ;; \
-			http)  TARGET_SVC="HTTP server" ;; \
-			"")    TARGET_SVC="no target server (external host)" ;; \
-			*)     TARGET_SVC="profile '$$PROFILE'" ;; \
-		esac; \
-		echo "Starting Locust containers with $$TARGET_SVC via Docker Compose (profile: $${PROFILE:-none})..."
+	@MOCK_SERVICE=$${LOCUST_MOCK_SERVICE:-}; \
+		if [ -z "$$MOCK_SERVICE" ]; then \
+			echo "Starting Locust containers via Docker Compose (mock services: none - external host)..."; \
+		else \
+			echo "Starting Locust containers via Docker Compose (mock services: $$MOCK_SERVICE)..."; \
+		fi
 	@echo "Using Locust file: $${LOCUST_FILE:-locustfile_http.py}"
 	@echo "Tags: $${LOCUST_TAGS:-none}"
 	@echo "Workers: $${LOCUST_WORKERS:-1}"
-	@echo "Target Host: $${LOCUST_HOST:-http://http-server:8080}"
-	@PROFILE=$${LOCUST_PROFILE:-}; \
+	@DISPLAY_HOST=$$(case "$${LOCUST_FILE:-locustfile_http.py}" in \
+			*mysql*) echo "mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema}" ;; \
+			*)       echo "$${LOCUST_HTTP_HOST:-http://http-server:8080}" ;; \
+		esac); \
+		echo "Target Host (set by locustfile): $$DISPLAY_HOST"
+	@MOCK_SERVICE=$${LOCUST_MOCK_SERVICE:-}; \
 		TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
 		LOG_DIR="locust/logs/$$TIMESTAMP"; \
 		mkdir -p $$LOG_DIR; \
@@ -116,7 +121,11 @@ locust-run:
 		RESULT_LOGFILE="$$LOG_DIR/result.log"; \
 		CSV_PREFIX="/mnt/locust/logs/$$TIMESTAMP/locust"; \
 		HTML_FILE="/mnt/locust/logs/$$TIMESTAMP/report.html"; \
-		echo "Target Host: $${LOCUST_HOST:-http://http-server:8080}" > $$LOG_DIR/target_host.txt; \
+		DISPLAY_HOST=$$(case "$${LOCUST_FILE:-locustfile_http.py}" in \
+			*mysql*) echo "mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema}" ;; \
+			*)       echo "$${LOCUST_HTTP_HOST:-http://http-server:8080}" ;; \
+		esac); \
+		echo "Target Host: $$DISPLAY_HOST" > $$LOG_DIR/target_host.txt; \
 		echo "Locust File: $${LOCUST_FILE:-locustfile_http.py}" >> $$LOG_DIR/target_host.txt; \
 		echo "Tags: $${LOCUST_TAGS:-all}" >> $$LOG_DIR/target_host.txt; \
 		echo "Workers: $${LOCUST_WORKERS:-1}" >> $$LOG_DIR/target_host.txt; \
@@ -132,13 +141,20 @@ locust-run:
 		echo "  - report.html"; \
 		LOCUST_FILE=$${LOCUST_FILE:-locustfile_http.py} \
 			LOCUST_TAGS=$${LOCUST_TAGS:-} \
-			LOCUST_HOST=$${LOCUST_HOST:-http://http-server:8080} \
 			LOCUST_LOGFILE=$$MASTER_LOGFILE \
 			LOCUST_LOGLEVEL=DEBUG \
 			LOCUST_CSV_PREFIX=$$CSV_PREFIX \
 			LOCUST_HTML_FILE=$$HTML_FILE \
-			COMPOSE_PROFILES=$$PROFILE \
+			COMPOSE_PROFILES=$$MOCK_SERVICE \
 			docker compose -p locust -f locust/docker-compose.yml up -d --scale worker=$${LOCUST_WORKERS:-1}; \
+		case ",$$MOCK_SERVICE," in *,mysql,*) \
+			printf "Waiting for MySQL (mysql-server) to be ready"; \
+			i=0; \
+			until [ "$$(docker inspect -f '{{.State.Health.Status}}' mysql-server 2>/dev/null)" = "healthy" ] || [ $$i -ge 60 ]; do \
+				printf "."; sleep 1; i=$$((i+1)); \
+			done; \
+			if [ "$$(docker inspect -f '{{.State.Health.Status}}' mysql-server 2>/dev/null)" = "healthy" ]; then echo " ready"; else echo " timeout (continuing; workers will retry)"; fi ;; \
+		esac; \
 		sleep 3; \
 		WORKER_CONTAINER=$$(docker ps --format "{{.Names}}" | grep -E "worker-[0-9]+" | head -1); \
 		if [ "$${LOCUST_DEBUG_MODE:-false}" = "true" ]; then \
@@ -153,14 +169,12 @@ locust-run:
 			nohup docker logs -f locust-master > $$RESULT_LOGFILE 2>&1 & \
 			echo $$! > locust/.result_log_pid; \
 		fi
-	@PROFILE=$${LOCUST_PROFILE:-}; \
-		if [ "$$PROFILE" = "mysql" ]; then \
-			echo "Locust containers started. Access Locust UI at http://localhost:8089 and MySQL at localhost:$${LOCUST_MYSQL_PORT:-3306}"; \
-		elif [ "$$PROFILE" = "http" ]; then \
-			echo "Locust containers started. Access Locust UI at http://localhost:8089 and HTTP server at http://localhost:8080"; \
-		else \
-			echo "Locust containers started. Access Locust UI at http://localhost:8089 (no target server started; using external host)"; \
-		fi
+	@MOCK_SERVICE=$${LOCUST_MOCK_SERVICE:-}; \
+		MSG="Locust containers started. Access Locust UI at http://localhost:8089"; \
+		case ",$$MOCK_SERVICE," in *,http,*) MSG="$$MSG; HTTP server at http://localhost:8080" ;; esac; \
+		case ",$$MOCK_SERVICE," in *,mysql,*) MSG="$$MSG; MySQL at localhost:$${LOCUST_MYSQL_PORT:-3306}" ;; esac; \
+		if [ -z "$$MOCK_SERVICE" ]; then MSG="$$MSG (no mock server started; using external host)"; fi; \
+		echo "$$MSG"
 
 locust-open:
 	@bin/open_browser.sh http://localhost:8089
@@ -182,65 +196,11 @@ locust-stop:
 
 locust-restart:
 	@$(MAKE) locust-stop
-	@$(MAKE) locust-run LOCUST_WORKERS=$(LOCUST_WORKERS)
+	@$(MAKE) locust-run
 
 locust-status:
 	@echo "Checking Locust container status..."
 	@COMPOSE_PROFILES="*" docker compose -p locust -f locust/docker-compose.yml ps
-
-locust-test-http:
-	@echo "Starting HTTP server load test..."
-	@$(MAKE) locust-stop
-	@echo "Starting Locust containers..."
-	@$(MAKE) LOCUST_PROFILE=http LOCUST_FILE=locustfile_http.py LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} locust-run
-
-locust-test-http-root:
-	@echo "Starting HTTP root page load test..."
-	@$(MAKE) locust-stop
-	@echo "Starting Locust containers..."
-	@$(MAKE) LOCUST_PROFILE=http LOCUST_FILE=locustfile_http.py LOCUST_TAGS=http-root LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} locust-run
-
-locust-test-http-login:
-	@echo "Starting HTTP login load test..."
-	@$(MAKE) locust-stop
-	@echo "Starting Locust containers..."
-	@$(MAKE) LOCUST_PROFILE=http LOCUST_FILE=locustfile_http.py LOCUST_TAGS=http-login LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} locust-run
-
-locust-test-graphql:
-	@echo "Starting GraphQL load test (all operations)..."
-	@$(MAKE) locust-stop
-	@echo "Starting Locust containers..."
-	@$(MAKE) LOCUST_PROFILE=http LOCUST_FILE=locustfile_graphql.py LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} locust-run
-
-locust-test-graphql-query:
-	@echo "Starting GraphQL query load test (read operations)..."
-	@$(MAKE) locust-stop
-	@echo "Starting Locust containers..."
-	@$(MAKE) LOCUST_PROFILE=http LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS=graphql-query LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} locust-run
-
-locust-test-graphql-mutation:
-	@echo "Starting GraphQL mutation load test (write operations)..."
-	@$(MAKE) locust-stop
-	@echo "Starting Locust containers..."
-	@$(MAKE) LOCUST_PROFILE=http LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS=graphql-mutation LOCUST_HOST=$${LOCUST_HTTP_HOST:-http://http-server:8080} locust-run
-
-locust-test-mysql:
-	@echo "Starting MySQL load test..."
-	@$(MAKE) locust-stop
-	@echo "Starting Locust containers..."
-	@$(MAKE) LOCUST_PROFILE=mysql LOCUST_FILE=locustfile_mysql.py LOCUST_HOST=mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} locust-run
-
-locust-test-mysql-select:
-	@echo "Starting MySQL select load test..."
-	@$(MAKE) locust-stop
-	@echo "Starting Locust containers..."
-	@$(MAKE) LOCUST_PROFILE=mysql LOCUST_FILE=locustfile_mysql.py LOCUST_TAGS=mysql-select LOCUST_HOST=mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} locust-run
-
-locust-test-mysql-cartesian:
-	@echo "Starting MySQL cartesian join load test..."
-	@$(MAKE) locust-stop
-	@echo "Starting Locust containers..."
-	@$(MAKE) LOCUST_PROFILE=mysql LOCUST_FILE=locustfile_mysql.py LOCUST_TAGS=mysql-cartesian LOCUST_HOST=mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema} locust-run
 
 locust-join-cluster:
 	@echo "Joining existing Locust cluster..."

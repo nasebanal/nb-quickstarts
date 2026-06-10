@@ -11,6 +11,13 @@ services:
       MYSQL_DATABASE: testdb
       MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
       MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
+    healthcheck:
+      # TCP(127.0.0.1) で mysqld が接続を受け付けられるまでを ready とみなす
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${LOCUST_MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
     networks:
       - locust-network
 
@@ -53,7 +60,6 @@ services:
       -f /mnt/locust/bin/${LOCUST_FILE:-locustfile_http.py}
       --master
       --master-bind-host=0.0.0.0
-      --host=${LOCUST_HOST:-http://http-server:8080}
       ${LOCUST_TAGS:+--tags ${LOCUST_TAGS}}
       ${LOCUST_HEADLESS_FLAG}
       ${LOCUST_USERS:+--users ${LOCUST_USERS}}

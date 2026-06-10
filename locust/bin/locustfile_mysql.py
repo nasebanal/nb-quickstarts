@@ -20,44 +20,64 @@ class MySQLUser(User):
     debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
 
     def on_start(self):
-        """Initialize MySQL connection when user starts"""
-        self.connection = None
-        self.connect_to_mysql()
+        """Initialize MySQL connection when user starts.
 
-    def connect_to_mysql(self):
-        """Establish MySQL connection"""
+        起動直後は mysql-server がまだ初期化中で接続を拒否する（Connection
+        refused）ことがあるため、起動時のみ多めにリトライして待つ。
+        """
+        self.connection = None
+        self.connect_to_mysql(
+            max_attempts=int(os.getenv("MYSQL_CONNECT_RETRIES", "15")),
+            retry_wait=float(os.getenv("MYSQL_CONNECT_RETRY_WAIT", "2")),
+        )
+
+    def connect_to_mysql(self, max_attempts=1, retry_wait=2.0):
+        """Establish MySQL connection.
+
+        max_attempts > 1 のときは接続できるまでリトライする（起動時の待ち用）。
+        計測イベント(connect)は最終結果として1回だけ発火する。
+        """
         start_time = time.time()
-        try:
-            self.connection = pymysql.connect(
-                host=MYSQL_HOST,
-                port=MYSQL_PORT,
-                user=MYSQL_USER,
-                password=MYSQL_PASSWORD,
-                database=MYSQL_DATABASE,
-                connect_timeout=10,
-                read_timeout=10,
-                write_timeout=10
-            )
-            total_time = int((time.time() - start_time) * 1000)
-            events.request.fire(
-                request_type="MySQL",
-                name="connect",
-                response_time=total_time,
-                response_length=0,
-                exception=None,
-                context={}
-            )
-        except Exception as e:
-            total_time = int((time.time() - start_time) * 1000)
-            events.request.fire(
-                request_type="MySQL",
-                name="connect",
-                response_time=total_time,
-                response_length=0,
-                exception=e,
-                context={}
-            )
-            logging.error(f"Failed to connect to MySQL: {e}")
+        last_exc = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                self.connection = pymysql.connect(
+                    host=MYSQL_HOST,
+                    port=MYSQL_PORT,
+                    user=MYSQL_USER,
+                    password=MYSQL_PASSWORD,
+                    database=MYSQL_DATABASE,
+                    connect_timeout=10,
+                    read_timeout=10,
+                    write_timeout=10
+                )
+                total_time = int((time.time() - start_time) * 1000)
+                events.request.fire(
+                    request_type="MySQL",
+                    name="connect",
+                    response_time=total_time,
+                    response_length=0,
+                    exception=None,
+                    context={}
+                )
+                return
+            except Exception as e:
+                last_exc = e
+                if attempt < max_attempts:
+                    if self.debug_mode:
+                        print(f"⚠️  [MySQL] connect attempt {attempt}/{max_attempts} failed: {e}; retrying in {retry_wait}s")
+                    time.sleep(retry_wait)
+
+        total_time = int((time.time() - start_time) * 1000)
+        events.request.fire(
+            request_type="MySQL",
+            name="connect",
+            response_time=total_time,
+            response_length=0,
+            exception=last_exc,
+            context={}
+        )
+        logging.error(f"Failed to connect to MySQL after {max_attempts} attempt(s): {last_exc}")
 
 
     @task
