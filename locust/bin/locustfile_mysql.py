@@ -1,8 +1,10 @@
-from locust import User, task, between, events, tag
-import pymysql
-import time
 import logging
 import os
+import time
+
+import pymysql
+
+from locust import User, between, events, tag, task
 
 # MySQL Connection Configuration (from environment variables)
 MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql-server")

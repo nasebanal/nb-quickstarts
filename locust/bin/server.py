@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
 import http.server
-import socketserver
 import json
 import os
 import re
-from datetime import datetime
+import socketserver
+from datetime import datetime, timezone
+
+
+def utc_now_iso() -> str:
+    """Current UTC time in the `...Z` form these responses advertise.
+
+    This used to be built from a naive `datetime.now()` with a literal "Z"
+    appended, which labelled LOCAL time as UTC — so every timestamp the mock
+    server returned was off by the machine's offset (nine hours on JST).
+    """
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 PORT = 8080
 DOCUMENT_ROOT = "."
@@ -285,7 +295,7 @@ def resolve_graphql_query(query, variables=None):
                 "shippingDate": match.group(3),
                 "planDeliveryDate": match.group(4),
                 "actualDeliveryDate": None,
-                "printDate": datetime.now().strftime("%Y-%m-%d"),
+                "printDate": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
                 "shippingRegistrationUnit": "Unit Auto",
                 "totalShippingQuantity": int(match.group(5)),
                 "totalShippingCostPrice": int(match.group(6)) * 0.6,  # 60% of selling price
@@ -316,7 +326,7 @@ def resolve_graphql_query(query, variables=None):
                         "variousTotalArrivalSellingPrice": 0
                     }
                 ],
-                "createdAt": datetime.now().isoformat() + "Z"
+                "createdAt": utc_now_iso()
             }
             TRANSFER_VOUCHERS[str(VOUCHER_ID_COUNTER)] = new_voucher
             created_vouchers.append(new_voucher)
@@ -353,7 +363,7 @@ def resolve_graphql_query(query, variables=None):
                 "title": title,
                 "content": content,
                 "authorId": author_id,
-                "createdAt": datetime.now().isoformat() + "Z"
+                "createdAt": utc_now_iso()
             }
             POSTS[str(POST_ID_COUNTER)] = new_post
             POST_ID_COUNTER += 1
@@ -385,10 +395,10 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
                 # Simple validation - accept any employee code
                 if employee_code:
                     # Generate a simple token (in production, use proper JWT)
-                    token = f"token_{employee_code}_{datetime.now().timestamp()}"
+                    token = f"token_{employee_code}_{datetime.now(timezone.utc).timestamp()}"
                     AUTH_TOKENS[token] = {
                         "employeeCode": employee_code,
-                        "createdAt": datetime.now().isoformat()
+                        "createdAt": utc_now_iso()
                     }
 
                     self.send_response(200)

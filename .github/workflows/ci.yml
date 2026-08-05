@@ -46,8 +46,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Pinned in requirements-dev.txt so an upstream ruff release cannot
+      # change what CI enforces without a commit here (Renovate raises the
+      # upgrade as a reviewable PR instead).
       - name: Install ruff
-        run: pip install ruff
+        run: pip install -r requirements-dev.txt
 
       - name: Syntax check (py_compile)
         run: python -m py_compile $(find . -name '*.py' -not -path './.git/*')
