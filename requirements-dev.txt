@@ -1,0 +1,7 @@
+# Development tooling, pinned so CI is reproducible.
+#
+# The linter is a dependency like any other: an unpinned `pip install ruff`
+# lets an upstream release change what CI enforces without a commit here.
+# Pinned, an upgrade arrives as a Renovate pull request, where any new findings
+# show up as a reviewable diff instead of a red build on unrelated work.
+ruff==0.15.16

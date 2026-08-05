@@ -1,0 +1,28 @@
+# Ruff configuration.
+#
+# The rule set is declared EXPLICITLY. Without this file ruff falls back to
+# whatever its current release considers the default, so `pip install ruff`
+# in CI meant an upstream release could fail the build with no change to this
+# repository — which is exactly what happened (16+ findings appeared overnight
+# from rules that had just been promoted into the defaults).
+#
+# Adding a rule family here is a deliberate act; upgrading ruff is not.
+
+target-version = "py312"
+
+[lint]
+select = [
+    "E4",   # pycodestyle — imports
+    "E7",   # pycodestyle — statements
+    "E9",   # pycodestyle — runtime errors
+    "F",    # pyflakes
+    "I",    # isort — import ordering
+    "DTZ",  # flake8-datetimez — naive datetimes
+]
+
+# Deliberately NOT enabled:
+#   BLE001 (blind except) — the GraphQL handlers in server.py and the task
+#   bodies in the locustfiles catch `Exception` on purpose. A mock server must
+#   answer 500 rather than die, and a load-test task must record a failure
+#   rather than abort the run. Enabling it would buy seven `noqa` comments and
+#   no safety.
