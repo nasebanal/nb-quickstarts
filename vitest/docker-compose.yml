@@ -1,0 +1,10 @@
+services:
+  vitest:
+    build:
+      context: ../apps/frontend
+    volumes:
+      - ../apps/frontend:/app
+      - /app/node_modules
+      - ./report:/report
+    working_dir: /app
+    command: npm run test:report

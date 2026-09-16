@@ -11,11 +11,10 @@ endif
 kafka:
 	@echo "🚀 Kafka Management Commands:"
 	@echo ""
-	@echo "  kafka:pull        - Pull Kafka Docker images"
-	@echo "  kafka:run         - Start Kafka containers (KRaft mode)"
-	@echo "  kafka:stop        - Stop and remove Kafka containers"
-	@echo "  kafka:restart     - Restart Kafka containers"
+	@echo "  kafka:up          - Start Kafka containers (KRaft mode)"
+	@echo "  kafka:down        - Stop and remove Kafka containers"
 	@echo "  kafka:status      - Check Kafka container status"
+	@echo "  kafka:restart     - Restart Kafka containers"
 	@echo "  kafka:add-topics  - Create Kafka topics"
 	@echo "  kafka:list-topics - List Kafka topics"
 	@echo "  kafka:describe-topics - Describe Kafka topics"
@@ -30,19 +29,14 @@ kafka:
 	@echo "  KAFKA_PORT=9092"
 	@echo "  KAFKA_TOPIC_NAME=quickstart-events"
 	@echo ""
-	@echo "Usage: make kafka:run"
+	@echo "Usage: make kafka:up"
 
 kafka\:%:
 	@$(MAKE) kafka-$(subst kafka:,,$@)
 
 #################### KAFKA ACTIONS ###################
 
-kafka-pull:
-	@echo "Pulling Kafka images..."
-	@docker pull $${KAFKA_IMAGE:-apache/kafka}:$${KAFKA_VERSION:-3.8.1}
-	@echo "Kafka images pulled successfully."
-
-kafka-run:
+kafka-up:
 	@echo "Starting Kafka containers (KRaft mode)..."
 	@docker-compose -f kafka/docker-compose.yml up -d
 	@echo ""
@@ -54,18 +48,18 @@ kafka-run:
 	@echo "  make kafka:list-topics    # List topics"
 	@echo "  make kafka:add-topics     # Create sample topic"
 
-kafka-stop:
+kafka-down:
 	@echo "Stopping Kafka containers..."
 	@docker-compose -f kafka/docker-compose.yml down
 	@echo "Kafka containers stopped and removed."
 
-kafka-restart:
-	@$(MAKE) kafka-stop
-	@$(MAKE) kafka-run
-
 kafka-status:
 	@echo "Checking Kafka container status..."
 	@docker-compose -f kafka/docker-compose.yml ps
+
+kafka-restart:
+	@$(MAKE) kafka-down
+	@$(MAKE) kafka-up
 
 kafka-add-topics:
 	@echo "Creating Kafka topic: $${KAFKA_TOPIC_NAME:-quickstart-events}..."

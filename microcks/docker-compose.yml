@@ -1,0 +1,14 @@
+services:
+  microcks:
+    image: quay.io/microcks/microcks-uber:latest
+    container_name: microcks
+    ports:
+      - "${MICROCKS_PORT:-9090}:8080"
+    networks:
+      - apps-network
+
+networks:
+  # Owned by apps/docker-compose.yml; see AGENTS.md "Cross-module Docker network".
+  apps-network:
+    name: apps-network
+    external: true

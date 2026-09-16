@@ -7,15 +7,24 @@ __pycache__/
 .DS_Store
 *.log
 *.sqlite3
+node_modules/
+apps/frontend/.next/
+apps/frontend/.vitest/
+*.tsbuildinfo
 
 # Environment variables (contains sensitive information)
 .env
-
-# Claude Code local instructions
-CLAUDE.md
 
 # Locust cluster mode flag file
 .locust_cluster_mode
 locust/logs/
 locust/.result_log_pid
 locust/.debug_log_pid
+
+# Generated test-report output (see AGENTS.md "Report files")
+pytest/report/
+vitest/report/
+playwright/report/
+playwright/test-results/
+specmatic/report/
+specmatic/junit/

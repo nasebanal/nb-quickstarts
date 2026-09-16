@@ -17,7 +17,7 @@ DECLARATIVE_CONFIG="kong/conf/declarative.yml"
 # Check if Kong is running
 if ! curl -s "${KONG_ADMIN_URL}" > /dev/null 2>&1; then
     echo -e "${YELLOW}Kong is not running${NC}"
-    echo "Start Kong: make kong:run"
+    echo "Start Kong: make kong:up"
     exit 1
 fi
 

@@ -56,7 +56,7 @@ jobs:
         run: python -m py_compile $(find . -name '*.py' -not -path './.git/*')
 
       - name: Ruff lint
-        run: ruff check locust/bin
+        run: ruff check locust/bin apps/backend
 
   # ---- シェルスクリプトの構文チェック ----
   # スクリプトは #!/bin/zsh（Makefile も SHELL := /bin/zsh）。
@@ -76,19 +76,50 @@ jobs:
             zsh -n "$f"
           done
 
+  # ---- TypeScript(apps/frontend) の型チェック ----
+  typescript:
+    name: Typecheck frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: apps/frontend
+        run: npm install
+
+      - name: tsc --noEmit
+        working-directory: apps/frontend
+        run: npm run typecheck
+
   # ---- Dockerfile の lint と build 確認 ----
   docker:
     name: Lint & build Dockerfile
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - dockerfile: locust/Dockerfile
+            context: locust
+            tag: nb-quickstarts/locust:ci
+          - dockerfile: apps/backend/Dockerfile
+            context: apps/backend
+            tag: nb-quickstarts/apps-backend:ci
+          - dockerfile: apps/frontend/Dockerfile
+            context: apps/frontend
+            tag: nb-quickstarts/apps-frontend:ci
     steps:
       - uses: actions/checkout@v4
 
       - name: Hadolint
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: locust/Dockerfile
+          dockerfile: ${{ matrix.dockerfile }}
           # ARG のバージョン固定など軽微な指摘は失敗扱いにしない
           failure-threshold: error
 
       - name: Build image
-        run: docker build -t nb-quickstarts/locust:ci locust
+        run: docker build -t ${{ matrix.tag }} ${{ matrix.context }}

@@ -1,6 +1,6 @@
 services:
   consul:
-    image: ${CONSUL_IMAGE:-hashicorp/consul}:${CONSUL_VERSION:-1.21}
+    image: ${CONSUL_IMAGE:-hashicorp/consul}:${CONSUL_VERSION:-1.21.5}
     container_name: consul
     ports:
       - "${CONSUL_HTTP_PORT:-8500}:8500"
@@ -11,6 +11,11 @@ services:
       CONSUL_BIND_INTERFACE: ${CONSUL_BIND_INTERFACE:-eth0}
     networks:
       - consul-net
+      # So `consul:register-apps`'s HTTP/TCP health checks (run by the
+      # Consul agent itself, from inside this container) can resolve
+      # "backend"/"frontend"/"mysql-server" by name - see AGENTS.md
+      # "Cross-module Docker network".
+      - apps-network
     volumes:
       - consul-data:/consul/data
       - consul-config:/consul/config
@@ -24,6 +29,9 @@ services:
 networks:
   consul-net:
     name: consul-net
+  apps-network:
+    name: apps-network
+    external: true
 
 volumes:
   consul-data:

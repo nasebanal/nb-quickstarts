@@ -1,40 +1,4 @@
 services:
-  mysql-server:
-    image: mysql:${LOCUST_MYSQL_VERSION:-8.4.7}
-    container_name: mysql-server
-    profiles:
-      - mysql
-    ports:
-      - "${LOCUST_MYSQL_PORT:-3306}:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: ${LOCUST_MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: testdb
-      MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
-      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
-    healthcheck:
-      # TCP(127.0.0.1) で mysqld が接続を受け付けられるまでを ready とみなす
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${LOCUST_MYSQL_ROOT_PASSWORD:-rootpassword}"]
-      interval: 3s
-      timeout: 5s
-      retries: 30
-      start_period: 5s
-    networks:
-      - locust-network
-
-  http-server:
-    image: python:3.12-slim
-    container_name: http-server
-    profiles:
-      - http
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./:/app
-    working_dir: /app/www
-    command: python3 ../bin/server.py
-    networks:
-      - locust-network
-
   locust-master:
     image: ${LOCUST_IMAGE:-locust-mysql:latest}
     container_name: locust-master
@@ -52,7 +16,7 @@ services:
       MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
       MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
       DEBUG_MODE: ${LOCUST_DEBUG_MODE:-false}
-      HTTP_HOST: ${LOCUST_HTTP_HOST:-http://http-server:8080}
+      HTTP_HOST: ${LOCUST_HTTP_HOST:-http://backend:8080}
       PYTHONUNBUFFERED: 1
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -70,7 +34,7 @@ services:
       ${LOCUST_CSV_PREFIX:+--csv ${LOCUST_CSV_PREFIX}}
       ${LOCUST_HTML_FILE:+--html ${LOCUST_HTML_FILE}}
     networks:
-      - locust-network
+      - apps-network
 
   worker:
     image: ${LOCUST_IMAGE:-locust-mysql:latest}
@@ -84,7 +48,7 @@ services:
       MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
       MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
       DEBUG_MODE: ${LOCUST_DEBUG_MODE:-false}
-      HTTP_HOST: ${LOCUST_HTTP_HOST:-http://http-server:8080}
+      HTTP_HOST: ${LOCUST_HTTP_HOST:-http://backend:8080}
       PYTHONUNBUFFERED: 1
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -93,10 +57,14 @@ services:
       --worker
       --master-host=locust-master
     networks:
-      - locust-network
+      - apps-network
     depends_on:
       - locust-master
 
 networks:
-  locust-network:
-    name: locust-network
+  # apps モジュール (../apps/docker-compose.yml) が所有するネットワーク。
+  # ここでは external として参照するだけなので、apps を起動していなくても
+  # `make apps-network-ensure` 相当の冪等な作成さえ済んでいれば起動できる。
+  apps-network:
+    name: apps-network
+    external: true

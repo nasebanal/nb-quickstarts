@@ -1,6 +1,6 @@
 services:
   kong-database:
-    image: postgres:13
+    image: postgres:13.23
     container_name: kong-database
     environment:
       POSTGRES_USER: ${KONG_PG_USER:-kong}
@@ -19,7 +19,7 @@ services:
       - database
 
   kong-migration-bootstrap:
-    image: kong:${KONG_VERSION:-3.6}
+    image: kong:${KONG_VERSION:-3.6.1}
     container_name: kong-migration-bootstrap
     command: kong migrations bootstrap
     environment:
@@ -38,7 +38,7 @@ services:
     restart: on-failure
 
   kong:
-    image: kong:${KONG_VERSION:-3.6}
+    image: kong:${KONG_VERSION:-3.6.1}
     container_name: kong
     environment:
       # Database settings (for database mode)
@@ -69,6 +69,9 @@ services:
       - "8445:8445"   # Kong Manager HTTPS
     networks:
       - kong-net
+      # So the declarative config's default route (apps_frontend, see
+      # kong/conf/declarative.yml) can resolve "frontend" by container name.
+      - apps-network
     volumes:
       - ./conf:/kong/conf:ro
     healthcheck:
@@ -80,6 +83,10 @@ services:
 networks:
   kong-net:
     name: kong-net
+  # Owned by apps/docker-compose.yml; see AGENTS.md "Cross-module Docker network".
+  apps-network:
+    name: apps-network
+    external: true
 
 volumes:
   kong-db-data:

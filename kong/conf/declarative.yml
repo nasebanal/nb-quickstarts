@@ -3,6 +3,21 @@ _transform: true
 
 # Sample service configuration
 services:
+  # Catch-all default route: hitting the proxy port with no more specific
+  # path (e.g. http://localhost:8000/) forwards straight to the apps
+  # frontend, so the gateway has an obviously-working destination out of
+  # the box instead of only the httpbin examples below. Kong matches routes
+  # by longest-prefix, so this never shadows the more specific /mock and
+  # /echo routes. Requires `make apps:up` (or apps-network won't resolve
+  # `frontend` — kong just proxies a connection error until apps is up).
+  - name: apps_frontend
+    url: http://frontend:5173
+    routes:
+      - name: apps_frontend_route
+        paths:
+          - /
+        strip_path: false
+
   - name: example_service
     url: https://httpbin.konghq.com
     routes:
