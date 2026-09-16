@@ -66,6 +66,18 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Sticky footer: body's direct children are <header>/<main>/<footer>
+     (from AppChrome). Without this, a short page leaves a gap of the
+     page's own gradient background below the footer whenever the content
+     doesn't fill the viewport (e.g. a wider/shorter window) - main grows
+     to fill the remaining space so the footer always sits flush against
+     the bottom of the viewport instead. */
+  display: flex;
+  flex-direction: column;
+}
+
+body > main {
+  flex: 1 0 auto;
 }
 
 .container {
