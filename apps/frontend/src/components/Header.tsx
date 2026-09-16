@@ -8,6 +8,7 @@ import { LanguageToggle } from "./LanguageToggle";
 import { useLocale } from "./LocaleProvider";
 import { LoginModal } from "./LoginModal";
 import { ThemeToggle } from "./ThemeToggle";
+import { UserMenu } from "./UserMenu";
 
 // Self-contained: no external/private package (works air-gapped). The logo
 // asset lives locally at public/logo.png. Title wording/colors match
@@ -15,7 +16,7 @@ import { ThemeToggle } from "./ThemeToggle";
 // .nb-nav-brand-demo lime) without depending on @nasebanal/shared-navigation.
 export function Header() {
   const { t } = useLocale();
-  const { token, logout } = useAuth();
+  const { token } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
@@ -42,20 +43,18 @@ export function Header() {
         </button>
         <div className="nb-header-actions">
           <Link
-            href="/api-docs"
+            href="/api-specs"
             target="_blank"
             rel="noopener noreferrer"
             className="nb-header-nav-link"
             data-testid="api-docs-link"
           >
-            API Docs
+            {t.hero.apiReferenceLabel}
           </Link>
           <LanguageToggle />
           <ThemeToggle />
           {token ? (
-            <button type="button" className="nb-header-login-link" onClick={logout} data-testid="logout-link">
-              {t.app.logoutButton}
-            </button>
+            <UserMenu />
           ) : (
             <button
               type="button"

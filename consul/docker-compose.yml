@@ -1,7 +1,7 @@
 services:
   consul:
     image: ${CONSUL_IMAGE:-hashicorp/consul}:${CONSUL_VERSION:-1.21.5}
-    container_name: consul
+    container_name: nb-consul
     ports:
       - "${CONSUL_HTTP_PORT:-8500}:8500"
       - "${CONSUL_DNS_PORT:-8600}:8600"

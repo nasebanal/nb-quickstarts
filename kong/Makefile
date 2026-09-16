@@ -9,24 +9,26 @@ endif
 #################### KONG MANAGEMENT ###################
 
 kong:
-	@echo "🚀 Kong Management Commands:"
+	@echo "🚀 Kong"
+	@echo "Kong Gateway - a cloud-native API gateway. By default it proxies straight through to the apps frontend, plus httpbin examples."
 	@echo ""
+	@echo "Container Management:"
 	@echo "  kong:up              - Start Kong (mode: KONG_DB env variable)"
-	@echo "  kong:down            - Stop and remove Kong containers"
+	@echo "  kong:down            - Stop and remove Kong containers (config preserved)"
 	@echo "  kong:status          - Check Kong container status"
-	@echo "  kong:restart         - Restart Kong containers"
+	@echo "  kong:restart         - Restart Kong containers (config preserved)"
+	@echo "  kong:reset           - Wipe config and re-import kong/conf/declarative.yml"
 	@echo "  kong:open            - Open Kong Manager in browser"
+	@echo ""
+	@echo "Verification:"
 	@echo "  kong:list            - List all services and routes"
-	@echo "  kong:reset           - Reset configuration (reload declarative.yml)"
 	@echo "  kong:test-rate-limit - Test rate limiting with multiple requests"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  KONG_DB=off       - DB-less mode (uses kong/conf/declarative.yml)"
 	@echo "  KONG_DB=postgres  - Database mode (uses PostgreSQL)"
 	@echo ""
-	@echo "Usage:"
-	@echo "  make kong:up                  # Use mode from .env (default: off)"
-	@echo "  make kong:up KONG_DB=postgres # Override to use database mode"
+	@echo "Note: override per invocation, e.g. 'make kong:up KONG_DB=postgres'."
 	@echo ""
 	@echo "Test endpoints:"
 	@echo "  curl http://localhost:8000/         # proxies to apps frontend (make apps:up first)"
@@ -90,7 +92,7 @@ kong-up: apps-network-ensure
 kong-down:
 	@echo "Stopping Kong containers..."
 	@docker-compose -f kong/docker-compose.yml --profile database down
-	@echo "Kong containers stopped and removed."
+	@echo "Kong containers stopped and removed. (In KONG_DB=postgres mode, config is preserved in the kong_kong-db-data Docker volume — use 'make kong:reset' to clear it and re-import kong/conf/declarative.yml.)"
 
 kong-status:
 	@echo "Checking Kong container status..."

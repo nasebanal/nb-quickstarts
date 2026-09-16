@@ -9,10 +9,11 @@ endif
 # Mocks `fetch`, so `make apps:up` is not required.
 
 vitest:
-	@echo "🚀 Vitest Commands:"
+	@echo "🚀 Vitest"
+	@echo "Vitest - a Vite-native unit-testing framework for JavaScript/TypeScript. Here running apps/frontend's test suite."
 	@echo ""
-	@echo "  vitest:build - Build the test image (apps/frontend + devDependencies)"
-	@echo "  vitest:test  - Run apps/frontend unit tests"
+	@echo "Test Commands:"
+	@echo "  vitest:test  - Build (if needed) and run apps/frontend unit tests"
 	@echo ""
 	@echo "Note: these are unit tests with fetch mocked out;"
 	@echo "      apps:up is NOT required."
@@ -24,8 +25,5 @@ vitest\:%:
 
 #################### VITEST ACTIONS ###################
 
-vitest-build:
-	@docker compose -p vitest -f vitest/docker-compose.yml build
-
 vitest-test:
-	@docker compose -p vitest -f vitest/docker-compose.yml run --rm vitest
+	@docker compose -p vitest -f vitest/docker-compose.yml run --build --rm vitest

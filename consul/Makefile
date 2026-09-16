@@ -9,13 +9,15 @@ endif
 #################### CONSUL MANAGEMENT ###################
 
 consul:
-	@echo "🚀 Consul Management Commands:"
+	@echo "🚀 Consul"
+	@echo "HashiCorp Consul - service networking (registry/discovery, health checking). Here registering apps' real services."
 	@echo ""
 	@echo "Container Management:"
 	@echo "  consul:up                 - Start Consul container"
-	@echo "  consul:down                - Stop and remove Consul container"
+	@echo "  consul:down               - Stop and remove Consul container (catalog preserved)"
 	@echo "  consul:status             - Check Consul container status"
-	@echo "  consul:restart            - Restart Consul container"
+	@echo "  consul:restart            - Restart Consul container (catalog preserved)"
+	@echo "  consul:reset              - Restart AND wipe the catalog (Docker volumes: consul_consul-data, consul_consul-config)"
 	@echo "  consul:open               - Open Consul UI in browser"
 	@echo ""
 	@echo "Service Registration (the real apps stack - requires apps:up):"
@@ -32,11 +34,7 @@ consul:
 	@echo "  CONSUL_VERSION=1.21"
 	@echo "  CONSUL_HTTP_PORT=8500"
 	@echo ""
-	@echo "Usage:"
-	@echo "  make consul:up"
-	@echo "  make apps:up               # the services consul:register-apps targets"
-	@echo "  make consul:register-apps"
-	@echo "  make consul:verify-apps    # prove discovery -> connection actually works"
+	@echo "Note: consul:register-apps needs apps:up first - the services it registers are apps' own containers."
 
 consul\:%:
 	@$(MAKE) consul-$(subst consul:,,$@)
@@ -60,7 +58,7 @@ consul-up: apps-network-ensure
 consul-down:
 	@echo "Stopping Consul containers..."
 	@docker-compose -f consul/docker-compose.yml down
-	@echo "Consul containers stopped and removed."
+	@echo "Consul containers stopped and removed. (Catalog preserved in the consul_consul-data / consul_consul-config Docker volumes — use 'make consul:reset' to wipe it.)"
 
 consul-status:
 	@echo "Checking Consul container status..."
@@ -68,6 +66,11 @@ consul-status:
 
 consul-restart:
 	@$(MAKE) consul-down
+	@$(MAKE) consul-up
+
+consul-reset:
+	@echo "Resetting Consul (wiping the catalog - Docker volumes: consul_consul-data, consul_consul-config)..."
+	@docker-compose -f consul/docker-compose.yml down --volumes
 	@$(MAKE) consul-up
 
 consul-open:

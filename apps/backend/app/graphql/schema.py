@@ -1,5 +1,5 @@
-"""GraphQL は REST (app/routers/items.py) と同じ app.services.item_service
-を呼ぶだけの薄いレイヤー。"""
+"""GraphQL is a thin layer that just calls the same
+app.services.item_service as REST (app/routers/items.py)."""
 
 import strawberry
 from strawberry.fastapi import GraphQLRouter
@@ -15,6 +15,13 @@ class ItemType:
     name: str
     quantity: int
     source: str
+
+
+@strawberry.type
+class ItemBalanceType:
+    name: str
+    balance: int
+    event_count: int
 
 
 @strawberry.input
@@ -33,6 +40,14 @@ class Query:
     def items(self) -> list[ItemType]:
         with SessionLocal() as db:
             return [_to_graphql_type(item) for item in item_service.list_items(db)]
+
+    @strawberry.field
+    def balances(self) -> list[ItemBalanceType]:
+        with SessionLocal() as db:
+            return [
+                ItemBalanceType(name=b.name, balance=b.balance, event_count=b.event_count)
+                for b in item_service.get_balances(db)
+            ]
 
 
 @strawberry.type

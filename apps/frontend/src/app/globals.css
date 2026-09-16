@@ -151,6 +151,91 @@ h1 {
   color: #47b1e8;
 }
 
+/* Logged-in state: a person-icon button that opens a dropdown (name +
+   Logout), replacing the plain "Logout" text link above. Same values as
+   nb-shared-navigation's .nb-nav-user-* / .nb-nav-dropdown-* (plain inline
+   SVG glyph, no icon library; dropdown: 8px radius, 1px border, soft
+   shadow, right-aligned under the trigger). */
+.nb-nav-user-menu {
+  position: relative;
+}
+
+.nb-nav-user-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  color: var(--nb-fg-muted);
+  transition: color 0.3s ease;
+}
+
+.nb-nav-user-button:hover {
+  color: #47b1e8;
+  /* Same leak as .nb-header-brand-button (see its own comment above): the
+     generic `:where(.container) button:hover` reset sets a background-color
+     nothing here otherwise overrides, since that rule and this one target
+     different properties (background-color vs color) and so never actually
+     compete - both just apply. */
+  background: none;
+}
+
+.nb-nav-user-icon {
+  display: block;
+}
+
+.nb-nav-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: var(--nb-surface);
+  border: 1px solid var(--nb-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  min-width: 180px;
+  margin-top: 0.5rem;
+  z-index: 1000;
+}
+
+.nb-nav-dropdown-header {
+  padding: 1rem;
+}
+
+.nb-nav-dropdown-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--nb-fg);
+}
+
+.nb-nav-dropdown-footer {
+  padding: 0.5rem;
+  border-top: 1px solid var(--nb-border-soft);
+}
+
+.nb-nav-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  color: var(--nb-fg);
+  text-decoration: none;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.nb-nav-dropdown-item:hover {
+  background-color: var(--nb-border-soft);
+}
+
+.nb-nav-dropdown-logout {
+  color: #e74c3c !important;
+  font-weight: 600;
+}
+
 .nb-header-title {
   font-size: 1.3rem;
   font-weight: bold;
@@ -245,8 +330,20 @@ h1 {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
 }
 
+/* Stands in for the h1 this panel used to have - explains the app's
+   concept instead of just naming it, so it needs a bit more presence than
+   ordinary body text without competing with the section headings below. */
+.nb-concept-description {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--nb-fg-muted);
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--nb-border-soft);
+}
+
 /* Scoped to .container (which wraps the header/footer chrome and every
-   page of ours) rather than bare element selectors — /api-docs renders
+   page of ours) rather than bare element selectors — /api-specs renders
    Scalar's own <button>/<input>/<table> elements outside any .container,
    and a global `button { background: ...; color: white }` reset was
    overriding Scalar's own button styling there.
@@ -267,7 +364,8 @@ h1 {
   align-items: center;
 }
 
-:where(.container) input {
+:where(.container) input,
+:where(.container) select {
   padding: 6px 8px;
   border: 1px solid var(--nb-border);
   border-radius: 4px;
@@ -635,7 +733,7 @@ h1 {
 /* ---- Scalar API reference theme (light mode, NASEBANAL brand) ----
    Same navy-sidebar treatment as nb-api-specs' globals.css: Scalar's own
    ".light-mode" class (set on its root wrapper, independent of our own
-   data-theme system on <html> — see /api-docs, which has no app Header/
+   data-theme system on <html> — see /api-specs, which has no app Header/
    ThemeToggle of its own) picks up these --scalar-* custom properties.
    Dark mode is intentionally left as Scalar's own default; nb-api-specs
    doesn't override it either. */

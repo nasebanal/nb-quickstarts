@@ -56,7 +56,7 @@ jobs:
         run: python -m py_compile $(find . -name '*.py' -not -path './.git/*')
 
       - name: Ruff lint
-        run: ruff check locust/bin apps/backend
+        run: ruff check locust/bin apps/backend kafka/bridge
 
   # ---- シェルスクリプトの構文チェック ----
   # スクリプトは #!/bin/zsh（Makefile も SHELL := /bin/zsh）。
@@ -111,6 +111,9 @@ jobs:
           - dockerfile: apps/frontend/Dockerfile
             context: apps/frontend
             tag: nb-quickstarts/apps-frontend:ci
+          - dockerfile: kafka/bridge/Dockerfile
+            context: kafka/bridge
+            tag: nb-quickstarts/kafka-bridge:ci
     steps:
       - uses: actions/checkout@v4
 

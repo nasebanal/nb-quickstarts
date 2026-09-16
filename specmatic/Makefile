@@ -8,8 +8,10 @@ endif
 #################### SPECMATIC (contract test against the running backend) ###################
 
 specmatic:
-	@echo "🚀 Specmatic Commands:"
+	@echo "🚀 Specmatic"
+	@echo "Specmatic - OpenAPI-driven contract testing. Here testing the running backend against apps/backend/openapi.json."
 	@echo ""
+	@echo "Test Commands:"
 	@echo "  specmatic:test - Contract-test the running backend against apps/backend/openapi.json"
 	@echo ""
 	@echo "Requires apps to be running first: make apps:up"

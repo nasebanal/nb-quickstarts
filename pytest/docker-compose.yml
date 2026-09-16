@@ -2,6 +2,7 @@ services:
   pytest:
     build:
       context: ../apps/backend
+    image: nb-pytest
     volumes:
       - ../apps/backend:/app
       - ./report:/report

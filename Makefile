@@ -8,15 +8,15 @@ export
 
 # Include service-specific Makefiles
 include apps/Makefile
-include pytest/Makefile
+include kong/Makefile
+include kafka/Makefile
+include consul/Makefile
 include vitest/Makefile
+include pytest/Makefile
 include playwright/Makefile
 include specmatic/Makefile
 include microcks/Makefile
-include kong/Makefile
-include kafka/Makefile
 include locust/Makefile
-include consul/Makefile
 
 #################### ALL (every long-running module at once) ###################
 # Deliberately excludes pytest/vitest/playwright/specmatic (one-shot `test`
@@ -29,6 +29,17 @@ include consul/Makefile
 # test on its own. If .env sets LOCUST_HEADLESS_FLAG=--headless, though,
 # `all:up` DOES kick off a real (LOCUST_RUN_TIME-bounded) load test against
 # apps immediately.
+
+all:
+	@echo "🚀 All"
+	@echo "Start/stop/test every long-running module together: apps, kong, kafka, consul, microcks, locust."
+	@echo ""
+	@echo "  all:up      - Start them all (apps first)"
+	@echo "  all:down    - Stop them all (apps last)"
+	@echo "  all:restart - all:down then all:up"
+	@echo "  all:status  - Show container status for every module"
+	@echo "  all:test    - Run pytest/vitest/playwright/specmatic in sequence (starts apps:up first)"
+	@echo "  all:reset   - Wipe apps/kong/kafka/consul persistent state, restart the rest"
 
 all\:%:
 	@$(MAKE) all-$(subst all:,,$@)
@@ -49,22 +60,72 @@ all-down:
 	@$(MAKE) kong-down
 	@$(MAKE) apps-down
 
+all-restart:
+	@$(MAKE) all-down
+	@$(MAKE) all-up
+
+all-status:
+	@echo "=== apps ==="
+	@$(MAKE) apps-status
+	@echo ""
+	@echo "=== kong ==="
+	@$(MAKE) kong-status
+	@echo ""
+	@echo "=== kafka ==="
+	@$(MAKE) kafka-status
+	@echo ""
+	@echo "=== consul ==="
+	@$(MAKE) consul-status
+	@echo ""
+	@echo "=== microcks ==="
+	@$(MAKE) microcks-status
+	@echo ""
+	@echo "=== locust ==="
+	@$(MAKE) locust-status
+
+# Runs the one-shot `test` modules (pytest/vitest/playwright/specmatic) in
+# sequence - NOT microcks/locust, which aren't a `test` verb (see AGENTS.md
+# "Test/verification tool modules"). playwright/specmatic need apps
+# running, so this brings it up first; it does NOT tear apps down
+# afterward, matching every other module's own test target.
+all-test: apps-up
+	@$(MAKE) pytest-test
+	@$(MAKE) vitest-test
+	@$(MAKE) playwright-test
+	@$(MAKE) specmatic-test
+
+# apps/kong/kafka/consul each have a named Docker volume worth wiping
+# (apps_apps-db-data, kong_kong-db-data, kafka_kafka-data,
+# consul_consul-data + consul_consul-config - see AGENTS.md "Anonymous
+# volumes"/module bullets) and get their own `reset`. microcks/locust hold
+# no persistent state at all, so a plain `restart` already leaves them as
+# fresh as a "reset" would.
+all-reset:
+	@$(MAKE) apps-reset
+	@$(MAKE) kong-reset
+	@$(MAKE) kafka-reset
+	@$(MAKE) consul-reset
+	@$(MAKE) microcks-restart
+	@$(MAKE) locust-restart
+
 #################### DEFAULT HELP ###################
 default:
-	@echo "🚀 NASEBANAL Quick Start"
+	@echo "Usage: make <command>"
 	@echo ""
-	@echo "Hierarchical Commands:"
-	@echo "  make apps               - Show Apps (test target) commands"
-	@echo "  make pytest             - Show Pytest (apps/backend unit tests) commands"
-	@echo "  make vitest             - Show Vitest (apps/frontend unit tests) commands"
-	@echo "  make playwright         - Show Playwright (E2E) commands"
-	@echo "  make specmatic          - Show Specmatic (contract test) commands"
-	@echo "  make microcks           - Show Microcks (mock server) commands"
-	@echo "  make kong               - Show Kong API Gateway commands"
-	@echo "  make kafka              - Show Kafka-related commands"
-	@echo "  make locust             - Show Locust Load Testing commands"
-	@echo "  make consul             - Show Consul-related commands"
+	@echo "🚀 NASEBANAL Quick Start - verification toolkit for the NASEBANAL Stack."
 	@echo ""
-	@echo "  make all:up              - Start apps/kong/kafka/consul/microcks/locust together"
-	@echo "  make all:down            - Stop all of the above"
+	@echo "Commands:"
+	@echo "  apps         Show Apps (test target) commands"
+	@echo "  kong         Show Kong API Gateway commands"
+	@echo "  kafka        Show Kafka-related commands"
+	@echo "  consul       Show Consul-related commands"
+	@echo "  vitest       Show Vitest (apps/frontend unit tests) commands"
+	@echo "  pytest       Show Pytest (apps/backend unit tests) commands"
+	@echo "  playwright   Show Playwright (E2E) commands"
+	@echo "  specmatic    Show Specmatic (contract test) commands"
+	@echo "  microcks     Show Microcks (mock server) commands"
+	@echo "  locust       Show Locust Load Testing commands"
+	@echo "  all          Show commands that act on every module above at once"
+	@echo ""
+	@echo "Run 'make <command>' for more information on a command."
 	@echo	""

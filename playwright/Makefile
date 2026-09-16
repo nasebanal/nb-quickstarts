@@ -8,8 +8,10 @@ endif
 #################### PLAYWRIGHT (E2E against the running apps frontend) ###################
 
 playwright:
-	@echo "🚀 Playwright Commands:"
+	@echo "🚀 Playwright"
+	@echo "Playwright - cross-browser E2E test automation. Here testing the running apps frontend."
 	@echo ""
+	@echo "Test Commands:"
 	@echo "  playwright:test - Run E2E browser tests against the running apps frontend"
 	@echo ""
 	@echo "Requires apps to be running first: make apps:up"

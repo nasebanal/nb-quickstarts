@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_employee_code
 from app.db import get_db
-from app.schemas import ItemCreate, ItemOut
+from app.schemas import ItemBalance, ItemCreate, ItemOut
 from app.services import item_service
 
 router = APIRouter(prefix="/items", tags=["items"])
@@ -13,6 +13,14 @@ router = APIRouter(prefix="/items", tags=["items"])
 def list_items(db: Session = Depends(get_db)) -> list[ItemOut]:
     items = item_service.list_items(db)
     return [ItemOut.model_validate(item) for item in items]
+
+
+# Must be declared before GET /{item_id} - otherwise FastAPI would try to
+# match "balances" as an item_id (an int) and fail with a 422 instead of
+# reaching this route.
+@router.get("/balances", response_model=list[ItemBalance])
+def list_balances(db: Session = Depends(get_db)) -> list[ItemBalance]:
+    return item_service.get_balances(db)
 
 
 @router.get("/{item_id}", response_model=ItemOut)

@@ -5,13 +5,17 @@ from pydantic.alias_generators import to_camel
 
 
 class CamelModel(BaseModel):
-    """JSON は camelCase (TypeScript フロントエンド/OpenAPI クライアント向け)、
-    Python 側の属性は snake_case のままにする共通基底クラス。"""
+    """Base class that serializes to camelCase JSON (for the TypeScript
+    frontend / OpenAPI clients) while keeping snake_case attributes on the
+    Python side."""
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
 class ItemCreate(CamelModel):
+    """`quantity` is a signed delta (e.g. -3 to record consumption), not an
+    absolute value — see `Item` in models.py."""
+
     name: str
     quantity: int = 0
 
@@ -24,6 +28,16 @@ class ItemOut(CamelModel):
     quantity: int
     source: str
     created_at: datetime
+
+
+class ItemBalance(CamelModel):
+    """A name's current balance: the sum of every event's `quantity` for
+    that name, plus how many events contributed to it (see
+    `item_service.get_balances`)."""
+
+    name: str
+    balance: int
+    event_count: int
 
 
 class LoginRequest(CamelModel):
