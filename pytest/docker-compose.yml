@@ -1,0 +1,11 @@
+services:
+  pytest:
+    build:
+      context: ../apps/backend
+    volumes:
+      - ../apps/backend:/app
+      - ./report:/report
+    working_dir: /app
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements-dev.txt &&
+      pytest tests/ -v --html=/report/report.html --self-contained-html"

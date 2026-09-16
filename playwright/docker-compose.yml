@@ -1,0 +1,16 @@
+services:
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.48.0-noble
+    working_dir: /app
+    # Runs on the host network, on purpose: apps/frontend's client bundle
+    # calls the backend at NEXT_PUBLIC_API_BASE (http://localhost:8080),
+    # meant for a real user's browser. A containerized browser on
+    # apps-network would resolve "localhost" to itself, not the host, and
+    # never reach the backend. Host networking makes Playwright's browser
+    # behave exactly like a real user's.
+    network_mode: host
+    volumes:
+      - ./:/app
+    environment:
+      BASE_URL: ${PLAYWRIGHT_BASE_URL:-http://localhost:5173}
+    command: sh -c "npm install && npx playwright test"

@@ -1,0 +1,35 @@
+services:
+  specmatic:
+    image: znsio/specmatic:latest
+    working_dir: /app
+    volumes:
+      - ../apps/backend/openapi.json:/app/openapi.json.src:ro
+      # Specmatic always writes its HTML report to build/reports/specmatic/html
+      # under the working dir, with no flag to redirect it - so mount that
+      # subtree straight onto the host instead.
+      - ./report:/app/build/reports/specmatic
+      - ./junit:/app/junit
+    entrypoint: sh
+    # FastAPI's generated openapi.json declares "openapi": "3.1.0", but this
+    # Specmatic release (v2.28.0) can't yet parse plain integer path
+    # parameters under a 3.1 document ("is not yet supported" load error) -
+    # see https://github.com/specmatic/specmatic/issues/628. The 3.1 JSON
+    # Schema our spec actually uses is otherwise a compatible subset, so we
+    # relabel just the version string to 3.0.3 before handing it to
+    # Specmatic. This only affects Specmatic's own copy - the live
+    # /openapi.json served by the backend (and the Scalar docs page) is
+    # untouched.
+    command:
+      - -c
+      - >
+        jq '.openapi = "3.0.3"' openapi.json.src > openapi.json &&
+        specmatic test openapi.json --host backend --port 8080
+        --junitReportDir /app/junit
+    networks:
+      - apps-network
+
+networks:
+  # Owned by apps/docker-compose.yml; see AGENTS.md "Cross-module Docker network".
+  apps-network:
+    name: apps-network
+    external: true

@@ -1,0 +1,12 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0
+pymysql>=1.1
+cryptography>=42.0
+strawberry-graphql[fastapi]>=0.240
+fastapi-mcp>=0.4.0
+# fastapi-mcp 0.4.0 calls mcp's Server(name, description) positionally;
+# every mcp release newer than this made `description` keyword-only
+# (TypeError at import time). Pin to fastapi-mcp's stated minimum, the
+# last version confirmed to still accept it positionally.
+mcp==1.12.0

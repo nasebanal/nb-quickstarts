@@ -1,0 +1,73 @@
+services:
+  mysql-server:
+    image: mysql:${LOCUST_MYSQL_VERSION:-8.4.7}
+    container_name: mysql-server
+    ports:
+      - "${LOCUST_MYSQL_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${LOCUST_MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
+      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
+    healthcheck:
+      # TCP(127.0.0.1) で mysqld が接続を受け付けられるまでを ready とみなす
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${LOCUST_MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+    networks:
+      - apps-network
+    volumes:
+      - apps-db-data:/var/lib/mysql
+
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+    environment:
+      MYSQL_HOST: mysql-server
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
+      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
+      MYSQL_DATABASE: testdb
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      - mysql-server
+    networks:
+      - apps-network
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      # URL called from the browser. The browser is outside the Docker
+      # network, so this must be the host-published port, not the
+      # container name (backend).
+      NEXT_PUBLIC_API_BASE: http://localhost:8080
+    depends_on:
+      - backend
+    networks:
+      - apps-network
+
+networks:
+  # apps-network は compose ではなく `apps-network-ensure` (apps/Makefile) が
+  # 冪等に作成する。apps/locust 等どちらが先に起動しても壊れないようにするため。
+  apps-network:
+    name: apps-network
+    external: true
+
+volumes:
+  # Named (not anonymous) so `apps:down`/`apps:restart` can leave it alone -
+  # data survives a normal restart, same as Kong's `kong-db-data` (same
+  # "<module>-db-data" naming, for consistency between the two). Only
+  # `apps:reset` removes it.
+  apps-db-data:

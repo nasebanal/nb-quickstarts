@@ -22,7 +22,7 @@ echo ""
 # Check if Kong is running
 if ! curl -s -f "${KONG_ADMIN_URL}/status" > /dev/null 2>&1; then
     echo -e "${YELLOW}Kong is not running${NC}"
-    echo "Start Kong: make kong:run"
+    echo "Start Kong: make kong:up"
     exit 1
 fi
 
@@ -34,8 +34,11 @@ if [ -z "$SERVICES" ]; then
     exit 0
 fi
 
-# Loop through each service
-for SERVICE in $SERVICES; do
+# Loop through each service. ${(f)SERVICES} is zsh's split-on-newline
+# expansion - a bare $SERVICES doesn't word-split by default in zsh (unlike
+# bash), so with more than one service this used to hand the whole
+# newline-joined blob to curl as a single malformed URL.
+for SERVICE in ${(f)SERVICES}; do
     # Get service details
     SERVICE_DATA=$(curl -s "${KONG_ADMIN_URL}/services/${SERVICE}")
     HOST=$(echo "$SERVICE_DATA" | jq -r '.host')

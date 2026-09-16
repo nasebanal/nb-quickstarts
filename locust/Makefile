@@ -11,7 +11,11 @@ endif
 #   - HTTP/GraphQL: locustfile が HTTP_HOST を読む（compose が LOCUST_HTTP_HOST を渡す）
 #   - MySQL:        locustfile が MYSQL_HOST/PORT/USER/... を読んで接続する
 # よって別ホストを叩くときは .env の LOCUST_HTTP_HOST / LOCUST_MYSQL_* を変更する。
-# 起動するモックは LOCUST_MOCK_SERVICE で制御する（カンマ区切りで複数可、空=外部のみ）。
+#
+# locust:up はテスト対象アプリ（MySQL/HTTPサーバー）を起動しない。
+#   - apps（同梱のモックアプリ）を対象にするときは、先に `make apps:up` しておく
+#   - 外部ホストを対象にするときは、.env の LOCUST_HTTP_HOST / LOCUST_MYSQL_HOST を
+#     外部URLに変更するだけでよい（apps を起動する必要はない）
 
 #################### LOCUST MANAGEMENT ###################
 
@@ -20,19 +24,23 @@ locust:
 	@echo ""
 	@echo "Container Management:"
 	@echo "  locust:build       - Build custom Locust Docker image with MySQL support"
-	@echo "  locust:pull        - Pull Locust Docker image"
-	@echo "  locust:run         - Start Locust master and worker containers"
-	@echo "  locust:open        - Open Locust UI in browser"
-	@echo "  locust:stop        - Stop and remove Locust containers"
-	@echo "  locust:restart     - Restart Locust containers"
+	@echo "  locust:up          - Start Locust master and worker containers"
+	@echo "  locust:down        - Stop and remove Locust containers"
 	@echo "  locust:status      - Check Locust container status"
+	@echo "  locust:restart     - Restart Locust containers"
+	@echo "  locust:open        - Open Locust UI in browser"
 	@echo ""
-	@echo "Load Testing (configure via .env or CLI, then run locust:run):"
-	@echo "  make locust:run                                          # uses .env settings"
-	@echo "  make locust:run LOCUST_FILE=locustfile_http.py    LOCUST_MOCK_SERVICE=http"
-	@echo "  make locust:run LOCUST_FILE=locustfile_graphql.py LOCUST_MOCK_SERVICE=http  LOCUST_TAGS=graphql-query"
-	@echo "  make locust:run LOCUST_FILE=locustfile_mysql.py   LOCUST_MOCK_SERVICE=mysql LOCUST_TAGS=mysql-select"
-	@echo "  (to switch test types cleanly, run locust:restart, or locust:stop then locust:run)"
+	@echo "Load Testing (configure via .env or CLI, then run locust:up):"
+	@echo "  make apps:up                                            # start test target apps (once)"
+	@echo "  make locust:up                                          # uses .env settings"
+	@echo "  make locust:up LOCUST_FILE=locustfile_http.py"
+	@echo "  make locust:up LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS=graphql-query"
+	@echo "  make locust:up LOCUST_FILE=locustfile_mysql.py   LOCUST_TAGS=mysql-select"
+	@echo "  (to switch test types cleanly, run locust:restart, or locust:down then locust:up)"
+	@echo ""
+	@echo "Note: locust:up no longer starts the target apps (MySQL/HTTP server)."
+	@echo "      Run 'make apps:up' first to target the bundled apps, or point"
+	@echo "      LOCUST_HTTP_HOST/LOCUST_MYSQL_HOST at an external host instead."
 	@echo ""
 	@echo "Cluster Management:"
 	@echo "  locust:join-cluster - Join an existing Locust cluster as worker from remote PC"
@@ -40,11 +48,10 @@ locust:
 	@echo "Usage:"
 	@echo "  1. Copy .env.example to .env:  cp .env.example .env"
 	@echo "  2. Edit .env to configure test parameters"
-	@echo "  3. Run load test:  make locust:run"
+	@echo "  3. Run load test:  make locust:up"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  LOCUST_FILE=locustfile_http.py     # Choose: locustfile_http.py, locustfile_graphql.py, locustfile_mysql.py"
-	@echo "  LOCUST_MOCK_SERVICE=http           # Mock(s) to start: http / mysql / http,mysql / empty=external"
 	@echo "  LOCUST_TAGS=                       # Optional: http-root, http-login, graphql-query, graphql-mutation, mysql-select, mysql-cartesian"
 	@echo "  LOCUST_WORKERS=1                   # Number of worker containers"
 	@echo "  LOCUST_IMAGE=locust-mysql:latest   # Docker image"
@@ -72,7 +79,7 @@ locust:
 	@echo "    - report.html (final test report)"
 	@echo ""
 	@echo "Other commands (with optional parameters):"
-	@echo "  make locust:run [LOCUST_HTTP_HOST=url] [LOCUST_MYSQL_HOST=host] [LOCUST_WORKERS=n]"
+	@echo "  make locust:up [LOCUST_HTTP_HOST=url] [LOCUST_MYSQL_HOST=host] [LOCUST_WORKERS=n]"
 	@echo "  make locust:join-cluster [LOCUST_MASTER_HOST=ip] [LOCUST_WORKERS=n]"
 
 locust\:%:
@@ -87,33 +94,22 @@ locust-build:
 		locust/
 	@echo "Custom Locust image built successfully as locust-mysql:$${LOCUSTIO_VERSION:-2.42.2}"
 
-locust-pull:
-	@echo "Pulling Locust Docker image..."
-	@docker pull locustio/locust:$${LOCUSTIO_VERSION:-2.42.2}
-	@echo "Locust image pulled successfully."
-
-locust-run:
+locust-up: apps-network-ensure
 	@if [ "$${LOCUST_HEADLESS_FLAG}" = "--headless" ] && [ -z "$${LOCUST_RUN_TIME}" ]; then \
 		echo "Error: LOCUST_RUN_TIME is required in headless mode"; \
 		echo "Set it in .env file (e.g., LOCUST_RUN_TIME=60s)"; \
 		exit 1; \
 	fi
-	@MOCK_SERVICE=$${LOCUST_MOCK_SERVICE:-}; \
-		if [ -z "$$MOCK_SERVICE" ]; then \
-			echo "Starting Locust containers via Docker Compose (mock services: none - external host)..."; \
-		else \
-			echo "Starting Locust containers via Docker Compose (mock services: $$MOCK_SERVICE)..."; \
-		fi
+	@echo "Starting Locust containers via Docker Compose..."
 	@echo "Using Locust file: $${LOCUST_FILE:-locustfile_http.py}"
 	@echo "Tags: $${LOCUST_TAGS:-none}"
 	@echo "Workers: $${LOCUST_WORKERS:-1}"
 	@DISPLAY_HOST=$$(case "$${LOCUST_FILE:-locustfile_http.py}" in \
 			*mysql*) echo "mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema}" ;; \
-			*)       echo "$${LOCUST_HTTP_HOST:-http://http-server:8080}" ;; \
+			*)       echo "$${LOCUST_HTTP_HOST:-http://backend:8080}" ;; \
 		esac); \
 		echo "Target Host (set by locustfile): $$DISPLAY_HOST"
-	@MOCK_SERVICE=$${LOCUST_MOCK_SERVICE:-}; \
-		TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
+	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
 		LOG_DIR="locust/logs/$$TIMESTAMP"; \
 		mkdir -p $$LOG_DIR; \
 		MASTER_LOGFILE="/mnt/locust/logs/$$TIMESTAMP/master.log"; \
@@ -123,7 +119,7 @@ locust-run:
 		HTML_FILE="/mnt/locust/logs/$$TIMESTAMP/report.html"; \
 		DISPLAY_HOST=$$(case "$${LOCUST_FILE:-locustfile_http.py}" in \
 			*mysql*) echo "mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema}" ;; \
-			*)       echo "$${LOCUST_HTTP_HOST:-http://http-server:8080}" ;; \
+			*)       echo "$${LOCUST_HTTP_HOST:-http://backend:8080}" ;; \
 		esac); \
 		echo "Target Host: $$DISPLAY_HOST" > $$LOG_DIR/target_host.txt; \
 		echo "Locust File: $${LOCUST_FILE:-locustfile_http.py}" >> $$LOG_DIR/target_host.txt; \
@@ -145,16 +141,7 @@ locust-run:
 			LOCUST_LOGLEVEL=DEBUG \
 			LOCUST_CSV_PREFIX=$$CSV_PREFIX \
 			LOCUST_HTML_FILE=$$HTML_FILE \
-			COMPOSE_PROFILES=$$MOCK_SERVICE \
 			docker compose -p locust -f locust/docker-compose.yml up -d --scale worker=$${LOCUST_WORKERS:-1}; \
-		case ",$$MOCK_SERVICE," in *,mysql,*) \
-			printf "Waiting for MySQL (mysql-server) to be ready"; \
-			i=0; \
-			until [ "$$(docker inspect -f '{{.State.Health.Status}}' mysql-server 2>/dev/null)" = "healthy" ] || [ $$i -ge 60 ]; do \
-				printf "."; sleep 1; i=$$((i+1)); \
-			done; \
-			if [ "$$(docker inspect -f '{{.State.Health.Status}}' mysql-server 2>/dev/null)" = "healthy" ]; then echo " ready"; else echo " timeout (continuing; workers will retry)"; fi ;; \
-		esac; \
 		sleep 3; \
 		WORKER_CONTAINER=$$(docker ps --format "{{.Names}}" | grep -E "worker-[0-9]+" | head -1); \
 		if [ "$${LOCUST_DEBUG_MODE:-false}" = "true" ]; then \
@@ -169,18 +156,10 @@ locust-run:
 			nohup docker logs -f locust-master > $$RESULT_LOGFILE 2>&1 & \
 			echo $$! > locust/.result_log_pid; \
 		fi
-	@MOCK_SERVICE=$${LOCUST_MOCK_SERVICE:-}; \
-		MSG="Locust containers started. Access Locust UI at http://localhost:8089"; \
-		case ",$$MOCK_SERVICE," in *,http,*) MSG="$$MSG; HTTP server at http://localhost:8080" ;; esac; \
-		case ",$$MOCK_SERVICE," in *,mysql,*) MSG="$$MSG; MySQL at localhost:$${LOCUST_MYSQL_PORT:-3306}" ;; esac; \
-		if [ -z "$$MOCK_SERVICE" ]; then MSG="$$MSG (no mock server started; using external host)"; fi; \
-		echo "$$MSG"
+	@echo "Locust containers started. Access Locust UI at http://localhost:8089"
 
-locust-open:
-	@bin/open_browser.sh http://localhost:8089
-
-locust-stop:
-	@echo "Stopping HTTP server, MySQL, and Locust containers..."
+locust-down:
+	@echo "Stopping Locust containers..."
 	@if [ -f locust/.result_log_pid ]; then \
 		kill $$(cat locust/.result_log_pid) 2>/dev/null || true; \
 		rm -f locust/.result_log_pid; \
@@ -189,18 +168,21 @@ locust-stop:
 		kill $$(cat locust/.debug_log_pid) 2>/dev/null || true; \
 		rm -f locust/.debug_log_pid; \
 	fi
-	@COMPOSE_PROFILES="*" docker compose -p locust -f locust/docker-compose.yml down --remove-orphans
+	@docker compose -p locust -f locust/docker-compose.yml down --remove-orphans
 	@docker compose -f locust/docker-compose-worker.yml down 2>/dev/null || true
 	@rm -f .locust_cluster_mode
-	@echo "All containers stopped and removed."
-
-locust-restart:
-	@$(MAKE) locust-stop
-	@$(MAKE) locust-run
+	@echo "Locust containers stopped and removed. (apps are unaffected; use 'make apps:down' to stop them.)"
 
 locust-status:
 	@echo "Checking Locust container status..."
-	@COMPOSE_PROFILES="*" docker compose -p locust -f locust/docker-compose.yml ps
+	@docker compose -p locust -f locust/docker-compose.yml ps
+
+locust-restart:
+	@$(MAKE) locust-down
+	@$(MAKE) locust-up
+
+locust-open:
+	@bin/open_browser.sh http://localhost:8089
 
 locust-join-cluster:
 	@echo "Joining existing Locust cluster..."

@@ -11,11 +11,10 @@ endif
 kong:
 	@echo "🚀 Kong Management Commands:"
 	@echo ""
-	@echo "  kong:pull            - Pull Kong Docker image"
-	@echo "  kong:run             - Start Kong (mode: KONG_DB env variable)"
-	@echo "  kong:stop            - Stop and remove Kong containers"
-	@echo "  kong:restart         - Restart Kong containers"
+	@echo "  kong:up              - Start Kong (mode: KONG_DB env variable)"
+	@echo "  kong:down            - Stop and remove Kong containers"
 	@echo "  kong:status          - Check Kong container status"
+	@echo "  kong:restart         - Restart Kong containers"
 	@echo "  kong:open            - Open Kong Manager in browser"
 	@echo "  kong:list            - List all services and routes"
 	@echo "  kong:reset           - Reset configuration (reload declarative.yml)"
@@ -26,10 +25,11 @@ kong:
 	@echo "  KONG_DB=postgres  - Database mode (uses PostgreSQL)"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make kong:run                  # Use mode from .env (default: off)"
-	@echo "  make kong:run KONG_DB=postgres # Override to use database mode"
+	@echo "  make kong:up                  # Use mode from .env (default: off)"
+	@echo "  make kong:up KONG_DB=postgres # Override to use database mode"
 	@echo ""
 	@echo "Test endpoints:"
+	@echo "  curl http://localhost:8000/         # proxies to apps frontend (make apps:up first)"
 	@echo "  curl http://localhost:8000/mock"
 	@echo "  curl http://localhost:8000/echo/get"
 
@@ -40,12 +40,7 @@ kong\:%:
 
 #################### KONG ACTIONS ###################
 
-kong-pull:
-	@echo "Pulling Kong Docker image..."
-	@docker pull kong:${KONG_VERSION:-3.6}
-	@echo "Kong image pulled successfully."
-
-kong-run:
+kong-up: apps-network-ensure
 	@echo "Checking Python dependencies..."
 	@if ! python3 -c "import yaml" 2>/dev/null; then \
 		echo "Required Python package 'PyYAML' is not installed."; \
@@ -87,23 +82,23 @@ kong-run:
 	fi
 	@echo "  Admin API:     http://localhost:8001"
 	@echo "  Kong Manager:  http://localhost:8002"
-	@echo "  Proxy:         http://localhost:8000"
+	@echo "  Proxy:         http://localhost:8000  (default route -> apps frontend; needs apps:up)"
 	@echo ""
 	@echo "Test the example service:"
 	@echo "  curl http://localhost:8000/mock"
 
-kong-stop:
+kong-down:
 	@echo "Stopping Kong containers..."
 	@docker-compose -f kong/docker-compose.yml --profile database down
 	@echo "Kong containers stopped and removed."
 
-kong-restart:
-	@$(MAKE) kong-stop
-	@$(MAKE) kong-run
-
 kong-status:
 	@echo "Checking Kong container status..."
 	@docker-compose -f kong/docker-compose.yml ps
+
+kong-restart:
+	@$(MAKE) kong-down
+	@$(MAKE) kong-up
 
 kong-open:
 	@bin/open_browser.sh http://localhost:8002

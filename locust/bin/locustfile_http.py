@@ -9,13 +9,12 @@ class WebsiteUser(HttpUser):
 
     @task
     @tag('http-root')
-    def load_homepage(self):
-        self.client.get("/")
+    def health_check(self):
+        self.client.get("/health")
 
     @task
     @tag('http-login')
     def test_login(self):
-        self.client.post("/login", json={
-            "username": "admin",
-            "password": "password"
+        self.client.post("/auth/login", json={
+            "employeeCode": "E001"
         })
