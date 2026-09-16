@@ -3,13 +3,17 @@ services:
     image: znsio/specmatic:latest
     working_dir: /app
     volumes:
-      - ../apps/backend/openapi.json:/app/openapi.json.src:ro
       # Specmatic always writes its HTML report to build/reports/specmatic/html
       # under the working dir, with no flag to redirect it - so mount that
       # subtree straight onto the host instead.
       - ./report:/app/build/reports/specmatic
       - ./junit:/app/junit
     entrypoint: sh
+    # Fetches the spec live from the backend it's about to test (this is a
+    # demo app with no real schema-change workflow, so there's no reason to
+    # keep a separately-exported copy in sync by hand - and specmatic-test
+    # already requires apps:up to make the actual test requests anyway).
+    #
     # FastAPI's generated openapi.json declares "openapi": "3.1.0", but this
     # Specmatic release (v2.28.0) can't yet parse plain integer path
     # parameters under a 3.1 document ("is not yet supported" load error) -
@@ -22,7 +26,7 @@ services:
     command:
       - -c
       - >
-        jq '.openapi = "3.0.3"' openapi.json.src > openapi.json &&
+        curl -sf http://backend:8080/openapi.json | jq '.openapi = "3.0.3"' > openapi.json &&
         specmatic test openapi.json --host backend --port 8080
         --junitReportDir /app/junit
     networks:

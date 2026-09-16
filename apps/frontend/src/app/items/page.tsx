@@ -4,16 +4,28 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/components/LocaleProvider";
-import { createItem, listItems, type Item } from "@/lib/api";
+import { createItem, UnauthorizedError } from "@/lib/api";
+import { useBalances } from "@/lib/useBalances";
 
 export default function ItemsPage() {
   const { t } = useLocale();
-  const { token, employeeCode, initializing } = useAuth();
+  const { token, initializing, logout } = useAuth();
   const router = useRouter();
-  const [items, setItems] = useState<Item[]>([]);
+  const { balances, refresh } = useBalances();
   const [itemName, setItemName] = useState("");
   const [itemQuantity, setItemQuantity] = useState("0");
   const [itemError, setItemError] = useState("");
+
+  // Transactions post against an existing account, picked from the chart
+  // of accounts the balances table itself already represents - not typed
+  // free text. Defaults to the first account once the balances poll first
+  // resolves; left alone after that so it doesn't fight your own selection
+  // on every later poll tick.
+  useEffect(() => {
+    if (!itemName && balances.length > 0) {
+      setItemName(balances[0].name);
+    }
+  }, [balances, itemName]);
 
   // Still no token once AuthProvider has finished trying to restore one
   // from sessionStorage means either a real logout or navigating here
@@ -26,16 +38,6 @@ export default function ItemsPage() {
     }
   }, [initializing, token, router]);
 
-  const refreshItems = async () => {
-    setItems(await listItems());
-  };
-
-  useEffect(() => {
-    refreshItems().catch((err) => {
-      console.error("Failed to load items", err);
-    });
-  }, []);
-
   const onCreateItem = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!token) return;
@@ -44,8 +46,21 @@ export default function ItemsPage() {
       await createItem(token, { name: itemName, quantity: Number(itemQuantity) });
       setItemName("");
       setItemQuantity("0");
-      await refreshItems();
+      // The polling hook picks this up on its own within POLL_INTERVAL_MS
+      // anyway - this just makes the table update immediately after your
+      // own registration instead of waiting for the next tick.
+      await refresh();
     } catch (err) {
+      if (err instanceof UnauthorizedError) {
+        // The backend's token store is in-memory only (see auth.py) - if
+        // it restarted since you logged in, sessionStorage still has a
+        // token the backend no longer recognizes. Explain why, then clear
+        // it: the page's own token-guard effect above reacts to that by
+        // sending the viewer back home to log in again.
+        setItemError(t.app.sessionExpiredError);
+        setTimeout(logout, 1500);
+        return;
+      }
       setItemError(err instanceof Error ? err.message : String(err));
     }
   };
@@ -57,30 +72,26 @@ export default function ItemsPage() {
   return (
     <main className="container">
       <div className="nb-content">
-        <h1>{t.app.title}</h1>
+        <p className="nb-concept-description" data-testid="concept-description">
+          {t.app.conceptDescription}
+        </p>
 
         <section>
-          <p data-testid="auth-status">
-            {t.app.loggedInAs} <strong>{employeeCode}</strong>
-          </p>
-        </section>
-
-        <section>
-          <h2>{t.app.itemListHeading}</h2>
-          <table data-testid="item-table">
+          <h2>{t.app.balanceHeading}</h2>
+          <table data-testid="balance-table">
             <thead>
               <tr>
                 <th>{t.app.columnName}</th>
-                <th>{t.app.columnQuantity}</th>
-                <th>{t.app.columnSource}</th>
+                <th>{t.app.columnBalance}</th>
+                <th>{t.app.columnEventCount}</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id} data-testid={`item-row-${item.id}`}>
-                  <td>{item.name}</td>
-                  <td>{item.quantity}</td>
-                  <td>{item.source}</td>
+              {balances.map((balance) => (
+                <tr key={balance.name} data-testid={`balance-row-${balance.name}`}>
+                  <td>{balance.name}</td>
+                  <td>{balance.balance}</td>
+                  <td>{balance.eventCount}</td>
                 </tr>
               ))}
             </tbody>
@@ -90,13 +101,21 @@ export default function ItemsPage() {
         <section>
           <h2>{t.app.registerHeading}</h2>
           <form data-testid="item-form" onSubmit={onCreateItem}>
-            <input
+            <select
               name="name"
-              placeholder={t.app.namePlaceholder}
               value={itemName}
               onChange={(event) => setItemName(event.target.value)}
               required
-            />
+              disabled={balances.length === 0}
+              data-testid="item-account-select"
+            >
+              {balances.length === 0 && <option value="">{t.app.noAccountsPlaceholder}</option>}
+              {balances.map((balance) => (
+                <option key={balance.name} value={balance.name}>
+                  {balance.name}
+                </option>
+              ))}
+            </select>
             <input
               name="quantity"
               type="number"

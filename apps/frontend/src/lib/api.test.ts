@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createItem, listItems, login } from "./api";
+import { createItem, listBalances, listItems, login } from "./api";
 
 function mockFetchOnce(body: unknown, ok = true, status = 200): void {
   vi.stubGlobal(
@@ -34,6 +34,13 @@ describe("api client", () => {
     const items = await listItems();
     expect(items).toHaveLength(1);
     expect(items[0].name).toBe("A");
+  });
+
+  it("listBalances returns the summed-per-name balances", async () => {
+    mockFetchOnce([{ name: "A", balance: 12, eventCount: 3 }]);
+    const balances = await listBalances();
+    expect(balances).toHaveLength(1);
+    expect(balances[0]).toEqual({ name: "A", balance: 12, eventCount: 3 });
   });
 
   it("createItem sends a bearer auth header", async () => {

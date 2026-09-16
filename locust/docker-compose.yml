@@ -1,7 +1,11 @@
 services:
   locust-master:
-    image: ${LOCUST_IMAGE:-locust-mysql:latest}
-    container_name: locust-master
+    image: ${LOCUST_IMAGE:-nb-locust-mysql:latest}
+    build:
+      context: .
+      args:
+        LOCUSTIO_VERSION: ${LOCUSTIO_VERSION:-2.42.2}
+    container_name: nb-locust-master
     ports:
       - "8089:8089"
       - "5557:5557"
@@ -17,6 +21,8 @@ services:
       MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
       DEBUG_MODE: ${LOCUST_DEBUG_MODE:-false}
       HTTP_HOST: ${LOCUST_HTTP_HOST:-http://backend:8080}
+      KAFKA_BOOTSTRAP_SERVERS: ${LOCUST_KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+      KAFKA_TOPIC: ${LOCUST_KAFKA_TOPIC:-quickstart-events}
       PYTHONUNBUFFERED: 1
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -37,7 +43,11 @@ services:
       - apps-network
 
   worker:
-    image: ${LOCUST_IMAGE:-locust-mysql:latest}
+    image: ${LOCUST_IMAGE:-nb-locust-mysql:latest}
+    build:
+      context: .
+      args:
+        LOCUSTIO_VERSION: ${LOCUSTIO_VERSION:-2.42.2}
     volumes:
       - ./:/mnt/locust
     environment:
@@ -49,6 +59,8 @@ services:
       MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
       DEBUG_MODE: ${LOCUST_DEBUG_MODE:-false}
       HTTP_HOST: ${LOCUST_HTTP_HOST:-http://backend:8080}
+      KAFKA_BOOTSTRAP_SERVERS: ${LOCUST_KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+      KAFKA_TOPIC: ${LOCUST_KAFKA_TOPIC:-quickstart-events}
       PYTHONUNBUFFERED: 1
     extra_hosts:
       - "host.docker.internal:host-gateway"

@@ -7,40 +7,38 @@ ifneq (,$(wildcard ../.env))
 endif
 
 #################### APPS (TEST TARGETS) ###################
-# apps はテスト対象そのもの(MySQL + backend(Python/FastAPI, REST+GraphQL) +
-# frontend(TypeScript/Vite))を持つ。
-#   - backend は MySQL の items を読み書きする。OpenAPI スキーマは
-#     apps/backend/openapi.json に書き出してあり、将来 Specmatic の契約テストで
-#     使う想定 (make specmatic:up はまだ無い)。
-#   - backend の app/services/item_service.py は将来 Kafka コンシューマーから
-#     も直接呼ぶ想定のサービス層。make kafka:up のイベントを受けて item を
-#     登録する、というシナリオを見据えて分離してある(まだコンシューマー自体は
-#     未実装)。
-# Locust・Playwright・Vitest・Pytest・Specmatic 等のテストツールや、Kong(ゲートウェイ)・
-# Microcks(コントラクトモック)は apps とは別モジュールとして追加し、apps-network に
-# 接続する想定。テストツール側は対象ホストを環境変数からのみ読み込むこと(コンテナ名の
-# ハードコード禁止)。そうすることで、apps を起動した状態でも外部ホスト向けにも
-# 同じコマンドでテストを切り替えられる。
+# apps is the actual test target itself: MySQL + backend (Python/FastAPI,
+# REST+GraphQL) + frontend (TypeScript/Next.js).
+#   - backend reads/writes items in MySQL. No OpenAPI schema is checked in -
+#     Specmatic, Microcks, and the frontend's /api-specs page all fetch the
+#     backend's live /openapi.json at the point of use instead (this is a
+#     demo app with no real schema-change workflow to keep a separately
+#     exported copy in sync with).
+#   - Kafka events reach items via a separate container, kafka-bridge (see
+#     kafka/docker-compose.yml + kafka/bridge/), which consumes the topic
+#     and calls POST /items over REST - not an in-process consumer here, so
+#     apps/backend has zero Kafka dependency.
+# Locust/Playwright/Vitest/Pytest/Specmatic and Kong (gateway)/Microcks
+# (contract mock) are added as modules separate from apps, connecting to
+# apps-network. Test tools read their target host from env vars only (never
+# a hardcoded container name), so the same commands work whether apps is
+# running or you're pointing at an external host instead.
 
 apps:
-	@echo "🚀 Apps (Test Target) Commands:"
+	@echo "🚀 Apps"
+	@echo "Test-target stack under verification: MySQL + FastAPI backend (REST/GraphQL/MCP) + Next.js frontend."
 	@echo ""
-	@echo "  apps:build          - Build backend/frontend Docker images"
-	@echo "  apps:up             - Start test target apps (MySQL + backend + frontend)"
+	@echo "Container Management:"
+	@echo "  apps:up             - Build (if needed) and start test target apps (MySQL + backend + frontend)"
 	@echo "  apps:down           - Stop and remove apps containers (MySQL data preserved)"
 	@echo "  apps:status         - Check apps container status"
 	@echo "  apps:restart        - Restart apps containers (MySQL data preserved)"
 	@echo "  apps:reset          - Restart AND wipe MySQL data (fresh database)"
 	@echo "  apps:open           - Open the frontend (TypeScript UI) in browser"
-	@echo "  apps:export-openapi - Regenerate apps/backend/openapi.json"
-	@echo ""
-	@echo "Usage:"
-	@echo "  make apps:up"
-	@echo "  make locust:up   # targets apps by default (see .env: LOCUST_HTTP_HOST / LOCUST_MYSQL_HOST)"
 	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  Frontend:        http://localhost:5173"
-	@echo "  API docs:        http://localhost:5173/api-docs (Scalar, reads the backend's live OpenAPI schema)"
+	@echo "  API docs:        http://localhost:5173/api-specs (Scalar, reads the backend's live OpenAPI schema)"
 	@echo "  Backend REST:    http://localhost:8080"
 	@echo "  Backend GraphQL: http://localhost:8080/graphql"
 	@echo "  MCP server:      http://localhost:8080/mcp"
@@ -60,23 +58,18 @@ apps\:%:
 apps-network-ensure:
 	@docker network create apps-network >/dev/null 2>&1 || true
 
-apps-build:
-	@echo "Building apps (backend/frontend) Docker images..."
-	@docker compose -p apps -f apps/docker-compose.yml build
-	@echo "Apps images built."
-
 apps-up: apps-network-ensure
 	@echo "Starting apps (MySQL + backend + frontend)..."
-	@docker compose -p apps -f apps/docker-compose.yml up -d --renew-anon-volumes
+	@docker compose -p apps -f apps/docker-compose.yml up -d --build
 	@printf "Waiting for MySQL (mysql-server) to be ready"
 	@i=0; \
-		until [ "$$(docker inspect -f '{{.State.Health.Status}}' mysql-server 2>/dev/null)" = "healthy" ] || [ $$i -ge 60 ]; do \
+		until [ "$$(docker inspect -f '{{.State.Health.Status}}' nb-mysql-server 2>/dev/null)" = "healthy" ] || [ $$i -ge 60 ]; do \
 			printf "."; sleep 1; i=$$((i+1)); \
 		done; \
-		if [ "$$(docker inspect -f '{{.State.Health.Status}}' mysql-server 2>/dev/null)" = "healthy" ]; then echo " ready"; else echo " timeout (continuing)"; fi
+		if [ "$$(docker inspect -f '{{.State.Health.Status}}' nb-mysql-server 2>/dev/null)" = "healthy" ]; then echo " ready"; else echo " timeout (continuing)"; fi
 	@echo "Apps started."
 	@echo "  Frontend:        http://localhost:5173"
-	@echo "  API docs:        http://localhost:5173/api-docs"
+	@echo "  API docs:        http://localhost:5173/api-specs"
 	@echo "  Backend REST:    http://localhost:8080"
 	@echo "  Backend GraphQL: http://localhost:8080/graphql"
 	@echo "  MCP server:      http://localhost:8080/mcp"
@@ -85,7 +78,7 @@ apps-up: apps-network-ensure
 apps-down:
 	@echo "Stopping apps containers..."
 	@docker compose -p apps -f apps/docker-compose.yml down --remove-orphans
-	@echo "Apps containers stopped and removed. (MySQL data preserved in the apps-db-data volume — use 'make apps:reset' to wipe it.)"
+	@echo "Apps containers stopped and removed. (MySQL data preserved in the apps_apps-db-data Docker volume — use 'make apps:reset' to wipe it.)"
 
 apps-status:
 	@echo "Checking apps container status..."
@@ -102,7 +95,3 @@ apps-reset:
 
 apps-open:
 	@bin/open_browser.sh http://localhost:5173
-
-apps-export-openapi:
-	@echo "Exporting OpenAPI schema to apps/backend/openapi.json..."
-	@docker compose -p apps -f apps/docker-compose.yml exec backend python scripts/export_openapi.py

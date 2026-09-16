@@ -42,7 +42,7 @@ export default function Home() {
                 </li>
                 <li>
                   Backend (REST + GraphQL) —{" "}
-                  <a href="/api-docs" target="_blank" rel="noopener noreferrer">
+                  <a href="/api-specs" target="_blank" rel="noopener noreferrer">
                     localhost:8080
                   </a>
                 </li>

@@ -2,6 +2,7 @@ services:
   vitest:
     build:
       context: ../apps/frontend
+    image: nb-vitest
     volumes:
       - ../apps/frontend:/app
       - /app/node_modules

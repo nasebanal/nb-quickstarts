@@ -1,7 +1,7 @@
 services:
   kafka:
     image: ${KAFKA_IMAGE:-apache/kafka}:${KAFKA_VERSION:-3.8.1}
-    container_name: kafka
+    container_name: nb-kafka
     ports:
       - "${KAFKA_PORT:-9092}:9092"
       - "${KAFKA_CONTROLLER_PORT:-9093}:9093"
@@ -11,10 +11,21 @@ services:
       KAFKA_PROCESS_ROLES: ${KAFKA_PROCESS_ROLES:-broker,controller}
       KAFKA_CONTROLLER_QUORUM_VOTERS: ${KAFKA_CONTROLLER_QUORUM_VOTERS:-1@kafka:9093}
 
-      # Listeners configuration
-      KAFKA_LISTENERS: ${KAFKA_LISTENERS:-PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093}
-      KAFKA_ADVERTISED_LISTENERS: ${KAFKA_ADVERTISED_LISTENERS:-PLAINTEXT://localhost:9092}
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: ${KAFKA_LISTENER_SECURITY_PROTOCOL_MAP:-CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT}
+      # Listeners configuration.
+      #
+      # PLAINTEXT_INTERNAL exists because the Kafka wire protocol requires
+      # clients to reconnect to whatever address the broker *advertises*
+      # (not just the bootstrap address they dialed first) - PLAINTEXT's
+      # advertised address is "localhost:9092", which only resolves
+      # correctly for something on the host machine. Any client running in
+      # *another* container (the kafka-bridge service below, locust's Kafka
+      # producer scenario) would successfully bootstrap, then be told to
+      # reconnect to "localhost:9092" - itself, not the broker - and fail.
+      # PLAINTEXT_INTERNAL advertises "kafka:29092", the container-network
+      # hostname, so those clients actually work.
+      KAFKA_LISTENERS: ${KAFKA_LISTENERS:-PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093}
+      KAFKA_ADVERTISED_LISTENERS: ${KAFKA_ADVERTISED_LISTENERS:-PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: ${KAFKA_LISTENER_SECURITY_PROTOCOL_MAP:-CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT}
       KAFKA_CONTROLLER_LISTENER_NAMES: ${KAFKA_CONTROLLER_LISTENER_NAMES:-CONTROLLER}
       KAFKA_INTER_BROKER_LISTENER_NAME: ${KAFKA_INTER_BROKER_LISTENER_NAME:-PLAINTEXT}
 
@@ -23,8 +34,30 @@ services:
 
       # Auto create topics
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: ${KAFKA_AUTO_CREATE_TOPICS:-true}
+
+      # offsets.topic.replication.factor defaults to 3, which can never be
+      # satisfied on this single-broker cluster - __consumer_offsets (which
+      # every consumer *group* needs, including kafka-bridge and
+      # kafka:consume-events/get-all-events/count-events) then silently
+      # fails to ever be created, and every group-based consume just hangs
+      # until it times out with zero messages, even though the data was
+      # produced and persisted correctly. Verified: without this, the topic
+      # log segment on disk had real bytes in it, but no consumer group
+      # could ever read them back.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR:-1}
+
+      # The image's actual default log.dirs is /tmp/kraft-combined-logs, NOT
+      # /var/lib/kafka/data - without this override, the volume below mounts
+      # a path Kafka never writes to, so every container recreation silently
+      # loses all topic data regardless of the volume being present.
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
     networks:
       - kafka-net
+      # So apps/backend's consumer and locust's Kafka producer scenario -
+      # both on apps-network - can resolve "kafka" and reach
+      # PLAINTEXT_INTERNAL above. See AGENTS.md "Cross-module Docker
+      # network".
+      - apps-network
     volumes:
       - kafka-data:/var/lib/kafka/data
     healthcheck:
@@ -34,9 +67,31 @@ services:
       retries: 5
       start_period: 30s
 
+  # Bridges Kafka events into a REST backend (apps/backend by default, but
+  # KAFKA_BRIDGE_TARGET_URL can point anywhere - see kafka/bridge/consumer.py).
+  # Deliberately its own container, not code inside apps/backend: a Kafka
+  # or backend outage only ever affects this container (it just retries),
+  # never apps/backend itself, which has zero Kafka dependency.
+  kafka-bridge:
+    build:
+      context: ./bridge
+    container_name: nb-kafka-bridge
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPIC: ${KAFKA_TOPIC_NAME:-quickstart-events}
+      KAFKA_CONSUMER_GROUP: nb-quickstarts-bridge
+      KAFKA_BRIDGE_TARGET_URL: ${KAFKA_BRIDGE_TARGET_URL:-http://backend:8080}
+      KAFKA_BRIDGE_EMPLOYEE_CODE: kafka-bridge
+    networks:
+      - apps-network
+    restart: unless-stopped
+
 networks:
   kafka-net:
     name: kafka-net
+  apps-network:
+    name: apps-network
+    external: true
 
 volumes:
   kafka-data:

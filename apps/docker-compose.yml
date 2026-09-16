@@ -1,7 +1,7 @@
 services:
   mysql-server:
     image: mysql:${LOCUST_MYSQL_VERSION:-8.4.7}
-    container_name: mysql-server
+    container_name: nb-mysql-server
     ports:
       - "${LOCUST_MYSQL_PORT:-3306}:3306"
     environment:
@@ -23,7 +23,8 @@ services:
 
   backend:
     build: ./backend
-    container_name: backend
+    image: nb-backend
+    container_name: nb-backend
     ports:
       - "8080:8080"
     volumes:
@@ -42,7 +43,8 @@ services:
 
   frontend:
     build: ./frontend
-    container_name: frontend
+    image: nb-frontend
+    container_name: nb-frontend
     ports:
       - "5173:5173"
     volumes:

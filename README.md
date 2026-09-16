@@ -13,7 +13,20 @@ https://youtu.be/8UI0XZrSPkQ
 
 ## 🚀 Overview
 
-**NASEBANAL Quickstarts is a verification toolkit for the [NASEBANAL Stack](https://www.nasebanal.com)** — the proven open-source technologies NASEBANAL builds on (Kafka, Consul, Kong, Locust, pytest, vitest, Playwright, Specmatic, Microcks, ...), not a scaffold for every technology out there. Each module spins up one piece of that stack (or a tool that verifies it) via Docker Compose + `make`, so you can try it, test against it, and see how the pieces fit together. Like the constituents of the NASEBANAL Stack itself, which modules are here may change as the stack evolves.
+**NASEBANAL Quickstarts is a verification toolkit for the [NASEBANAL Stack](https://www.nasebanal.com)** — the proven open-source technologies NASEBANAL builds on, not a scaffold for every technology out there. Each module spins up one piece of that stack (or a tool that verifies it) via Docker Compose + `make`, so you can try it, test against it, and see how the pieces fit together. Like the constituents of the NASEBANAL Stack itself, which modules are here may change as the stack evolves.
+
+Supported OSS, one module per technology:
+
+- **[apps](#apps)** — the test-target stack itself: [FastAPI](https://fastapi.tiangolo.com/) (REST + GraphQL via [Strawberry](https://strawberry.rocks/) + an [MCP](https://modelcontextprotocol.io/) server via [fastapi-mcp](https://github.com/tadata-org/fastapi_mcp)), [Next.js](https://nextjs.org/), [MySQL](https://www.mysql.com/)
+- **[Kong](https://konghq.com/products/kong-gateway)** — API gateway
+- **[Kafka](https://kafka.apache.org/)** — event streaming
+- **[Consul](https://www.consul.io/)** — service registry/discovery
+- **[Vitest](https://vitest.dev/)** — `apps/frontend` unit tests
+- **[pytest](https://docs.pytest.org/)** — `apps/backend` unit tests
+- **[Playwright](https://playwright.dev/)** — E2E browser tests
+- **[Specmatic](https://specmatic.io/)** — OpenAPI contract tests
+- **[Microcks](https://microcks.io/)** — API mocking, seeded from `apps/backend`'s OpenAPI schema
+- **[Locust](https://locust.io/)** — load testing
 
 ## 🏁 Getting Started
 
@@ -87,24 +100,35 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 
 `apps/` holds the actual apps under test:
 
-- `apps/backend` — Python (FastAPI). REST + GraphQL over a minimal `items`
-  table (`id`, `name`, `quantity`, `source`, `createdAt`) in MySQL (`testdb`).
-  The OpenAPI schema is exported to `apps/backend/openapi.json` (regenerate
-  with `make apps:export-openapi`); Specmatic and Microcks read it directly.
+- `apps/backend` — Python (FastAPI). REST + GraphQL over a minimal,
+  event-sourced `items` table (`id`, `name`, `quantity`, `source`,
+  `createdAt`) in MySQL (`testdb`), modeling a simple accounting ledger:
+  `name` is an account (e.g. "Cash"), each row is one transaction posted
+  against it (`quantity` is a signed debit/credit delta, not an absolute
+  balance), and `GET /items/balances` (also a GraphQL `balances` query)
+  returns each account's current balance and transaction count — the sum
+  and count of its own entries. No OpenAPI schema is checked in — Specmatic and
+  `microcks:import-openapi` both fetch it live from the running backend
+  instead (`/api-specs` and the MCP mount already did).
   The read/write logic lives in `app/services/item_service.py`, which both
-  the REST and GraphQL routers call — a future Kafka consumer (driven by
-  `make kafka:up`) is meant to call `register_item(..., source="kafka")`
-  from that same module, so an event-to-backend scenario can be added
-  without touching the HTTP/GraphQL layers. That consumer isn't implemented
-  yet. Also mounts an MCP server at `/mcp` (via `fastapi-mcp`), auto-derived
+  the REST and GraphQL routers call. Kafka events reach it too, via `make
+  kafka:bridge-up` — a separate container that consumes the topic and calls
+  `POST /items` over REST, so `apps/backend` itself has no Kafka dependency
+  at all (see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion)
+  below). Also mounts an MCP server at `/mcp` (via `fastapi-mcp`), auto-derived
   from the same REST routes — point a local MCP client (e.g. Claude Desktop)
   at `http://localhost:8080/mcp`.
 - `apps/frontend` — TypeScript (Next.js). `/` is the landing page; logging
-  in (via a modal) takes you to the real `/items` route, which calls the
-  backend REST API directly from the browser. `/api-docs` renders the
-  backend's live OpenAPI schema with Scalar.
-- `mysql-server` — MySQL, seeded with a few sample items on first boot. Has
-  no persistent volume, so `apps:down` always resets it.
+  in (via a modal) takes you to the real `/items` route, which shows only
+  the account balances table (`useBalances.ts`, polled every 1s — no raw
+  transaction log rendered, since that's exactly what balloons under a load
+  test) and a "record a transaction" form whose account field is a
+  `<select>` over the existing accounts, not free text. `/api-specs` renders
+  the backend's live OpenAPI schema with Scalar.
+- `mysql-server` — MySQL, seeded with a small chart of accounts on first
+  boot (Cash, Sales Revenue, Rent Expense). Data persists across
+  `apps:down`/`apps:restart` in a named Docker volume; run `make apps:reset`
+  for a genuinely fresh database (see "Persistent state / reset" below).
 
 Its lifecycle is independent from any test tool: `make apps:up` starts it,
 `make apps:down` stops it, and no test tool (pytest, vitest, playwright,
@@ -118,7 +142,7 @@ make apps:down
 
 Endpoints once started:
 - Frontend: http://localhost:5173
-- API docs (Scalar): http://localhost:5173/api-docs
+- API docs (Scalar): http://localhost:5173/api-specs
 - Backend REST: http://localhost:8080
 - Backend GraphQL: http://localhost:8080/graphql
 - MCP server: http://localhost:8080/mcp
@@ -137,9 +161,31 @@ make locust:up LOCUST_FILE=locustfile_http.py   # uses LOCUST_HTTP_HOST=http://b
 make locust:up LOCUST_FILE=locustfile_http.py LOCUST_HTTP_HOST=https://staging.example.com
 ```
 
-apps and any tooling that connects to it (Locust, Microcks, and in the
-future Kong as a gateway in front of apps) share the `apps-network` Docker
-network, so they can be started in any order.
+apps and any tooling that connects to it (Locust, Microcks, Kong as a
+gateway in front of apps, Consul for service discovery) share the
+`apps-network` Docker network, so they can be started in any order.
+
+### Persistent state / reset
+
+`apps`, `kong`, `kafka`, and `consul` each keep their data in a named
+Docker volume, so a plain `down`/`restart` preserves it. Each has its own
+`reset` command that wipes that volume and starts fresh (`make all:reset`
+runs all four, plus a plain restart for `microcks`/`locust`, which hold no
+persistent state to begin with):
+
+| Module | What persists | Docker volume | Reset command |
+| --- | --- | --- | --- |
+| `apps` | MySQL data (`testdb`) | `apps_apps-db-data` | `make apps:reset` |
+| `kong` | Gateway services/routes (`KONG_DB=postgres` mode only) | `kong_kong-db-data` | `make kong:reset` |
+| `kafka` | Topics and their messages | `kafka_kafka-data` | `make kafka:reset` |
+| `consul` | Service catalog/registrations | `consul_consul-data`, `consul_consul-config` | `make consul:reset` |
+
+These are Docker-managed volumes, not host directories — there's no
+`./data/...` folder in this repo to go look at. Inspect one with
+`docker volume inspect <name>` (its `Mountpoint` is a path inside Docker
+Desktop's own VM, not your machine's filesystem directly); on macOS,
+everything Docker manages ultimately lives inside one shared virtual disk
+image at `~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw`.
 
 ### Test/verification tools
 
@@ -151,12 +197,34 @@ make apps:up                # start the apps under test first
 make pytest:test            # apps/backend unit tests (in-memory SQLite, apps:up not required)
 make vitest:test            # apps/frontend unit tests (fetch mocked, apps:up not required)
 make playwright:test        # E2E browser test against the running frontend (requires apps:up)
-make specmatic:test         # contract test of the running backend against apps/backend/openapi.json (requires apps:up)
+make specmatic:test         # contract test of the running backend against its own live OpenAPI schema (requires apps:up)
 
-make microcks:up            # long-running mock server loaded from apps/backend/openapi.json
-make microcks:import-openapi
+make microcks:up            # long-running mock server
+make microcks:import-openapi # fetches the backend's live OpenAPI schema and loads it (requires apps:up)
 make microcks:open
 ```
+
+### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
+
+`make kafka:bridge-up` starts a small standalone consumer (`kafka/bridge/`) that reads events off the Kafka topic and forwards each one to a REST backend via `POST /items` — `apps/backend` by default, but `KAFKA_BRIDGE_TARGET_URL` can point anywhere, same as every other test tool's target host. It's deliberately separate from `kafka:up` (opt in explicitly) and lives in its own container rather than inside `apps/backend`, so a Kafka or backend outage only ever affects the bridge itself — it just retries forever, and only commits a Kafka offset after a successful delivery, so an outage pauses ingestion rather than losing events.
+
+```bash
+make apps:up
+make kafka:up
+make kafka:bridge-up
+```
+
+Two matching Locust scenarios make the case for putting Kafka in front of a write path at all — same event, same volume, two paths in:
+
+```bash
+# Direct REST, no Kafka - every simulated user POSTs straight to the backend
+make locust:up LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 LOCUST_HEADLESS_FLAG=--headless LOCUST_RUN_TIME=60s
+
+# The same load, produced onto the Kafka topic instead (needs kafka:bridge-up running)
+make locust:up LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 LOCUST_HEADLESS_FLAG=--headless LOCUST_RUN_TIME=60s
+```
+
+Measured on a single laptop, against this repo's own default resource limits (SQLAlchemy's default connection pool, a single `uvicorn` worker in `--reload` mode): direct REST failed **79%** of `POST /items` requests (500s, connection resets, and up to 30s+ latency) under that load. The identical load produced onto Kafka instead completed **1,241,297 events at 0% failure**, ~24ms median produce latency, with the backend's own `/health` endpoint staying at ~2ms response time throughout — because `kafka-bridge` drains the topic at its own steady, sequential pace and never forwards a burst to the backend.
 
 ### Locust Configuration
 
@@ -247,7 +315,6 @@ make locust:up LOCUST_FILE=locustfile_http.py
 
 **Workers (PC2+):**
 ```bash
-make locust:build
 make locust:join-cluster LOCUST_MASTER_HOST=<PC1-IP> LOCUST_WORKERS=5
 ```
 

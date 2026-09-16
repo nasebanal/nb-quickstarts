@@ -11,12 +11,17 @@ def _utc_now() -> datetime:
 
 
 class Item(Base):
-    """テスト対象の最小リソース。
+    """Minimal test-target resource. Event-sourced: each row is one
+    quantity-change event (`quantity` is a signed delta, not an absolute
+    value). A name's "balance" is the sum of every event's `quantity` for
+    that name (`item_service.get_balances` / `GET /items/balances`).
 
-    `source` は誰がこのレコードを登録したかを示す (api / kafka)。まだ Kafka
-    コンシューマーは実装していないが、将来 make kafka:start のイベント連携から
-    `services.item_service.register_item(..., source="kafka")` を直接呼び出す
-    想定で用意してある。
+    `source` records who registered this event (currently always "api" -
+    see item_service.py). `make kafka:bridge-up` runs a separate consumer
+    container that calls POST /items over REST for each Kafka message, so
+    those events land here too, just via the same REST path as everyone
+    else - one Kafka message maps naturally onto one row here precisely
+    because this table is event-sourced.
     """
 
     __tablename__ = "items"

@@ -2,6 +2,10 @@
 // browser, so it must use the host-published URL, not the container name.
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 
+// Event-sourced: each Item is one quantity-change event, not a standalone
+// row with an absolute quantity. `quantity` is a signed delta - see
+// apps/backend/app/models.py. A name's current balance is the sum of all
+// its events (ItemBalance, from /items/balances).
 export interface Item {
   id: number;
   name: string;
@@ -15,6 +19,19 @@ export interface ItemInput {
   quantity: number;
 }
 
+export interface ItemBalance {
+  name: string;
+  balance: number;
+  eventCount: number;
+}
+
+// Thrown specifically for a 401, so callers can tell "your session is no
+// longer valid" (e.g. the backend restarted and its in-memory token store
+// - see auth.py - was wiped, but sessionStorage still has the old token)
+// apart from any other failure, and react to it (log out, prompt a fresh
+// login) instead of just surfacing the raw response as a generic error.
+export class UnauthorizedError extends Error {}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -25,6 +42,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
   if (!response.ok) {
     const body = await response.text();
+    if (response.status === 401) {
+      throw new UnauthorizedError(body);
+    }
     throw new Error(`${response.status} ${response.statusText}: ${body}`);
   }
   return (await response.json()) as T;
@@ -39,6 +59,10 @@ export function login(employeeCode: string): Promise<{ token: string; employeeCo
 
 export function listItems(): Promise<Item[]> {
   return request("/items");
+}
+
+export function listBalances(): Promise<ItemBalance[]> {
+  return request("/items/balances");
 }
 
 export function createItem(token: string, input: ItemInput): Promise<Item> {

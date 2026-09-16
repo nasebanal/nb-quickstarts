@@ -9,7 +9,21 @@ def test_list_items_seeded(client):
     assert response.status_code == 200
     items = response.json()
     assert len(items) >= 3
-    assert items[0]["name"] == "Sample Item A"
+    assert items[0]["name"] == "Cash"
+
+
+def test_list_balances_sums_events_per_name(client):
+    response = client.get("/items/balances")
+    assert response.status_code == 200
+    balances = {b["name"]: b for b in response.json()}
+    # Cash has three seeded events (+100000, -30000, +50000) - the endpoint
+    # must sum them, not just report the latest one.
+    assert balances["Cash"]["balance"] == 120000
+    assert balances["Cash"]["eventCount"] == 3
+    assert balances["Sales Revenue"]["balance"] == 50000
+    assert balances["Sales Revenue"]["eventCount"] == 1
+    assert balances["Rent Expense"]["balance"] == 30000
+    assert balances["Rent Expense"]["eventCount"] == 1
 
 
 def test_create_item_requires_auth(client):

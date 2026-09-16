@@ -20,11 +20,11 @@ endif
 #################### LOCUST MANAGEMENT ###################
 
 locust:
-	@echo "🚀 Locust Load Testing Commands:"
+	@echo "🚀 Locust"
+	@echo "Locust - Python-based load testing. Here targeting apps (or an external host)."
 	@echo ""
 	@echo "Container Management:"
-	@echo "  locust:build       - Build custom Locust Docker image with MySQL support"
-	@echo "  locust:up          - Start Locust master and worker containers"
+	@echo "  locust:up          - Build (if needed) and start Locust master and worker containers"
 	@echo "  locust:down        - Stop and remove Locust containers"
 	@echo "  locust:status      - Check Locust container status"
 	@echo "  locust:restart     - Restart Locust containers"
@@ -38,23 +38,24 @@ locust:
 	@echo "  make locust:up LOCUST_FILE=locustfile_mysql.py   LOCUST_TAGS=mysql-select"
 	@echo "  (to switch test types cleanly, run locust:restart, or locust:down then locust:up)"
 	@echo ""
+	@echo "REST vs. Kafka-buffered ingestion (see README 'Kafka bridge' for measured results):"
+	@echo "  make locust:up LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 ..."
+	@echo "  make kafka:bridge-up  # then the same load, buffered:"
+	@echo "  make locust:up LOCUST_FILE=locustfile_kafka.py        LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 ..."
+	@echo ""
 	@echo "Note: locust:up no longer starts the target apps (MySQL/HTTP server)."
 	@echo "      Run 'make apps:up' first to target the bundled apps, or point"
 	@echo "      LOCUST_HTTP_HOST/LOCUST_MYSQL_HOST at an external host instead."
+	@echo "      First time here? cp .env.example .env, then edit it before make locust:up."
 	@echo ""
 	@echo "Cluster Management:"
 	@echo "  locust:join-cluster - Join an existing Locust cluster as worker from remote PC"
-	@echo ""
-	@echo "Usage:"
-	@echo "  1. Copy .env.example to .env:  cp .env.example .env"
-	@echo "  2. Edit .env to configure test parameters"
-	@echo "  3. Run load test:  make locust:up"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  LOCUST_FILE=locustfile_http.py     # Choose: locustfile_http.py, locustfile_graphql.py, locustfile_mysql.py"
 	@echo "  LOCUST_TAGS=                       # Optional: http-root, http-login, graphql-query, graphql-mutation, mysql-select, mysql-cartesian"
 	@echo "  LOCUST_WORKERS=1                   # Number of worker containers"
-	@echo "  LOCUST_IMAGE=locust-mysql:latest   # Docker image"
+	@echo "  LOCUST_IMAGE=nb-locust-mysql:latest # Docker image"
 	@echo "  LOCUST_HTTP_HOST=http://...        # HTTP/GraphQL target URL"
 	@echo "  LOCUST_MYSQL_HOST=mysql-server     # MySQL hostname"
 	@echo "  LOCUST_MYSQL_DATABASE=...          # MySQL database name"
@@ -86,13 +87,6 @@ locust\:%:
 	@$(MAKE) locust-$(subst locust:,,$@)
 
 #################### LOCUST ACTIONS ###################
-
-locust-build:
-	@echo "Building custom Locust Docker image with MySQL support..."
-	@docker build -t locust-mysql:$${LOCUSTIO_VERSION:-2.42.2} \
-		--build-arg LOCUSTIO_VERSION=$${LOCUSTIO_VERSION:-2.42.2} \
-		locust/
-	@echo "Custom Locust image built successfully as locust-mysql:$${LOCUSTIO_VERSION:-2.42.2}"
 
 locust-up: apps-network-ensure
 	@if [ "$${LOCUST_HEADLESS_FLAG}" = "--headless" ] && [ -z "$${LOCUST_RUN_TIME}" ]; then \
@@ -141,19 +135,19 @@ locust-up: apps-network-ensure
 			LOCUST_LOGLEVEL=DEBUG \
 			LOCUST_CSV_PREFIX=$$CSV_PREFIX \
 			LOCUST_HTML_FILE=$$HTML_FILE \
-			docker compose -p locust -f locust/docker-compose.yml up -d --scale worker=$${LOCUST_WORKERS:-1}; \
+			docker compose -p locust -f locust/docker-compose.yml up -d --build --scale worker=$${LOCUST_WORKERS:-1}; \
 		sleep 3; \
 		WORKER_CONTAINER=$$(docker ps --format "{{.Names}}" | grep -E "worker-[0-9]+" | head -1); \
 		if [ "$${LOCUST_DEBUG_MODE:-false}" = "true" ]; then \
 			echo "Collecting logs from master and worker ($$WORKER_CONTAINER)..."; \
-			nohup docker logs -f locust-master > $$RESULT_LOGFILE 2>&1 & \
+			nohup docker logs -f nb-locust-master > $$RESULT_LOGFILE 2>&1 & \
 			echo $$! > locust/.result_log_pid; \
 			nohup docker logs -f $$WORKER_CONTAINER 2>&1 | tee -a $$RESULT_LOGFILE | grep --line-buffered -E '(✅|❌|⚠️|^  - )' > $$DEBUG_LOGFILE & \
 			echo $$! > locust/.debug_log_pid; \
 			echo "Debug mode enabled. Collecting from worker: $$WORKER_CONTAINER"; \
 			echo "Debug logs: $$DEBUG_LOGFILE"; \
 		else \
-			nohup docker logs -f locust-master > $$RESULT_LOGFILE 2>&1 & \
+			nohup docker logs -f nb-locust-master > $$RESULT_LOGFILE 2>&1 & \
 			echo $$! > locust/.result_log_pid; \
 		fi
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089"
@@ -192,11 +186,9 @@ locust-join-cluster:
 		echo "Usage: make locust:join-cluster [LOCUST_MASTER_HOST=<master-ip>] [LOCUST_WORKERS=n] [LOCUST_FILE=locustfile.py]"; \
 		exit 1; \
 	fi
-	@echo "Building Locust image if needed..."
-	@docker build -t $(LOCUST_IMAGE) locust/ 2>/dev/null || docker build -t locust-mysql:latest locust/ || true
 	@echo "Starting $(LOCUST_WORKERS) worker(s) to connect to $(LOCUST_MASTER_HOST)..."
 	@LOCUST_FILE=$(LOCUST_FILE) \
 		LOCUST_MASTER_HOST=$(LOCUST_MASTER_HOST) \
-		docker compose -f locust/docker-compose-worker.yml up -d --scale locust-worker=$(LOCUST_WORKERS)
+		docker compose -f locust/docker-compose-worker.yml up -d --build --scale locust-worker=$(LOCUST_WORKERS)
 	@echo "Workers started and connected to cluster at $(LOCUST_MASTER_HOST)"
 	@echo "Check master UI at http://$(LOCUST_MASTER_HOST):8089"

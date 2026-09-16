@@ -10,10 +10,11 @@ endif
 # so `make apps:up` is not required.
 
 pytest:
-	@echo "🚀 Pytest Commands:"
+	@echo "🚀 Pytest"
+	@echo "pytest - the de facto Python unit-testing framework. Here running apps/backend's test suite."
 	@echo ""
-	@echo "  pytest:build - Build the test image (apps/backend + dev deps)"
-	@echo "  pytest:test  - Run apps/backend unit tests"
+	@echo "Test Commands:"
+	@echo "  pytest:test  - Build (if needed) and run apps/backend unit tests"
 	@echo ""
 	@echo "Note: these are unit tests against an in-memory SQLite DB;"
 	@echo "      apps:up is NOT required."
@@ -25,8 +26,5 @@ pytest\:%:
 
 #################### PYTEST ACTIONS ###################
 
-pytest-build:
-	@docker compose -p pytest -f pytest/docker-compose.yml build
-
 pytest-test:
-	@docker compose -p pytest -f pytest/docker-compose.yml run --rm pytest
+	@docker compose -p pytest -f pytest/docker-compose.yml run --build --rm pytest

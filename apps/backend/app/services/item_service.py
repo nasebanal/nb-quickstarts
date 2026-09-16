@@ -1,16 +1,21 @@
-"""items の読み書きロジック。
+"""Read/write logic for items.
 
-REST (app/routers/items.py) と GraphQL (app/graphql/schema.py) はどちらも
-ここを呼ぶだけにしてある。将来 Kafka コンシューマーを実装するときも、
-イベントを受け取ったら `register_item(db, data, source="kafka")` を直接
-呼び出せばよく、HTTP/GraphQL 層に手を入れる必要はない想定。
+Both REST (app/routers/items.py) and GraphQL (app/graphql/schema.py) just
+call into this module. Kafka events reach this module indirectly: the
+kafka-bridge service (kafka/bridge/consumer.py) is a separate container
+that consumes the topic and calls POST /items over REST, same as any other
+client - not an in-process consumer here, deliberately, so apps/backend
+has zero Kafka dependency and a Kafka outage can never affect it. That
+means every REST-originated Item currently gets source="api" regardless of
+who called it (see routers/items.py) - `source="kafka"` is reserved for a
+possible future in-process consumer, not used by kafka-bridge.
 """
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Item
-from app.schemas import ItemCreate
+from app.schemas import ItemBalance, ItemCreate
 
 
 def list_items(db: Session) -> list[Item]:
@@ -27,3 +32,15 @@ def register_item(db: Session, data: ItemCreate, source: str = "api") -> Item:
     db.commit()
     db.refresh(item)
     return item
+
+
+def get_balances(db: Session) -> list[ItemBalance]:
+    """One row per distinct name, with `quantity` summed across every event
+    for that name - the current "balance" a name's events add up to - plus
+    how many events contributed to it."""
+    rows = db.execute(
+        select(Item.name, func.sum(Item.quantity).label("balance"), func.count().label("event_count"))
+        .group_by(Item.name)
+        .order_by(Item.name)
+    )
+    return [ItemBalance(name=name, balance=balance, event_count=event_count) for name, balance, event_count in rows]

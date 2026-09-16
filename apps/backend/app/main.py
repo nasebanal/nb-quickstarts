@@ -22,7 +22,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title="nb-quickstarts apps backend",
     description=(
-        "テスト対象アプリのバックエンドAPI(items リソースの最小 CRUD)。"
+        "テスト対象アプリのバックエンドAPI(items リソースの最小限のイベントソーシング実装)。"
         "OpenAPI スキーマは Specmatic の契約テストにそのまま使う想定。"
     ),
     version="0.1.0",

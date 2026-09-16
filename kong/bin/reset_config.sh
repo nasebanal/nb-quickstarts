@@ -57,7 +57,7 @@ else
     echo -e "${BLUE}Reloading Kong declarative configuration...${NC}"
 
     # Reload declarative config (DB-less mode)
-    docker exec kong kong reload
+    docker exec nb-kong kong reload
 
     echo -e "${GREEN}✓${NC} Configuration reloaded from ${DECLARATIVE_CONFIG}"
 fi

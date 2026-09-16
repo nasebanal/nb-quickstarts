@@ -9,6 +9,7 @@ export interface Dictionary {
     usernameLabel: string;
     loginButton: string;
     endpointsTitle: string;
+    apiReferenceLabel: string;
   };
   howItWorks: {
     title: string;
@@ -17,17 +18,18 @@ export interface Dictionary {
     readmeLinkLabel: string;
   };
   app: {
-    title: string;
-    loggedInAs: string;
-    itemListHeading: string;
+    conceptDescription: string;
+    balanceHeading: string;
     columnName: string;
-    columnQuantity: string;
-    columnSource: string;
+    columnBalance: string;
+    columnEventCount: string;
     registerHeading: string;
-    namePlaceholder: string;
+    noAccountsPlaceholder: string;
     quantityPlaceholder: string;
     registerButton: string;
     logoutButton: string;
+    userMenuLabel: string;
+    sessionExpiredError: string;
   };
   footer: {
     rightsReserved: string;
@@ -43,10 +45,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
       description:
         "A minimal REST + GraphQL backend (FastAPI, MySQL) fronted by this Next.js app — " +
         "the test target nb-quickstarts uses to verify the NASEBANAL Stack (vitest, pytest, " +
-        "Playwright, Specmatic, Microcks, Locust, ...). Log in to register items.",
+        "Playwright, Specmatic, Microcks, Locust, ...). Log in to post transactions against " +
+        "an accounting ledger.",
       usernameLabel: "Username",
       loginButton: "Login",
       endpointsTitle: "Endpoints once running",
+      apiReferenceLabel: "API Reference",
     },
     howItWorks: {
       title: "How It Works",
@@ -54,7 +58,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
         {
           title: "Start the Stack",
           description:
-            "make apps:up — starts MySQL (seeded with sample items), the FastAPI backend " +
+            "make apps:up — starts MySQL (seeded with a small chart of accounts), the FastAPI backend " +
             "(REST + GraphQL), and this frontend, all on the shared apps-network.",
         },
         {
@@ -75,17 +79,22 @@ export const dictionaries: Record<Locale, Dictionary> = {
       readmeLinkLabel: "README",
     },
     app: {
-      title: "Items",
-      loggedInAs: "Logged in as",
-      itemListHeading: "Item List",
-      columnName: "Name",
-      columnQuantity: "Quantity",
-      columnSource: "Source",
-      registerHeading: "Register Item",
-      namePlaceholder: "Name",
-      quantityPlaceholder: "Quantity",
-      registerButton: "Register",
+      conceptDescription:
+        "This demo models a simple accounting ledger: every transaction below is a signed " +
+        "entry (a debit or credit) posted against an account, never an edit to the account " +
+        "itself — the same append-only pattern real bookkeeping and event-sourced financial " +
+        "systems use. Each account's balance is just the running total of its own entries.",
+      balanceHeading: "Account Balances",
+      columnName: "Account",
+      columnBalance: "Balance",
+      columnEventCount: "Transactions",
+      registerHeading: "Record a Transaction",
+      noAccountsPlaceholder: "No accounts yet",
+      quantityPlaceholder: "Amount (+/-)",
+      registerButton: "Record",
       logoutButton: "Logout",
+      userMenuLabel: "User menu",
+      sessionExpiredError: "Your session has expired (the backend restarted since you logged in) — logging you out.",
     },
     footer: {
       rightsReserved: "All rights reserved.",
@@ -99,10 +108,11 @@ export const dictionaries: Record<Locale, Dictionary> = {
       description:
         "FastAPI + MySQLの最小限のREST/GraphQLバックエンドを、このNext.jsアプリがフロントエンドとして提供します。" +
         "nb-quickstartsがNASEBANAL Stack(vitest・pytest・Playwright・Specmatic・Microcks・Locustなど)を" +
-        "検証するためのテスト対象です。ログインするとアイテムを登録できます。",
+        "検証するためのテスト対象です。ログインすると会計台帳に取引を記帳できます。",
       usernameLabel: "ユーザー名",
       loginButton: "ログイン",
       endpointsTitle: "起動後のエンドポイント",
+      apiReferenceLabel: "APIリファレンス",
     },
     howItWorks: {
       title: "使い方",
@@ -110,7 +120,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
         {
           title: "起動する",
           description:
-            "make apps:up — MySQL(サンプルデータ入り)、FastAPIバックエンド(REST + GraphQL)、" +
+            "make apps:up — MySQL(勘定科目のサンプルデータ入り)、FastAPIバックエンド(REST + GraphQL)、" +
             "このフロントエンドをapps-network上にまとめて起動します。",
         },
         {
@@ -130,17 +140,21 @@ export const dictionaries: Record<Locale, Dictionary> = {
       readmeLinkLabel: "README",
     },
     app: {
-      title: "アイテム",
-      loggedInAs: "ログイン中:",
-      itemListHeading: "アイテム一覧",
-      columnName: "名前",
-      columnQuantity: "数量",
-      columnSource: "登録元",
-      registerHeading: "アイテムを登録",
-      namePlaceholder: "名前",
-      quantityPlaceholder: "数量",
-      registerButton: "登録",
+      conceptDescription:
+        "このデモは簡易的な会計台帳を模しています。以下の取引はどれも勘定科目そのものを書き換えるのではなく、" +
+        "その勘定科目に対して記帳される符号付きの仕訳(借方/貸方)です — 実際の簿記やイベントソーシング型の" +
+        "金融システムと同じ「追記のみ」の考え方です。各勘定科目の残高は、その仕訳を積み上げた合計にすぎません。",
+      balanceHeading: "勘定科目残高",
+      columnName: "勘定科目",
+      columnBalance: "残高",
+      columnEventCount: "取引件数",
+      registerHeading: "取引を記帳",
+      noAccountsPlaceholder: "勘定科目がまだありません",
+      quantityPlaceholder: "金額(+/-)",
+      registerButton: "記帳",
       logoutButton: "ログアウト",
+      userMenuLabel: "ユーザーメニュー",
+      sessionExpiredError: "セッションの有効期限が切れました(ログイン後にbackendが再起動されました) — ログアウトします。",
     },
     footer: {
       rightsReserved: "All rights reserved.",

@@ -15,19 +15,28 @@ test("login and register an item", async ({ page }) => {
 
   // Successful login navigates to a real route, /items.
   await page.waitForURL("**/items");
-  await expect(page.getByTestId("auth-status")).toContainText("E001");
-  await expect(page.getByTestId("item-table")).toBeVisible();
+  await expect(page.getByTestId("balance-table")).toBeVisible();
 
-  // Unique per run — apps:up keeps MySQL data across runs, so a fixed name
-  // would eventually match more than one row and fail Playwright's strict
-  // mode.
-  const itemName = `Playwright Item ${Date.now()}`;
+  // The logged-in identity now shows in the header's user menu, not on the
+  // main panel — open it and check the name there.
+  await page.getByTestId("user-menu-button").click();
+  await expect(page.getByTestId("user-menu-name")).toHaveText("E001");
+  await page.getByTestId("user-menu-button").click(); // close it again
+
+  // Transactions post against an existing account (a <select>, not free
+  // text) - "Cash" is always present via the seed data. apps:up keeps
+  // MySQL data across runs, so assert the *delta*, not an absolute final
+  // value, which would eventually diverge between runs.
+  const balanceRow = page.getByTestId("balance-row-Cash");
+  const balanceCell = balanceRow.locator("td").nth(1);
+  const before = Number(await balanceCell.textContent());
+
   const form = page.getByTestId("item-form");
-  await form.locator('input[name="name"]').fill(itemName);
+  await form.getByTestId("item-account-select").selectOption("Cash");
   await form.locator('input[name="quantity"]').fill("3");
   await page.getByTestId("item-submit").click();
 
-  await expect(page.locator('[data-testid^="item-row-"]', { hasText: itemName })).toBeVisible();
+  await expect(balanceCell).toHaveText(String(before + 3));
 });
 
 test("modal closes without navigating away", async ({ page }) => {
@@ -58,6 +67,8 @@ test("header login/logout link", async ({ page }) => {
   await page.getByTestId("login-submit").click();
   await page.waitForURL("**/items");
 
+  // Logout now lives inside the user menu dropdown, not as a plain header link.
+  await page.getByTestId("user-menu-button").click();
   await expect(page.getByTestId("logout-link")).toBeVisible();
   await page.getByTestId("logout-link").click();
 
@@ -85,6 +96,7 @@ test("logo click from /items reloads in place and keeps the session", async ({ p
   void navigation;
 
   await expect(page).toHaveURL(/\/items$/);
-  await expect(page.getByTestId("auth-status")).toContainText("E003");
+  await page.getByTestId("user-menu-button").click();
+  await expect(page.getByTestId("user-menu-name")).toHaveText("E003");
   await expect(page.getByTestId("logout-link")).toBeVisible();
 });
