@@ -7,8 +7,8 @@ WORKDIR /app
 # trips on this project's dependency graph; a newer npm doesn't have it.
 RUN npm install -g npm@11
 
-COPY package.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
 
