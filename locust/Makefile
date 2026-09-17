@@ -60,6 +60,9 @@ locust:
 	@echo "  LOCUST_SPAWN_RATE=1                # User spawn rate (users/second) (same)"
 	@echo "  LOCUST_RUN_TIME=                   # Required for locust:test (e.g., 1h30m, 60s); ignored by locust:up"
 	@echo ""
+	@echo "Endpoints once started:"
+	@echo "  Web UI: http://localhost:8089"
+	@echo ""
 	@echo "Note: results are also saved to locust/logs/YYYYMMDD_HHMMSS/ - see README for what's in there."
 
 locust\:%:
