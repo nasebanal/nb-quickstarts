@@ -46,6 +46,13 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    # Response headers are hidden from browser JS by default under CORS
+    # unless explicitly exposed here - `Via` is how the frontend detects
+    # whether it's actually being routed through Kong right now (Kong adds
+    # it to every proxied response; a direct connection has no such
+    # header). Confirmed via curl that Kong adds it, and separately that
+    # fetch()'s response.headers.get("via") returns null without this.
+    expose_headers=["Via"],
 )
 
 app.include_router(health.router)

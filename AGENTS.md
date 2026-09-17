@@ -38,6 +38,7 @@ Every module's ports are chosen so it can run at the same time as any other modu
 | kong | manager (HTTP/HTTPS) | 8002 / 8445 |
 | kafka | broker | 9092 |
 | kafka | controller | 9093 |
+| kafka | kafka-bridge health (`kafka:bridge-up`, `GET /health`) | 8090 |
 | locust | master UI | 8089 |
 | locust | master-worker traffic | 5557 / 5558 |
 | consul | HTTP API | 8500 |

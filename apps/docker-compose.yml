@@ -62,6 +62,12 @@ services:
       # bakes NEXT_PUBLIC_* into the bundle at server start, not
       # per-request.
       NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8080}
+      # Same idea, for kafka-bridge's health endpoint (make
+      # kafka:bridge-up - see kafka/bridge/consumer.py's _HealthHandler)
+      # instead of the main backend - kafka-bridge is a separate,
+      # standalone container with its own host-published port, not
+      # proxied through backend or Kong.
+      NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL: ${NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL:-http://localhost:8090}
     depends_on:
       - backend
     networks:

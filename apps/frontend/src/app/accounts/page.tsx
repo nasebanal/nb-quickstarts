@@ -4,8 +4,27 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/components/LocaleProvider";
-import { API_BASE, createAccount, UnauthorizedError } from "@/lib/api";
+import { API_BASE, checkKafkaBridge, checkViaKong, createAccount, UnauthorizedError } from "@/lib/api";
 import { useBalances } from "@/lib/useBalances";
+
+// Shared by every "is X actually true right now" status check next to the
+// backend URL field (Via Kong, Kafka Bridge, ...) - each is a real,
+// verified signal (see checkViaKong/checkKafkaBridge's own comments in
+// api.ts), and none of them change without a container restart, so one
+// check on mount is enough for any of them - no need to poll the way
+// useBalances polls balances.
+function useStatusCheck(check: () => Promise<boolean>): boolean | null {
+  const [status, setStatus] = useState<boolean | null>(null);
+  useEffect(() => {
+    check()
+      .then(setStatus)
+      .catch(() => setStatus(false));
+    // Only ever run once, on mount - `check` is a stable top-level
+    // function reference (checkViaKong/checkKafkaBridge), not a value
+    // that should re-trigger this.
+  }, [check]);
+  return status;
+}
 
 export default function AccountsPage() {
   const { t } = useLocale();
@@ -15,6 +34,8 @@ export default function AccountsPage() {
   const [accountName, setAccountName] = useState("");
   const [accountQuantity, setAccountQuantity] = useState("0");
   const [accountError, setAccountError] = useState("");
+  const viaKong = useStatusCheck(checkViaKong);
+  const kafkaBridge = useStatusCheck(checkKafkaBridge);
 
   // Transactions post against an existing account, picked from the chart
   // of accounts the balances table itself already represents - not typed
@@ -75,13 +96,28 @@ export default function AccountsPage() {
         <p className="nb-concept-description" data-testid="concept-description">
           {t.app.conceptDescription}
         </p>
-        {/* Read-only - not a setting, just visibility into what
+        {/* readOnly, not disabled - selectable/copyable, but the value
+            can't be typed into. Not a setting, just visibility into what
             NEXT_PUBLIC_API_BASE currently resolves to (direct backend,
             Kong, a Specmatic stub, a Microcks mock - see AGENTS.md's Kong
             section). Nothing here lets you change it from the UI. */}
-        <p className="nb-api-base" data-testid="api-base">
-          {t.app.apiBaseLabel}: <code>{API_BASE}</code>
-        </p>
+        <div className="nb-api-base" data-testid="api-base">
+          <label htmlFor="api-base-input">{t.app.apiBaseLabel}</label>
+          <input id="api-base-input" type="text" value={API_BASE} readOnly />
+          {/* Disabled checkboxes read as non-editable toggles - checked
+              once the corresponding check resolves true, otherwise
+              unchecked (including while still checking, on mount). Same
+              shared style (.nb-status-toggle) for both, so they read as
+              one consistent group. */}
+          <span className="nb-status-toggle" data-testid="via-kong">
+            <label htmlFor="via-kong-input">{t.app.viaKongLabel}</label>
+            <input id="via-kong-input" type="checkbox" checked={viaKong ?? false} disabled readOnly />
+          </span>
+          <span className="nb-status-toggle" data-testid="kafka-bridge">
+            <label htmlFor="kafka-bridge-input">{t.app.kafkaBridgeLabel}</label>
+            <input id="kafka-bridge-input" type="checkbox" checked={kafkaBridge ?? false} disabled readOnly />
+          </span>
+        </div>
 
         <section>
           <h2>{t.app.balanceHeading}</h2>

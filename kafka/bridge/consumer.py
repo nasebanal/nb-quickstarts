@@ -23,7 +23,9 @@ Two distinct failure modes, handled two different ways:
 import json
 import logging
 import os
+import threading
 import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import requests
 from kafka.errors import KafkaError
@@ -39,6 +41,7 @@ GROUP_ID = os.environ.get("KAFKA_CONSUMER_GROUP", "nb-quickstarts-bridge")
 TARGET_URL = os.environ.get("KAFKA_BRIDGE_TARGET_URL", "http://backend:8080")
 EMPLOYEE_CODE = os.environ.get("KAFKA_BRIDGE_EMPLOYEE_CODE", "kafka-bridge")
 RETRY_SECONDS = float(os.environ.get("KAFKA_BRIDGE_RETRY_SECONDS", "3"))
+HEALTH_PORT = int(os.environ.get("KAFKA_BRIDGE_HEALTH_PORT", "8090"))
 
 _token: str | None = None
 
@@ -129,7 +132,45 @@ def _connect_consumer() -> KafkaConsumer:
             time.sleep(RETRY_SECONDS)
 
 
+class _HealthHandler(BaseHTTPRequestHandler):
+    """GET /health -> 200 {"status": "ok"} - proof kafka-bridge is running
+    at all, not proof the consume loop below is making progress (that's
+    what the container's own logs and Kafka consumer-group lag are for).
+    Exists only so apps/frontend can show "is kafka-bridge up" in the UI -
+    see api.ts's checkKafkaBridge() - deliberately not on apps/backend or
+    routed through it, so apps/backend's zero-Kafka-dependency guarantee
+    (see this module's own docstring) stays exactly that.
+    """
+
+    def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's naming convention
+        if self.path != "/health":
+            self.send_response(404)
+            self.end_headers()
+            return
+        body = b'{"status": "ok"}'
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        # Browser JS calls this directly (cross-origin from apps/frontend,
+        # not proxied through the backend or Kong), so it needs its own
+        # CORS header - nothing here is sensitive, so a wildcard is fine.
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A002 - stdlib's signature
+        pass  # Quiet by default - every health check would otherwise log a line.
+
+
+def _start_health_server() -> None:
+    server = ThreadingHTTPServer(("0.0.0.0", HEALTH_PORT), _HealthHandler)  # noqa: S104 - container-internal
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    log.info("Health check listening on :%d/health", HEALTH_PORT)
+
+
 def main() -> None:
+    _start_health_server()
     consumer = _connect_consumer()
     while True:
         try:

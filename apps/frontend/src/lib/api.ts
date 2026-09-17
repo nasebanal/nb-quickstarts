@@ -54,6 +54,40 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return (await response.json()) as T;
 }
 
+// Kong adds a `Via: kong/<version>` header to every response it proxies -
+// a direct connection to the backend has no such header, so this is a
+// real, verifiable signal (not just inferring from API_BASE's port
+// number) of whether requests are actually going through Kong right now.
+// Requires the backend's CORSMiddleware to expose_headers=["Via"] (see
+// app/main.py) - by default, browsers hide non-safelisted response
+// headers from JS on a cross-origin request, which this is (different
+// port = different origin), so fetch()'s response.headers.get("via")
+// silently returns null without that.
+export async function checkViaKong(): Promise<boolean> {
+  const response = await fetch(`${API_BASE}/health`);
+  return (response.headers.get("via") ?? "").toLowerCase().includes("kong");
+}
+
+const KAFKA_BRIDGE_HEALTH_URL =
+  process.env.NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL ?? "http://localhost:8090";
+
+// kafka-bridge (make kafka:bridge-up) is a separate, opt-in container with
+// its own health endpoint (kafka/bridge/consumer.py's _HealthHandler) -
+// not proxied through the backend or Kong, so apps/backend keeps zero
+// Kafka dependency even for this check. Not running at all (kafka:up
+// alone doesn't start it) is the common case, not an error, so this
+// resolves false on any failure (connection refused, timeout, ...) rather
+// than throwing - a caller checking "is it up" doesn't need to
+// distinguish "not running" from "network error" here.
+export async function checkKafkaBridge(): Promise<boolean> {
+  try {
+    const response = await fetch(`${KAFKA_BRIDGE_HEALTH_URL}/health`);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 export function login(employeeCode: string): Promise<{ token: string; employeeCode: string }> {
   return request("/auth/login", {
     method: "POST",
