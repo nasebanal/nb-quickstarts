@@ -30,7 +30,7 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: ${KAFKA_INTER_BROKER_LISTENER_NAME:-PLAINTEXT}
 
       # Cluster ID (required for KRaft)
-      CLUSTER_ID: ${KAFKA_CLUSTER_ID:-MkU3OEVBNTcwNTJENDM2Qk}
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID:-UkVQTEFDRV9NRV9MT0NBTA}
 
       # Auto create topics
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: ${KAFKA_AUTO_CREATE_TOPICS:-true}
@@ -82,6 +82,13 @@ services:
       KAFKA_CONSUMER_GROUP: nb-quickstarts-bridge
       KAFKA_BRIDGE_TARGET_URL: ${KAFKA_BRIDGE_TARGET_URL:-http://backend:8080}
       KAFKA_BRIDGE_EMPLOYEE_CODE: kafka-bridge
+      KAFKA_BRIDGE_HEALTH_PORT: 8090
+    ports:
+      # GET /health, so apps/frontend's browser JS can show "is kafka-bridge
+      # up" (see bridge/consumer.py's _HealthHandler) - not proxied through
+      # the backend or Kong, so apps/backend's zero-Kafka-dependency stays
+      # exactly that.
+      - "${KAFKA_BRIDGE_HEALTH_PORT:-8090}:8090"
     networks:
       - apps-network
     restart: unless-stopped

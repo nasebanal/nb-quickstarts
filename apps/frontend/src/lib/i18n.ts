@@ -24,12 +24,16 @@ export interface Dictionary {
     columnBalance: string;
     columnEventCount: string;
     registerHeading: string;
+    autoRefreshLabel: string;
     noAccountsPlaceholder: string;
     quantityPlaceholder: string;
     registerButton: string;
     logoutButton: string;
     userMenuLabel: string;
     sessionExpiredError: string;
+    apiBaseLabel: string;
+    viaKongLabel: string;
+    kafkaBridgeLabel: string;
   };
   footer: {
     rightsReserved: string;
@@ -89,12 +93,16 @@ export const dictionaries: Record<Locale, Dictionary> = {
       columnBalance: "Balance",
       columnEventCount: "Transactions",
       registerHeading: "Record a Transaction",
+      autoRefreshLabel: "Auto-refresh (every 1s)",
       noAccountsPlaceholder: "No accounts yet",
       quantityPlaceholder: "Amount (+/-)",
       registerButton: "Record",
       logoutButton: "Logout",
       userMenuLabel: "User menu",
       sessionExpiredError: "Your session has expired (the backend restarted since you logged in) — logging you out.",
+      apiBaseLabel: "Connected backend",
+      viaKongLabel: "Via Kong",
+      kafkaBridgeLabel: "Kafka Bridge",
     },
     footer: {
       rightsReserved: "All rights reserved.",
@@ -149,12 +157,16 @@ export const dictionaries: Record<Locale, Dictionary> = {
       columnBalance: "残高",
       columnEventCount: "取引件数",
       registerHeading: "取引を記帳",
+      autoRefreshLabel: "自動更新(1秒ごと)",
       noAccountsPlaceholder: "勘定科目がまだありません",
       quantityPlaceholder: "金額(+/-)",
       registerButton: "記帳",
       logoutButton: "ログアウト",
       userMenuLabel: "ユーザーメニュー",
       sessionExpiredError: "セッションの有効期限が切れました(ログイン後にbackendが再起動されました) — ログアウトします。",
+      apiBaseLabel: "接続先Backend",
+      viaKongLabel: "Kong経由",
+      kafkaBridgeLabel: "Kafka Bridge",
     },
     footer: {
       rightsReserved: "All rights reserved.",

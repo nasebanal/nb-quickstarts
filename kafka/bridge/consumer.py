@@ -23,7 +23,9 @@ Two distinct failure modes, handled two different ways:
 import json
 import logging
 import os
+import threading
 import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import requests
 from kafka.errors import KafkaError
@@ -39,8 +41,14 @@ GROUP_ID = os.environ.get("KAFKA_CONSUMER_GROUP", "nb-quickstarts-bridge")
 TARGET_URL = os.environ.get("KAFKA_BRIDGE_TARGET_URL", "http://backend:8080")
 EMPLOYEE_CODE = os.environ.get("KAFKA_BRIDGE_EMPLOYEE_CODE", "kafka-bridge")
 RETRY_SECONDS = float(os.environ.get("KAFKA_BRIDGE_RETRY_SECONDS", "3"))
+HEALTH_PORT = int(os.environ.get("KAFKA_BRIDGE_HEALTH_PORT", "8090"))
 
 _token: str | None = None
+
+# Read by _HealthHandler, written from the main loop/_login/_connect_consumer.
+# Plain dict writes/reads of these simple values are already atomic under the
+# GIL, so no lock is needed between the health server's thread and main().
+_status = {"kafka_connected": False, "backend_reachable": False}
 
 
 def _login() -> str:
@@ -56,9 +64,11 @@ def _login() -> str:
             )
             response.raise_for_status()
             _token = response.json()["token"]
+            _status["backend_reachable"] = True
             log.info("Logged in to %s as %s", TARGET_URL, EMPLOYEE_CODE)
             return _token
         except requests.RequestException as exc:
+            _status["backend_reachable"] = False
             log.warning("Backend not reachable at %s yet (%s) - retrying in %ss", TARGET_URL, exc, RETRY_SECONDS)
             time.sleep(RETRY_SECONDS)
 
@@ -96,9 +106,11 @@ def _forward(event: dict) -> bool:
             _token = None
             return False
         response.raise_for_status()
+        _status["backend_reachable"] = True
         log.info("Forwarded event %s -> balance event recorded", event)
         return True
     except requests.RequestException as exc:
+        _status["backend_reachable"] = False
         log.warning("Failed to forward %s to %s (%s) - will retry", event, TARGET_URL, exc)
         return False
 
@@ -123,13 +135,54 @@ def _connect_consumer() -> KafkaConsumer:
                 consumer_timeout_ms=5000,
             )
             log.info("Connected to Kafka at %s, topic=%s", BOOTSTRAP_SERVERS, TOPIC)
+            _status["kafka_connected"] = True
             return consumer
         except KafkaError as exc:
+            _status["kafka_connected"] = False
             log.warning("Kafka not reachable at %s yet (%s) - retrying in %ss", BOOTSTRAP_SERVERS, exc, RETRY_SECONDS)
             time.sleep(RETRY_SECONDS)
 
 
+class _HealthHandler(BaseHTTPRequestHandler):
+    """GET /health -> 200 {"status": "ok", kafka_connected, backend_reachable}
+    - proof kafka-bridge is running at all (always 200 while the process is
+    alive - a liveness check, not a readiness one), with the two flags
+    giving more detail than just "the container is running". Exists only so
+    apps/frontend can show "is kafka-bridge up" in the UI - see api.ts's
+    checkKafkaBridge() - deliberately not on apps/backend or routed through
+    it, so apps/backend's zero-Kafka-dependency guarantee (see this
+    module's own docstring) stays exactly that.
+    """
+
+    def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's naming convention
+        if self.path != "/health":
+            self.send_response(404)
+            self.end_headers()
+            return
+        body = json.dumps({"status": "ok", **_status}).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        # Browser JS calls this directly (cross-origin from apps/frontend,
+        # not proxied through the backend or Kong), so it needs its own
+        # CORS header - nothing here is sensitive, so a wildcard is fine.
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A002 - stdlib's signature
+        pass  # Quiet by default - every health check would otherwise log a line.
+
+
+def _start_health_server() -> None:
+    server = ThreadingHTTPServer(("0.0.0.0", HEALTH_PORT), _HealthHandler)  # noqa: S104 - container-internal
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    log.info("Health check listening on :%d/health", HEALTH_PORT)
+
+
 def main() -> None:
+    _start_health_server()
     consumer = _connect_consumer()
     while True:
         try:
@@ -147,6 +200,7 @@ def main() -> None:
                     time.sleep(RETRY_SECONDS)
                 consumer.commit()
         except KafkaError as exc:
+            _status["kafka_connected"] = False
             log.warning("Lost connection to Kafka (%s) - reconnecting", exc)
             consumer = _connect_consumer()
 

@@ -349,9 +349,95 @@ h1 {
   font-size: 1rem;
   line-height: 1.6;
   color: var(--nb-fg-muted);
+  margin-bottom: 8px;
+}
+
+/* Read-only debug info, not a setting - but deliberately styled as a
+   labeled field (not just muted text) so it's easy to spot at a glance,
+   since NEXT_PUBLIC_API_BASE can silently point at the real backend,
+   Kong, a Specmatic stub, or a Microcks mock with no other visible
+   difference in the UI. The input itself uses `.nb-api-base input` (not
+   `:where(.container) input`'s zero-specificity reset) to override its
+   background to a muted tone, signaling "not editable" the way a
+   disabled-looking-but-still-selectable field conventionally does. */
+.nb-api-base {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 32px;
   padding-bottom: 24px;
   border-bottom: 1px solid var(--nb-border-soft);
+}
+
+.nb-api-base label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--nb-fg-muted);
+  white-space: nowrap;
+}
+
+.nb-api-base input {
+  flex: 1;
+  max-width: 360px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  background: var(--nb-border-soft);
+  cursor: default;
+}
+
+/* Shared by every "is X actually true right now" status toggle next to
+   the backend URL field (Via Kong, Kafka Bridge, ...) - same label/toggle
+   layout and sizing for all of them, so they read as one consistent group
+   instead of each looking like its own one-off widget. Each one reflects
+   something verified live (a real signal, e.g. Kong's `Via` response
+   header - see checkViaKong in api.ts), not inferred from configuration,
+   so it can genuinely disagree with what a URL or env var alone would
+   suggest. */
+.nb-status-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--nb-fg-subtle);
+  white-space: nowrap;
+}
+
+.nb-status-toggle label {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.nb-status-toggle input[type="checkbox"] {
+  /* Resets :where(.container) input's padding/border/border-radius/
+     background (text-field styling), which would otherwise distort the
+     native checkbox glyph - :where() has zero specificity, so this class
+     selector overrides it regardless of source order. */
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  accent-color: var(--nb-accent);
+  cursor: default;
+}
+
+.nb-section-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nb-auto-refresh-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: var(--nb-fg-muted);
+  cursor: pointer;
 }
 
 /* Scoped to .container (which wraps the header/footer chrome and every

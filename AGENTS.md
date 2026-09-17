@@ -38,6 +38,7 @@ Every module's ports are chosen so it can run at the same time as any other modu
 | kong | manager (HTTP/HTTPS) | 8002 / 8445 |
 | kafka | broker | 9092 |
 | kafka | controller | 9093 |
+| kafka | kafka-bridge health (`kafka:bridge-up`, `GET /health`) | 8090 |
 | locust | master UI | 8089 |
 | locust | master-worker traffic | 5557 / 5558 |
 | consul | HTTP API | 8500 |
@@ -112,7 +113,8 @@ Two more Kafka gotchas, both found the same way as the `log.dirs` one above — 
 Test and verification tools are added as modules separate from `apps`. Which verb they use depends on their lifecycle:
 
 - **Long-running services** (the `build`/`up`/`down`/`status`/`restart`/`open` pattern): Kong (gateway), Microcks (contract mock). These run `docker compose up -d`, so they follow the same convention as every other module.
-  - Kong is joined to `apps-network` (in addition to its own `kong-net`) and `kong/conf/declarative.yml` declares a catch-all `apps_frontend` service/route (path `/`, `strip_path: false`), so `http://localhost:8000/` proxies straight through to the apps frontend out of the box — no manual "New Gateway Service" setup needed in Kong Manager. It needs `make apps:up` to actually resolve; Kong itself still starts fine without it. `/mock` and `/echo` (the httpbin examples) keep working since Kong matches routes by longest-prefix. In `KONG_DB=postgres` mode, changing `declarative.yml` requires `make kong:reset` to re-import — a plain `kong:up` on an already-bootstrapped DB skips the import (see `kong-up`'s "Existing database found" branch).
+  - Kong is joined to `apps-network` (in addition to its own `kong-net`) and `kong/conf/declarative.yml` declares just two services: `example_service` (httpbin-backed `/mock` and `/echo` demo routes, with a `rate-limiting` plugin, no dependency on apps) and `apps_backend` (`/api/*`, `strip_path: true`, proxying to the real backend's own root - `http://localhost:8000/api/accounts` reaches `backend:8080/accounts`). `apps_backend` needs `make apps:up` to actually resolve `backend` by container name; Kong itself still starts fine without it - the route just proxies a connection error until apps is up. There used to be a third, catch-all `apps_frontend` service proxying `/` straight to the frontend; removed, since routing to a REST/GraphQL/MCP backend through a gateway is the more useful demo of what Kong is actually for, and it's also the seam a future Consumer-side E2E test could use to swap in a mock backend (e.g. Specmatic's stub, `specmatic:stub-up`) without `apps/frontend` needing to know the difference - just repoint `apps_backend`'s `url` and re-import, no frontend changes needed (see `specmatic:test`'s Provider vs `vitest:contract-test`'s Consumer distinction above for why that'd be a different, complementary check from what already exists). In `KONG_DB=postgres` mode, changing `declarative.yml` requires `make kong:reset` to re-import — a plain `kong:up` on an already-bootstrapped DB skips the import (see `kong-up`'s "Existing database found" branch).
+  - **Routing `apps/frontend` itself through Kong**: `apps/docker-compose.yml`'s `NEXT_PUBLIC_API_BASE` is `.env`-overridable (`${NEXT_PUBLIC_API_BASE:-http://localhost:8080}`) - set it to `http://localhost:8000/api` and the frontend calls the backend through `apps_backend` instead of directly. Needs `make kong:up` and a frontend recreate (`apps:restart`) to pick up the change, since Next.js dev mode bakes `NEXT_PUBLIC_*` into the client bundle at server start, not per-request. Verified end-to-end: ran `make playwright:test` against a Kong-routed frontend and confirmed via Kong's own access log that every request (`/api/auth/login`, `POST /api/accounts`, `/api/accounts/balances`) actually went through the gateway, not straight to the backend - all 5 tests passed unchanged. This is the concrete version of the "swap `apps_backend`'s `url` at a mock, no frontend changes needed" idea above: point `apps_backend` at `specmatic-stub:9091` instead of `backend:8080` and the exact same `NEXT_PUBLIC_API_BASE=http://localhost:8000/api` setup runs Playwright against a contract mock instead of the real backend - a from-the-browser Consumer test complementing `vitest:contract-test`'s Node-side one. Not built out as its own `make` target (yet) - this is the reconnaissance, not the feature.
   - Consul is likewise joined to `apps-network` (in addition to its own `consul-net`), because Consul's own agent — not the caller — is what performs each service's HTTP/TCP health check, so it needs to resolve `backend`/`frontend`/`mysql-server` by container name. `make consul:register-apps` registers the real apps containers (`apps-backend` → `backend:8080` HTTP-checked against `/health`, `apps-frontend` → `frontend:5173` HTTP-checked with `Method: HEAD`, `apps-mysql` → `mysql-server:3306` TCP-checked); `consul:deregister-apps` removes them; `consul:discover-apps` prints Consul's own cached health status. `consul:verify-apps` goes a step further — it queries Consul for each service's address/port and then actually connects to exactly what was returned (from a throwaway container on `apps-network`, since the Makefile itself runs on the host and can't resolve those container names), proving the discover → connect flow really works instead of just trusting Consul's cached check result.
     - The frontend's check uses `Method: HEAD`, not the default GET: a GET against Next.js dev server's `/` streams back its entire React payload, and Consul stores an HTTP check's response body in the check's `Output` field — past Consul's size cap it truncates mid-escape-sequence, corrupting the JSON of every subsequent `/v1/health/service` query for that service. HEAD gets the same "is this actually a live HTTP server" signal with an empty body, so nothing to truncate.
     - The original generic `consul:register-service`/`register-db` samples (fake `127.0.0.1` addresses) were removed — their own health check always came up `critical` (`127.0.0.1` from inside the Consul container just points at itself), so they never actually demonstrated a working check. The apps-backed versions above replace them.
@@ -229,8 +231,65 @@ examples fresh on every run, never checked in:
 Every expected response body above is fetched live from the backend, so
 none of them can drift from reality even though the *shape* they're checked
 against now comes from the hand-maintained `openapi.yaml`, not the backend's
-own code. `specmatic:test` is a clean, 100%-coverage pass as a result: 11
-scenarios, 11 successes.
+own code. `specmatic:test` is a clean, 100%-coverage pass as a result: 12
+scenarios, 12 successes (11 from the externalized examples above, plus one
+more Specmatic derives on its own from `openapi.yaml`'s inline
+`GET /accounts/{account_id}` parameter example - see below).
+
+### Microcks: mocking the contract, and Kong as the swap point to either mock
+
+`openapi.yaml` also carries inline `examples:` (not `prepare_contract.sh`'s
+dynamically-generated externalized ones - separate mechanism, separate
+purpose) for every read operation, so `microcks:import-openapi` has
+something to actually mock instead of an empty `messagesMap` per operation
+(confirmed this was the initial state: imported the schema before adding
+examples, checked `GET /api/services/{id}` on Microcks' own API, every
+operation had `[]`). Two non-obvious things, found empirically:
+
+- **Microcks needs the plural `examples:` (a named map), not the singular
+  `example:`** - the latter parses fine as valid OpenAPI and Specmatic
+  accepts it too, but Microcks silently produces zero mock messages from it.
+  Request and response examples for the same scenario must also share the
+  *same key* (e.g. `e001_login` under both `/auth/login`'s `requestBody`
+  and its `200` response) - that's how Microcks pairs them into one
+  complete mock; an unpaired example (input with no matching output, or
+  vice versa) is discarded. Confirmed by testing both keyed and unkeyed
+  forms directly against a running Microcks instance.
+- **`POST /accounts` has no inline example, unlike every other operation** -
+  it needs a real bearer token, which an OpenAPI example has no way to
+  carry (a header, not part of `requestBody`). Adding one anyway was tried
+  first: Specmatic picked it up as an extra test scenario (inline schema
+  examples become Specmatic scenarios too, not just an externalized-example
+  concern), had no way to authenticate it, and it failed with 401 every
+  time - a real regression caught by the same `specmatic:test` run this
+  whole file is about keeping honest. Removed the example; `POST /accounts`
+  keeps its documented `201`/`401`/`422` responses with no example, and
+  Microcks simply can't mock it as a result (an accepted scope boundary,
+  not an oversight - see the comment on that operation in `openapi.yaml`).
+- Microcks' own REST mock URL has a different shape than the real API:
+  `/rest/<service-name>/<version>/<path>`, with the service name's spaces
+  encoded as `+` (confirmed against Microcks' own request log, which prints
+  the exact URL it matched) - e.g.
+  `/rest/nb-quickstarts+apps+backend/0.1.0/health`, not `/health`.
+
+**Kong as the swap point**: `apps_backend`'s `url` (see the Kong bullet
+above) can point at either mock instead of the real backend, and neither
+`apps/frontend` nor anything hitting `/api/*` needs to change - only
+`kong/conf/declarative.yml` and a `kong:reset`. For Specmatic's stub, just
+`http://specmatic-stub:9091`, since its mock paths match the real API
+directly. For Microcks, the whole `/rest/<service>/<version>` prefix has to
+be baked into `apps_backend.url` itself (e.g.
+`http://microcks:8080/rest/nb-quickstarts+apps+backend/0.1.0`), since
+`strip_path: true` on the Kong route only removes `/api` - Kong then
+appends whatever's left of the incoming path onto the service `url`'s own
+path, landing on Microcks' expected shape. Verified both directions
+end-to-end, not just wired up: repointed `apps_backend.url` to each mock in
+turn, `kong:reset`, then `curl`'d `/api/accounts/balances` and
+`/api/accounts/1` through `localhost:8000` and got back exactly the
+`openapi.yaml` example values from each mock, confirmed against
+Specmatic's/Microcks' own request logs that they were the ones actually
+serving it. See README's "Kong: routing to the real backend, or to a
+contract mock instead" for the exact commands.
 
 Microcks and locust are excluded from this table on purpose: Microcks is a
 long-running mock server with no natural "test run" to report on, and locust

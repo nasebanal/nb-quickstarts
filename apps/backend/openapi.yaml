@@ -42,6 +42,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+              examples:
+                healthy:
+                  value:
+                    status: ok
   /auth/login:
     post:
       tags: [auth]
@@ -53,6 +57,14 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/LoginRequest"
+            examples:
+              # Named to match the response example below - Microcks pairs
+              # request/response examples by matching key, not by content
+              # (see AGENTS.md's Microcks section).
+              e001_login:
+                summary: Log in as employee E001
+                value:
+                  employeeCode: E001
       responses:
         "200":
           description: Successful Response
@@ -60,6 +72,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LoginResponse"
+              examples:
+                e001_login:
+                  value:
+                    token: example-token-abc123
+                    employeeCode: E001
         "422":
           description: Validation Error
           content:
@@ -81,10 +98,34 @@ paths:
                 title: Response List Accounts Accounts Get
                 items:
                   $ref: "#/components/schemas/AccountOut"
+              examples:
+                seeded_accounts:
+                  value:
+                    - id: 1
+                      name: Cash
+                      quantity: 100000
+                      source: seed
+                      createdAt: "2024-01-01T00:00:00"
+                    - id: 2
+                      name: Rent Expense
+                      quantity: 30000
+                      source: seed
+                      createdAt: "2024-01-01T00:00:00"
     post:
       tags: [accounts]
       summary: Create Account
       operationId: create_account_accounts_post
+      # Deliberately no requestBody/response `examples:` here, unlike every
+      # other operation - this one needs a real bearer token (see auth.py),
+      # which an OpenAPI example has no way to carry (it's a header, not
+      # part of the body). specmatic:test already covers this operation via
+      # its own dynamically-generated externalized example, with a real
+      # token fetched at test time (see specmatic/bin/prepare_contract.sh);
+      # an inline example here would give Specmatic a second, competing
+      # scenario for the same operation with no way to authenticate it,
+      # always failing with 401. Microcks can't mock this one as a result -
+      # see README's Microcks section for why that's an accepted scope
+      # boundary, not an oversight.
       security:
         - HTTPBearer: []
       requestBody:
@@ -106,6 +147,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HTTPError"
+              examples:
+                unauthorized:
+                  value:
+                    detail: invalid or missing token
         "422":
           description: Validation Error
           content:
@@ -127,6 +172,18 @@ paths:
                 title: Response List Balances Accounts Balances Get
                 items:
                   $ref: "#/components/schemas/AccountBalance"
+              examples:
+                seeded_balances:
+                  value:
+                    - name: Cash
+                      balance: 120000
+                      eventCount: 3
+                    - name: Rent Expense
+                      balance: 30000
+                      eventCount: 1
+                    - name: Sales Revenue
+                      balance: 50000
+                      eventCount: 1
   /accounts/{account_id}:
     get:
       tags: [accounts]
@@ -139,7 +196,10 @@ paths:
           schema:
             type: integer
             title: Account Id
-            examples: [1]
+          examples:
+            cash_account:
+              summary: The seed data's first row - always present
+              value: 1
       responses:
         "200":
           description: Successful Response
@@ -147,12 +207,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AccountOut"
+              examples:
+                cash_account:
+                  value:
+                    id: 1
+                    name: Cash
+                    quantity: 100000
+                    source: seed
+                    createdAt: "2024-01-01T00:00:00"
         "404":
           description: Account not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HTTPError"
+              examples:
+                not_found:
+                  value:
+                    detail: account not found
         "422":
           description: Validation Error
           content:

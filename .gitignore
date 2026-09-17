@@ -17,6 +17,9 @@ apps/frontend/.vitest/
 
 # Locust cluster mode flag file
 .locust_cluster_mode
+
+# Persisted mock auth tokens (apps/backend/app/auth.py) - runtime state
+apps/backend/.tokens.json
 locust/logs/
 locust/.result_log_pid
 locust/.debug_log_pid

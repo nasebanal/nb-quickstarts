@@ -54,7 +54,20 @@ services:
       # URL called from the browser. The browser is outside the Docker
       # network, so this must be the host-published port, not the
       # container name (backend).
-      NEXT_PUBLIC_API_BASE: http://localhost:8080
+      # Overridable via .env - e.g. set to http://localhost:8000/api to
+      # route every call through Kong's apps_backend route (see
+      # kong/conf/declarative.yml) instead of hitting the backend
+      # directly; needs `make kong:up` too, and a frontend recreate
+      # (apps:restart) to pick up the new value, since Next.js dev mode
+      # bakes NEXT_PUBLIC_* into the bundle at server start, not
+      # per-request.
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8080}
+      # Same idea, for kafka-bridge's health endpoint (make
+      # kafka:bridge-up - see kafka/bridge/consumer.py's _HealthHandler)
+      # instead of the main backend - kafka-bridge is a separate,
+      # standalone container with its own host-published port, not
+      # proxied through backend or Kong.
+      NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL: ${NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL:-http://localhost:8090}
     depends_on:
       - backend
     networks:

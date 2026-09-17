@@ -36,6 +36,12 @@ apps:
 	@echo "  apps:reset          - Restart AND wipe MySQL data (fresh database)"
 	@echo "  apps:open           - Open the frontend (TypeScript UI) in browser"
 	@echo ""
+	@echo "Configuration (.env file):"
+	@echo "  NEXT_PUBLIC_API_BASE=http://localhost:8080 # URL apps/frontend calls from the"
+	@echo "                                              # browser - set to http://localhost:8000/api"
+	@echo "                                              # to route through Kong's apps_backend"
+	@echo "                                              # route instead (needs kong:up too)"
+	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  Frontend:        http://localhost:5173"
 	@echo "  API docs:        http://localhost:5173/api-specs (Scalar, reads the backend's live OpenAPI schema)"
@@ -60,7 +66,7 @@ apps-network-ensure:
 
 apps-up: apps-network-ensure
 	@echo "Starting apps (MySQL + backend + frontend)..."
-	@docker compose -p apps -f apps/docker-compose.yml up -d --build
+	@docker compose -p apps -f apps/docker-compose.yml up -d $${APPS_BUILD_FLAG---build}
 	@printf "Waiting for MySQL (mysql-server) to be ready"
 	@i=0; \
 		until [ "$$(docker inspect -f '{{.State.Health.Status}}' nb-mysql-server 2>/dev/null)" = "healthy" ] || [ $$i -ge 60 ]; do \
@@ -91,7 +97,7 @@ apps-restart:
 apps-reset:
 	@echo "Resetting apps (wiping MySQL data)..."
 	@docker compose -p apps -f apps/docker-compose.yml down --remove-orphans --volumes
-	@$(MAKE) apps-up
+	@APPS_BUILD_FLAG= $(MAKE) apps-up
 
 apps-open:
 	@bin/open_browser.sh http://localhost:5173
