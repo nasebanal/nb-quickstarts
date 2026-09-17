@@ -24,7 +24,12 @@ class Item(Base):
     because this table is event-sourced.
     """
 
-    __tablename__ = "items"
+    # The table itself is named "accounts", matching this demo's domain
+    # (see AGENTS.md "UI language vs. code identifiers, deliberately
+    # different") - nothing else references this literal name (all access
+    # goes through the ORM), so it's a zero-risk rename unlike the class/
+    # route/MCP tool names, which stay Item/item on purpose.
+    __tablename__ = "accounts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(128))

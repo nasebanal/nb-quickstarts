@@ -101,7 +101,7 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 `apps/` holds the actual apps under test:
 
 - `apps/backend` — Python (FastAPI). REST + GraphQL over a minimal,
-  event-sourced `items` table (`id`, `name`, `quantity`, `source`,
+  event-sourced `accounts` table (`id`, `name`, `quantity`, `source`,
   `createdAt`) in MySQL (`testdb`), modeling a simple accounting ledger:
   `name` is an account (e.g. "Cash"), each row is one transaction posted
   against it (`quantity` is a signed debit/credit delta, not an absolute
