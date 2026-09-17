@@ -66,7 +66,7 @@ apps-network-ensure:
 
 apps-up: apps-network-ensure
 	@echo "Starting apps (MySQL + backend + frontend)..."
-	@docker compose -p apps -f apps/docker-compose.yml up -d --build
+	@docker compose -p apps -f apps/docker-compose.yml up -d $${APPS_BUILD_FLAG---build}
 	@printf "Waiting for MySQL (mysql-server) to be ready"
 	@i=0; \
 		until [ "$$(docker inspect -f '{{.State.Health.Status}}' nb-mysql-server 2>/dev/null)" = "healthy" ] || [ $$i -ge 60 ]; do \
@@ -97,7 +97,7 @@ apps-restart:
 apps-reset:
 	@echo "Resetting apps (wiping MySQL data)..."
 	@docker compose -p apps -f apps/docker-compose.yml down --remove-orphans --volumes
-	@$(MAKE) apps-up
+	@APPS_BUILD_FLAG= $(MAKE) apps-up
 
 apps-open:
 	@bin/open_browser.sh http://localhost:5173
