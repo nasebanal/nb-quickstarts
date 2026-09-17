@@ -69,8 +69,8 @@ services:
       - "8445:8445"   # Kong Manager HTTPS
     networks:
       - kong-net
-      # So the declarative config's default route (apps_frontend, see
-      # kong/conf/declarative.yml) can resolve "frontend" by container name.
+      # So the declarative config's apps_backend route (see
+      # kong/conf/declarative.yml) can resolve "backend" by container name.
       - apps-network
     volumes:
       - ./conf:/kong/conf:ro

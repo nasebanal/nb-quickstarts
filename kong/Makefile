@@ -10,7 +10,7 @@ endif
 
 kong:
 	@echo "🚀 Kong"
-	@echo "Kong Gateway - a cloud-native API gateway. By default it proxies straight through to the apps frontend, plus httpbin examples."
+	@echo "Kong Gateway - a cloud-native API gateway. By default it proxies to the real apps backend, plus httpbin examples."
 	@echo ""
 	@echo "Container Management:"
 	@echo "  kong:up              - Start Kong (mode: KONG_DB env variable)"
@@ -29,11 +29,12 @@ kong:
 	@echo "  KONG_DB=postgres  # Database mode (uses PostgreSQL)"
 	@echo ""
 	@echo "Endpoints once started:"
-	@echo "  Proxy:           http://localhost:8000 (HTTPS: 8443) - proxies to apps frontend, needs apps:up"
-	@echo "  Proxy /mock:     http://localhost:8000/mock"
-	@echo "  Proxy /echo/get: http://localhost:8000/echo/get"
-	@echo "  Admin API:       http://localhost:8001 (HTTPS: 8444)"
-	@echo "  Manager UI:      http://localhost:8002 (HTTPS: 8445)"
+	@echo "  Proxy:              http://localhost:8000 (HTTPS: 8443)"
+	@echo "  Proxy /api/*:       http://localhost:8000/api/accounts (-> apps backend, needs apps:up)"
+	@echo "  Proxy /mock:        http://localhost:8000/mock"
+	@echo "  Proxy /echo/get:    http://localhost:8000/echo/get"
+	@echo "  Admin API:          http://localhost:8001 (HTTPS: 8444)"
+	@echo "  Manager UI:         http://localhost:8002 (HTTPS: 8445)"
 	@echo ""
 	@echo "Note: override KONG_DB per invocation, e.g. 'make kong:up KONG_DB=postgres'."
 
@@ -86,10 +87,11 @@ kong-up: apps-network-ensure
 	fi
 	@echo "  Admin API:     http://localhost:8001"
 	@echo "  Kong Manager:  http://localhost:8002"
-	@echo "  Proxy:         http://localhost:8000  (default route -> apps frontend; needs apps:up)"
+	@echo "  Proxy:         http://localhost:8000  (apps backend at /api/*; needs apps:up)"
 	@echo ""
 	@echo "Test the example service:"
 	@echo "  curl http://localhost:8000/mock"
+	@echo "  curl http://localhost:8000/api/health  (needs apps:up)"
 
 kong-down:
 	@echo "Stopping Kong containers..."

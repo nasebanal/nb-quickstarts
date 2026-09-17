@@ -24,10 +24,16 @@ fi
 if [ "${KONG_DB:-off}" = "postgres" ]; then
     echo -e "${BLUE}Resetting Kong database configuration...${NC}"
 
-    # Delete all routes first (routes depend on services)
+    # Delete all routes first (routes depend on services). ${(f)ROUTES} is
+    # zsh's split-on-newline expansion - a bare $ROUTES doesn't word-split
+    # by default in zsh (unlike bash), so with more than one route this
+    # handed the whole newline-joined blob to curl as a single malformed
+    # multi-line URL, which curl rejected (set -e then aborted the script
+    # before deleting anything) - same bug already fixed in
+    # list_services.sh's ${(f)SERVICES}, just not here yet.
     echo "Deleting all routes..."
     ROUTES=$(curl -s "${KONG_ADMIN_URL}/routes" | jq -r '.data[].id // empty')
-    for route_id in $ROUTES; do
+    for route_id in ${(f)ROUTES}; do
         curl -s -X DELETE "${KONG_ADMIN_URL}/routes/${route_id}" > /dev/null
         echo "  Deleted route: ${route_id}"
     done
@@ -35,7 +41,7 @@ if [ "${KONG_DB:-off}" = "postgres" ]; then
     # Delete all services
     echo "Deleting all services..."
     SERVICES=$(curl -s "${KONG_ADMIN_URL}/services" | jq -r '.data[].id // empty')
-    for service_id in $SERVICES; do
+    for service_id in ${(f)SERVICES}; do
         curl -s -X DELETE "${KONG_ADMIN_URL}/services/${service_id}" > /dev/null
         echo "  Deleted service: ${service_id}"
     done
@@ -43,7 +49,7 @@ if [ "${KONG_DB:-off}" = "postgres" ]; then
     # Delete all plugins
     echo "Deleting all plugins..."
     PLUGINS=$(curl -s "${KONG_ADMIN_URL}/plugins" | jq -r '.data[].id // empty')
-    for plugin_id in $PLUGINS; do
+    for plugin_id in ${(f)PLUGINS}; do
         curl -s -X DELETE "${KONG_ADMIN_URL}/plugins/${plugin_id}" > /dev/null
         echo "  Deleted plugin: ${plugin_id}"
     done

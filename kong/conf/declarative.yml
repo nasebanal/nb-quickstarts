@@ -1,44 +1,43 @@
 _format_version: "3.0"
 _transform: true
 
-# Sample service configuration
 services:
-  # Catch-all default route: hitting the proxy port with no more specific
-  # path (e.g. http://localhost:8000/) forwards straight to the apps
-  # frontend, so the gateway has an obviously-working destination out of
-  # the box instead of only the httpbin examples below. Kong matches routes
-  # by longest-prefix, so this never shadows the more specific /mock and
-  # /echo routes. Requires `make apps:up` (or apps-network won't resolve
-  # `frontend` — kong just proxies a connection error until apps is up).
-  - name: apps_frontend
-    url: http://frontend:5173
-    routes:
-      - name: apps_frontend_route
-        paths:
-          - /
-        strip_path: false
-
+  # httpbin-backed demo endpoints, showing Kong's own gateway features
+  # (routing, rate-limiting) with no dependency on apps being up.
   - name: example_service
     url: https://httpbin.konghq.com
     routes:
-      - name: example_route
+      - name: example_mock_route
         paths:
           - /mock
+      - name: example_echo_route
+        paths:
+          - /echo
+        methods:
+          - GET
+          - POST
     plugins:
       - name: rate-limiting
         config:
           minute: 5
           policy: local
 
-  - name: echo_service
-    url: https://httpbin.org
+  # Proxies to the real apps backend (REST/GraphQL/MCP/OpenAPI - everything
+  # under backend:8080's own root), strip_path so http://localhost:8000/api/accounts
+  # reaches backend:8080/accounts. Requires `make apps:up` (or apps-network
+  # won't resolve `backend` by name - Kong itself still starts fine
+  # without it, this route just proxies a connection error until apps is
+  # up). This is the seam a future Consumer-side E2E test could point at a
+  # mock instead of the real backend (e.g. Specmatic's stub, see
+  # specmatic:stub-up) without apps/frontend needing to know the
+  # difference - just repoint this service's `url` and re-import.
+  - name: apps_backend
+    url: http://backend:8080
     routes:
-      - name: echo_route
+      - name: apps_backend_route
         paths:
-          - /echo
-        methods:
-          - GET
-          - POST
+          - /api
+        strip_path: true
 
 # You can add more services, routes, plugins here
 # Example:
@@ -47,4 +46,4 @@ services:
 #   routes:
 #     - name: my_route
 #       paths:
-#         - /api
+#         - /my-api
