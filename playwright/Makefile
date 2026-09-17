@@ -14,7 +14,10 @@ playwright:
 	@echo "Test Commands:"
 	@echo "  playwright:test - Run E2E browser tests against the running apps frontend"
 	@echo ""
-	@echo "Requires apps to be running first: make apps:up"
+	@echo "Configuration (.env file):"
+	@echo "  PLAYWRIGHT_BASE_URL=http://localhost:5173 # Frontend URL Playwright navigates to"
+	@echo ""
+	@echo "Note: requires apps to be running first - make apps:up."
 	@echo ""
 	@echo "Report: playwright/report/index.html"
 

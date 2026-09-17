@@ -9,12 +9,12 @@ endif
 
 specmatic:
 	@echo "🚀 Specmatic"
-	@echo "Specmatic - OpenAPI-driven contract testing. Here testing the running backend against apps/backend/openapi.json."
+	@echo "Specmatic - OpenAPI-driven contract testing. Here testing the running backend against its own live OpenAPI schema."
 	@echo ""
 	@echo "Test Commands:"
-	@echo "  specmatic:test - Contract-test the running backend against apps/backend/openapi.json"
+	@echo "  specmatic:test - Contract-test the running backend against its live /openapi.json"
 	@echo ""
-	@echo "Requires apps to be running first: make apps:up"
+	@echo "Note: requires apps to be running first - make apps:up."
 	@echo ""
 	@echo "Report: specmatic/report/html/index.html (also specmatic/junit/TEST-junit-jupiter.xml)"
 
