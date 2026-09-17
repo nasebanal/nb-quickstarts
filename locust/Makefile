@@ -24,32 +24,28 @@ locust:
 	@echo "Locust - Python-based load testing. Here targeting apps (or an external host)."
 	@echo ""
 	@echo "Container Management:"
-	@echo "  locust:up          - Build (if needed) and start Locust master and worker containers"
+	@echo "  locust:up          - Build (if needed) and start Locust with its Web UI (no auto-run)"
+	@echo "  locust:test        - Same, but headless: starts the load test immediately, no UI"
 	@echo "  locust:down        - Stop and remove Locust containers"
 	@echo "  locust:status      - Check Locust container status"
 	@echo "  locust:restart     - Restart Locust containers"
 	@echo "  locust:open        - Open Locust UI in browser"
 	@echo ""
-	@echo "Load Testing (configure via .env or CLI, then run locust:up):"
+	@echo "Load Testing (configure via .env or CLI, then run locust:up or locust:test):"
 	@echo "  make apps:up                                            # start test target apps (once)"
-	@echo "  make locust:up                                          # uses .env settings"
+	@echo "  make locust:up                                          # UI mode - uses .env settings, start the test from the browser"
+	@echo "  make locust:test LOCUST_RUN_TIME=60s                    # headless - starts immediately, stops after LOCUST_RUN_TIME"
 	@echo "  make locust:up LOCUST_FILE=locustfile_http.py"
 	@echo "  make locust:up LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS=graphql-query"
 	@echo "  make locust:up LOCUST_FILE=locustfile_mysql.py   LOCUST_TAGS=mysql-select"
 	@echo "  (to switch test types cleanly, run locust:restart, or locust:down then locust:up)"
 	@echo ""
-	@echo "REST vs. Kafka-buffered ingestion (see README 'Kafka bridge' for measured results):"
-	@echo "  make locust:up LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 ..."
-	@echo "  make kafka:bridge-up  # then the same load, buffered:"
-	@echo "  make locust:up LOCUST_FILE=locustfile_kafka.py        LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 ..."
-	@echo ""
-	@echo "Note: locust:up no longer starts the target apps (MySQL/HTTP server)."
-	@echo "      Run 'make apps:up' first to target the bundled apps, or point"
-	@echo "      LOCUST_HTTP_HOST/LOCUST_MYSQL_HOST at an external host instead."
-	@echo "      First time here? cp .env.example .env, then edit it before make locust:up."
-	@echo ""
 	@echo "Cluster Management:"
 	@echo "  locust:join-cluster - Join an existing Locust cluster as worker from remote PC"
+	@echo ""
+	@echo "Other commands (with optional parameters):"
+	@echo "  make locust:up [LOCUST_HTTP_HOST=url] [LOCUST_MYSQL_HOST=host] [LOCUST_WORKERS=n]"
+	@echo "  make locust:join-cluster [LOCUST_MASTER_HOST=ip] [LOCUST_WORKERS=n]"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  LOCUST_FILE=locustfile_http.py     # Choose: locustfile_http.py, locustfile_graphql.py, locustfile_mysql.py"
@@ -60,40 +56,35 @@ locust:
 	@echo "  LOCUST_MYSQL_HOST=mysql-server     # MySQL hostname"
 	@echo "  LOCUST_MYSQL_DATABASE=...          # MySQL database name"
 	@echo "  LOCUST_MYSQL_CARTESIAN_LIMIT=10000 # Cartesian join LIMIT value"
+	@echo "  LOCUST_USERS=10                    # Number of concurrent users (locust:up also lets you set this from the UI)"
+	@echo "  LOCUST_SPAWN_RATE=1                # User spawn rate (users/second) (same)"
+	@echo "  LOCUST_RUN_TIME=                   # Required for locust:test (e.g., 1h30m, 60s); ignored by locust:up"
 	@echo ""
-	@echo "Headless Mode (auto-start without UI):"
-	@echo "  LOCUST_HEADLESS_FLAG=--headless    # Enable headless mode (empty for UI mode)"
-	@echo "  LOCUST_USERS=10                    # Number of concurrent users"
-	@echo "  LOCUST_SPAWN_RATE=1                # User spawn rate (users/second)"
-	@echo "  LOCUST_RUN_TIME=                   # Optional: Test duration (e.g., 1h30m, 60s)"
+	@echo "Endpoints once started:"
+	@echo "  Web UI: http://localhost:8089"
 	@echo ""
-	@echo "Log Files (saved in timestamped directory):"
-	@echo "  Directory: locust/logs/YYYYMMDD_HHMMSS/"
-	@echo "    - target_host.txt (test configuration: target host, locustfile, tags, workers)"
-	@echo "    - result.log (master + worker container output)"
-	@echo "    - master.log (Locust framework logs)"
-	@echo "    - debug.log (worker debug messages, only if LOCUST_DEBUG_MODE=true)"
-	@echo "    - locust_stats.csv (current aggregated statistics, periodically overwritten)"
-	@echo "    - locust_stats_history.csv (time-series data, appended every second)"
-	@echo "    - locust_failures.csv (failure records)"
-	@echo "    - locust_exceptions.csv (exception records)"
-	@echo "    - report.html (final test report)"
-	@echo ""
-	@echo "Other commands (with optional parameters):"
-	@echo "  make locust:up [LOCUST_HTTP_HOST=url] [LOCUST_MYSQL_HOST=host] [LOCUST_WORKERS=n]"
-	@echo "  make locust:join-cluster [LOCUST_MASTER_HOST=ip] [LOCUST_WORKERS=n]"
+	@echo "Note: results are also saved to locust/logs/YYYYMMDD_HHMMSS/ - see README for what's in there."
 
 locust\:%:
 	@$(MAKE) locust-$(subst locust:,,$@)
 
 #################### LOCUST ACTIONS ###################
 
+# make locust:up   -> UI mode, no --headless: start containers and pick users/spawn-rate/run-time from the browser.
+# make locust:test -> headless: starts the load test immediately with no UI, bounded by LOCUST_RUN_TIME.
+# Both funnel into locust-run below; only the headless flag differs.
 locust-up: apps-network-ensure
-	@if [ "$${LOCUST_HEADLESS_FLAG}" = "--headless" ] && [ -z "$${LOCUST_RUN_TIME}" ]; then \
-		echo "Error: LOCUST_RUN_TIME is required in headless mode"; \
-		echo "Set it in .env file (e.g., LOCUST_RUN_TIME=60s)"; \
+	@$(MAKE) locust-run LOCUST_HEADLESS_FLAG=
+
+locust-test: apps-network-ensure
+	@if [ -z "$${LOCUST_RUN_TIME}" ]; then \
+		echo "Error: LOCUST_RUN_TIME is required for locust:test (headless mode)"; \
+		echo "Set it via .env or: make locust:test LOCUST_RUN_TIME=60s"; \
 		exit 1; \
 	fi
+	@$(MAKE) locust-run LOCUST_HEADLESS_FLAG=--headless
+
+locust-run:
 	@echo "Starting Locust containers via Docker Compose..."
 	@echo "Using Locust file: $${LOCUST_FILE:-locustfile_http.py}"
 	@echo "Tags: $${LOCUST_TAGS:-none}"

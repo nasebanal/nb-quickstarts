@@ -24,11 +24,9 @@ include locust/Makefile
 # kong/consul/microcks resolve its containers by name over apps-network.
 # consul:up alone does NOT register apps-backend/frontend/mysql with it -
 # run `make consul:register-apps` separately, same as any other module.
-# locust:up starts the master/worker containers and, with the default
-# empty LOCUST_HEADLESS_FLAG, just waits at the UI - it does NOT run a load
-# test on its own. If .env sets LOCUST_HEADLESS_FLAG=--headless, though,
-# `all:up` DOES kick off a real (LOCUST_RUN_TIME-bounded) load test against
-# apps immediately.
+# locust:up (which all:up calls) always starts in UI mode and does NOT run
+# a load test on its own - use `make locust:test` separately (headless,
+# LOCUST_RUN_TIME-bounded) to actually generate load against apps.
 
 all:
 	@echo "🚀 All"

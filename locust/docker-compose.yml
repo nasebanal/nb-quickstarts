@@ -26,6 +26,8 @@ services:
       PYTHONUNBUFFERED: 1
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # LOCUST_HEADLESS_FLAG below isn't an .env setting - locust/Makefile sets
+    # it to --headless for `make locust:test`, empty for `make locust:up`.
     command: >
       -f /mnt/locust/bin/${LOCUST_FILE:-locustfile_http.py}
       --master
