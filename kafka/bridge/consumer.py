@@ -44,7 +44,7 @@ _token: str | None = None
 
 
 def _login() -> str:
-    """Fetches (or reuses) a bearer token for POST /items. Retries forever -
+    """Fetches (or reuses) a bearer token for POST /accounts. Retries forever -
     the backend may not be up yet, or may be temporarily unreachable."""
     global _token
     if _token:
@@ -79,14 +79,14 @@ def _parse(raw: bytes) -> dict:
 
 
 def _forward(event: dict) -> bool:
-    """POSTs one event to /items. Returns True on success. A 401 clears the
+    """POSTs one event to /accounts. Returns True on success. A 401 clears the
     cached token so the next attempt re-logs in (e.g. after a backend
     restart, which wipes its in-memory token store)."""
     global _token
     token = _login()
     try:
         response = requests.post(
-            f"{TARGET_URL}/items",
+            f"{TARGET_URL}/accounts",
             json={"name": event["name"], "quantity": event["quantity"]},
             headers={"Authorization": f"Bearer {token}"},
             timeout=5,

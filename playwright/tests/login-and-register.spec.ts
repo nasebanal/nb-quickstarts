@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("login and register an item", async ({ page }) => {
+test("login and register an account", async ({ page }) => {
   await page.goto("/");
 
   // Landing page first — no username field until you open the login modal.
@@ -13,8 +13,8 @@ test("login and register an item", async ({ page }) => {
   await page.getByTestId("employee-code-input").fill("E001");
   await page.getByTestId("login-submit").click();
 
-  // Successful login navigates to a real route, /items.
-  await page.waitForURL("**/items");
+  // Successful login navigates to a real route, /accounts.
+  await page.waitForURL("**/accounts");
   await expect(page.getByTestId("balance-table")).toBeVisible();
 
   // The logged-in identity now shows in the header's user menu, not on the
@@ -31,10 +31,10 @@ test("login and register an item", async ({ page }) => {
   const balanceCell = balanceRow.locator("td").nth(1);
   const before = Number(await balanceCell.textContent());
 
-  const form = page.getByTestId("item-form");
-  await form.getByTestId("item-account-select").selectOption("Cash");
+  const form = page.getByTestId("account-form");
+  await form.getByTestId("account-select").selectOption("Cash");
   await form.locator('input[name="quantity"]').fill("3");
-  await page.getByTestId("item-submit").click();
+  await page.getByTestId("account-submit").click();
 
   await expect(balanceCell).toHaveText(String(before + 3));
 });
@@ -50,9 +50,9 @@ test("modal closes without navigating away", async ({ page }) => {
   await expect(page).toHaveURL(/\/$/);
 });
 
-test("visiting /items directly without logging in redirects home", async ({ page }) => {
-  await page.goto("/items");
-  await page.waitForURL((url) => !url.pathname.startsWith("/items"));
+test("visiting /accounts directly without logging in redirects home", async ({ page }) => {
+  await page.goto("/accounts");
+  await page.waitForURL((url) => !url.pathname.startsWith("/accounts"));
   await expect(page.getByTestId("login-open")).toBeVisible();
 });
 
@@ -65,25 +65,25 @@ test("header login/logout link", async ({ page }) => {
 
   await page.getByTestId("employee-code-input").fill("E002");
   await page.getByTestId("login-submit").click();
-  await page.waitForURL("**/items");
+  await page.waitForURL("**/accounts");
 
   // Logout now lives inside the user menu dropdown, not as a plain header link.
   await page.getByTestId("user-menu-button").click();
   await expect(page.getByTestId("logout-link")).toBeVisible();
   await page.getByTestId("logout-link").click();
 
-  // Logging out clears the token, which the /items page's own guard
+  // Logging out clears the token, which the /accounts page's own guard
   // reacts to by sending the viewer back home.
-  await page.waitForURL((url) => !url.pathname.startsWith("/items"));
+  await page.waitForURL((url) => !url.pathname.startsWith("/accounts"));
   await expect(page.getByTestId("header-login-link")).toBeVisible();
 });
 
-test("logo click from /items reloads in place and keeps the session", async ({ page }) => {
+test("logo click from /accounts reloads in place and keeps the session", async ({ page }) => {
   await page.goto("/");
   await page.getByTestId("login-open").click();
   await page.getByTestId("employee-code-input").fill("E003");
   await page.getByTestId("login-submit").click();
-  await page.waitForURL("**/items");
+  await page.waitForURL("**/accounts");
 
   // AuthProvider persists the token to sessionStorage (see
   // AuthProvider.tsx), so a full reload — confirmed via Playwright's
@@ -95,7 +95,7 @@ test("logo click from /items reloads in place and keeps the session", async ({ p
   ]);
   void navigation;
 
-  await expect(page).toHaveURL(/\/items$/);
+  await expect(page).toHaveURL(/\/accounts$/);
   await page.getByTestId("user-menu-button").click();
   await expect(page.getByTestId("user-menu-name")).toHaveText("E003");
   await expect(page.getByTestId("logout-link")).toBeVisible();

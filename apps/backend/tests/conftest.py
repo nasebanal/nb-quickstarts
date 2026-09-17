@@ -9,7 +9,7 @@ module level (when pytest first imports this file).
 """
 
 import app.db as db_module
-import app.models  # noqa: F401 - registers the Item table on Base.metadata
+import app.models  # noqa: F401 - registers the Account table on Base.metadata
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool

@@ -12,15 +12,15 @@ class CamelModel(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class ItemCreate(CamelModel):
+class AccountCreate(CamelModel):
     """`quantity` is a signed delta (e.g. -3 to record consumption), not an
-    absolute value — see `Item` in models.py."""
+    absolute value — see `Account` in models.py."""
 
     name: str
     quantity: int = 0
 
 
-class ItemOut(CamelModel):
+class AccountOut(CamelModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True)
 
     id: int
@@ -30,10 +30,10 @@ class ItemOut(CamelModel):
     created_at: datetime
 
 
-class ItemBalance(CamelModel):
+class AccountBalance(CamelModel):
     """A name's current balance: the sum of every event's `quantity` for
     that name, plus how many events contributed to it (see
-    `item_service.get_balances`)."""
+    `account_service.get_balances`)."""
 
     name: str
     balance: int
