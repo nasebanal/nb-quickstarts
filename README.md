@@ -267,6 +267,17 @@ curl http://localhost:8000/api/accounts/balances   # -> Microcks' mock, not the 
 
 Both were verified this way, not just described: every request during a real `make playwright:test` run against a Kong-routed frontend showed up in Kong's own access log going to `/api/*`, and swapping `apps_backend.url` to each mock in turn returned exactly the example values from `openapi.yaml`, confirmed via `curl` and Microcks'/Specmatic's own request logs. Revert `apps_backend.url` to `http://backend:8080` and `make kong:reset` to point back at the real backend afterward — this is a manual swap for trying it out, not a toggle either module automates yet.
 
+**Same swap, from Kong Manager's screen instead of editing `declarative.yml`** — needs `KONG_DB=postgres` (`make kong:up KONG_DB=postgres`, or set it in `.env`): DB-less mode's Admin API is read-only, so Kong Manager can display `apps_backend` but can't save an edit to it. With Postgres mode, editing the one `apps_backend` service through the UI takes effect immediately, no `kong:reset` needed:
+
+1. `make kong:open` (or open http://localhost:8002) → **Gateway Services** → `apps_backend` → **Edit**.
+2. Change **Host** (and **Port**, and **Path** for Microcks) to point at the mock, then **Save**:
+   - Specmatic's stub: Host `specmatic-stub`, Port `9091`, Path empty.
+   - Microcks: Host `microcks`, Port `8080`, Path `/rest/nb-quickstarts+apps+backend/0.1.0`.
+3. `curl http://localhost:8000/api/accounts/balances` (or reload `apps/frontend` if it's routed through Kong) to confirm the mock is answering - allow a couple of seconds for the change to propagate to Kong's own worker processes first.
+4. To revert: edit `apps_backend` again, Host back to `backend`, Port `8080`, Path empty, **Save**.
+
+There's only ever one `apps_backend` service — no separate service per backend/mock to flip between. An earlier attempt registered three services (real/Specmatic/Microcks) all routed to the same `/api` path, meant to be toggled by disabling the two not in use, but Kong's `Route` object has no `enabled` field (only `Service` does), and disabling a `Service` behind an already-matched `Route` doesn't fail over to another route - Kong's router just resolves one fixed winner among routes with an identical path and sticks with it regardless of that service's enabled state. So a single service edited in place, as above, is the reliable way to do this from the UI.
+
 ### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
 
 `make kafka:bridge-up` starts a small standalone consumer (`kafka/bridge/`) that reads events off the Kafka topic and forwards each one to a REST backend via `POST /accounts` — `apps/backend` by default, but `KAFKA_BRIDGE_TARGET_URL` can point anywhere, same as every other test tool's target host. It's deliberately separate from `kafka:up` (opt in explicitly) and lives in its own container rather than inside `apps/backend`, so a Kafka or backend outage only ever affects the bridge itself — it just retries forever, and only commits a Kafka offset after a successful delivery, so an outage pauses ingestion rather than losing events.
@@ -391,6 +402,6 @@ make locust:join-cluster LOCUST_MASTER_HOST=<PC1-IP> LOCUST_WORKERS=5
 
 ## 📝 License
 
-This project is licensed under the BSD 3-Clause License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Copyright (c) 2025, Shunjiro Yatsuzuka, NASEBANAL
+Copyright (c) 2025 NASEBANAL
