@@ -424,6 +424,22 @@ h1 {
   cursor: default;
 }
 
+.nb-section-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nb-auto-refresh-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: var(--nb-fg-muted);
+  cursor: pointer;
+}
+
 /* Scoped to .container (which wraps the header/footer chrome and every
    page of ours) rather than bare element selectors — /api-specs renders
    Scalar's own <button>/<input>/<table> elements outside any .container,

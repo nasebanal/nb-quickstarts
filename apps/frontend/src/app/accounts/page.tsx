@@ -30,7 +30,8 @@ export default function AccountsPage() {
   const { t } = useLocale();
   const { token, initializing, logout } = useAuth();
   const router = useRouter();
-  const { balances, refresh } = useBalances();
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const { balances, refresh } = useBalances(autoRefresh);
   const [accountName, setAccountName] = useState("");
   const [accountQuantity, setAccountQuantity] = useState("0");
   const [accountError, setAccountError] = useState("");
@@ -120,7 +121,18 @@ export default function AccountsPage() {
         </div>
 
         <section>
-          <h2>{t.app.balanceHeading}</h2>
+          <div className="nb-section-heading-row">
+            <h2>{t.app.balanceHeading}</h2>
+            <label className="nb-auto-refresh-toggle">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(event) => setAutoRefresh(event.target.checked)}
+                data-testid="auto-refresh-toggle"
+              />
+              {t.app.autoRefreshLabel}
+            </label>
+          </div>
           <table data-testid="balance-table">
             <thead>
               <tr>

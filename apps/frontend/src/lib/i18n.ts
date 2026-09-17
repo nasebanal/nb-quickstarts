@@ -24,6 +24,7 @@ export interface Dictionary {
     columnBalance: string;
     columnEventCount: string;
     registerHeading: string;
+    autoRefreshLabel: string;
     noAccountsPlaceholder: string;
     quantityPlaceholder: string;
     registerButton: string;
@@ -92,6 +93,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       columnBalance: "Balance",
       columnEventCount: "Transactions",
       registerHeading: "Record a Transaction",
+      autoRefreshLabel: "Auto-refresh (every 1s)",
       noAccountsPlaceholder: "No accounts yet",
       quantityPlaceholder: "Amount (+/-)",
       registerButton: "Record",
@@ -155,6 +157,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       columnBalance: "残高",
       columnEventCount: "取引件数",
       registerHeading: "取引を記帳",
+      autoRefreshLabel: "自動更新(1秒ごと)",
       noAccountsPlaceholder: "勘定科目がまだありません",
       quantityPlaceholder: "金額(+/-)",
       registerButton: "記帳",
