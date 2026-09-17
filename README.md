@@ -14,7 +14,7 @@
 
 Supported OSS, one module per technology:
 
-- **[apps](#apps-configuration-test-target-apps)** — the test-target stack itself: [FastAPI](https://fastapi.tiangolo.com/) (REST + GraphQL via [Strawberry](https://strawberry.rocks/) + an [MCP](https://modelcontextprotocol.io/) server via [fastapi-mcp](https://github.com/tadata-org/fastapi_mcp)), [Next.js](https://nextjs.org/), [MySQL](https://www.mysql.com/)
+- **[apps](#apps)** — the test-target stack itself: [FastAPI](https://fastapi.tiangolo.com/) (REST + GraphQL via [Strawberry](https://strawberry.rocks/) + an [MCP](https://modelcontextprotocol.io/) server via [fastapi-mcp](https://github.com/tadata-org/fastapi_mcp)), [Next.js](https://nextjs.org/), [MySQL](https://www.mysql.com/)
 - **[Kong](https://konghq.com/products/kong-gateway)** — API gateway
 - **[Kafka](https://kafka.apache.org/)** — event streaming
 - **[Consul](https://www.consul.io/)** — service registry/discovery
@@ -187,7 +187,7 @@ configure and launch the test from the browser at http://localhost:8089) or
 optionally `LOCUST_TAGS` (which subset) — in `.env` or on the command line.
 To switch test types cleanly, use `make locust:restart` (or `make
 locust:down` then `make locust:up`). For the full list of tunable env vars, see
-[Locust Configuration](#locust-configuration) below.
+[Locust](#locust) in Configuration.
 
 ```bash
 # HTTP Load Testing
@@ -238,87 +238,96 @@ make locust:join-cluster LOCUST_MASTER_HOST=<PC1-IP> LOCUST_WORKERS=5
 
 ## ⚙️ Configuration
 
-All services use `.env` file for configuration:
+Every module reads its settings from one `.env` file at the repo root (`cp .env.example .env` first - see [Getting Started](#-getting-started)). Below are each module's main parameters; `.env.example` has the full list, including lower-level ones (Kafka's KRaft/listener settings, image versions, MySQL credentials, ...) most people never need to touch. Override any of them via `.env` or inline on the command line:
 
-**Key configurations:**
-- **Apps**: See detailed configuration below
-- **Kong**: DB mode (`off`/`postgres`), version, database credentials
-- **Kafka**: Port 9092, topic name, partitions
-- **Locust**: See detailed configuration below
-- **Consul**: Ports 8500 (HTTP), 8600 (DNS)
-
-Override via `.env` file or command-line:
 ```bash
 make kong:up KONG_DB=postgres
 make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 ```
 
-### Apps Configuration (test target apps)
+`apps/` holds the actual apps under test - `apps/backend` (FastAPI: REST + GraphQL + an MCP server, over a MySQL-backed accounting ledger), `apps/frontend` (Next.js), and `mysql-server`. Its lifecycle is independent from every test tool - `apps:up`/`apps:down` only, never started or stopped automatically by pytest/vitest/playwright/specmatic/locust/etc. See the [Endpoints](#endpoints) table above for every URL it exposes once up, and `AGENTS.md` for the full architecture writeup.
 
-`apps/` holds the actual apps under test:
+### Apps
 
-- `apps/backend` — Python (FastAPI). REST + GraphQL over a minimal,
-  event-sourced `accounts` table (`id`, `name`, `quantity`, `source`,
-  `createdAt`) in MySQL (`testdb`), modeling a simple accounting ledger:
-  `name` is an account (e.g. "Cash"), each row is one transaction posted
-  against it (`quantity` is a signed debit/credit delta, not an absolute
-  balance), and `GET /accounts/balances` (also a GraphQL `balances` query)
-  returns each account's current balance and transaction count — the sum
-  and count of its own entries. Contract-first, not code-first: the REST
-  API's OpenAPI schema is a checked-in, hand-maintained file
-  (`apps/backend/openapi.yaml`), not generated from the route code —
-  `app/main.py` serves it verbatim at `GET /openapi.json`, which is what
-  `/api-specs`, the MCP mount, Specmatic, and `microcks:import-openapi` all
-  still fetch (see [Specmatic: contract testing](#specmatic-contract-testing-provider-and-consumer)
-  in Sample Scenarios for why).
-  The read/write logic lives in `app/services/account_service.py`, which both
-  the REST and GraphQL routers call. Kafka events reach it too, via `make
-  kafka:bridge-up` — a separate container that consumes the topic and calls
-  `POST /accounts` over REST, so `apps/backend` itself has no Kafka dependency
-  at all (see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion)
-  in Sample Scenarios). Also mounts an MCP server at `/mcp` (via `fastapi-mcp`), auto-derived
-  from the same REST routes — point a local MCP client (e.g. Claude Desktop)
-  at `http://localhost:8080/mcp`.
-- `apps/frontend` — TypeScript (Next.js). `/` is the landing page; logging
-  in (via a modal) takes you to the real `/accounts` route, which shows only
-  the account balances table (`useBalances.ts`, polled every 1s — no raw
-  transaction log rendered, since that's exactly what balloons under a load
-  test) and a "record a transaction" form whose account field is a
-  `<select>` over the existing accounts, not free text. `/api-specs` renders
-  the backend's live OpenAPI schema with Scalar.
-- `mysql-server` — MySQL, seeded with a small chart of accounts on first
-  boot (Cash, Sales Revenue, Rent Expense). Data persists across
-  `apps:down`/`apps:restart` in a named Docker volume; run `make apps:reset`
-  for a genuinely fresh database (see "Persistent state / reset" below).
+| Variable | Default | Description |
+|---|---|---|
+| `NEXT_PUBLIC_API_BASE` | `http://localhost:8080` | Where `apps/frontend` calls the backend - direct, or `http://localhost:8000/api` to route through Kong instead (needs `kong:up` + `apps:restart`) |
+| `NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL` | `http://localhost:8090` | Where the frontend checks kafka-bridge's health - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
 
-Its lifecycle is independent from any test tool: `make apps:up` starts it,
-`make apps:down` stops it, and no test tool (pytest, vitest, playwright,
-specmatic, locust, ...) starts or stops it automatically.
+### Kong
+
+| Variable | Default | Description |
+|---|---|---|
+| `KONG_DB` | `postgres` | `postgres` (DB mode - needed for Kong Manager edits to stick) or `off` (DB-less, reads `kong/conf/declarative.yml` only) |
+| `KONG_VERSION` | `3.6.1` | Kong Docker image tag |
+| `KONG_PG_USER` / `KONG_PG_PASSWORD` / `KONG_PG_DATABASE` | `kong` / `kongpass` / `kong` | Postgres credentials, `KONG_DB=postgres` mode only |
+
+### Kafka
+
+| Variable | Default | Description |
+|---|---|---|
+| `KAFKA_PORT` | `9092` | Host-published broker port |
+| `KAFKA_TOPIC_NAME` | `quickstart-events` | Topic `kafka:add-topics` creates and everything else reads/writes |
+| `KAFKA_TOPIC_PARTITIONS` | `1` | Partition count for that topic |
+| `KAFKA_BRIDGE_TARGET_URL` | `http://backend:8080` | Where kafka-bridge forwards events via `POST /accounts` - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
+| `KAFKA_BRIDGE_HEALTH_PORT` | `8090` | kafka-bridge's own `/health` port |
+
+### Consul
+
+| Variable | Default | Description |
+|---|---|---|
+| `CONSUL_HTTP_PORT` | `8500` | HTTP API / UI |
+| `CONSUL_DNS_PORT` | `8600` | DNS interface |
+
+### Specmatic, Microcks & Playwright
+
+| Variable | Default | Description |
+|---|---|---|
+| `SPECMATIC_STUB_PORT` | `9091` | `specmatic:stub-up`'s mock server port |
+| `MICROCKS_PORT` | `9090` | Microcks UI / mock API port |
+| `PLAYWRIGHT_BASE_URL` | `http://localhost:5173` | URL Playwright navigates to (runs on the host network, not `apps-network`) |
+
+### Locust
+
+| Variable | Default | Description |
+|---|---|---|
+| `LOCUST_FILE` | `locustfile_http.py` | Which scenario to run - see [Locust load testing scenarios](#locust-load-testing-scenarios) |
+| `LOCUST_TAGS` | *(empty)* | Filter to a subset of tasks within that file |
+| `LOCUST_WORKERS` | `5` | Number of worker containers |
+| `LOCUST_USERS` | `10` | Concurrent simulated users (also settable from the UI in `locust:up`) |
+| `LOCUST_SPAWN_RATE` | `1` | Users spawned per second |
+| `LOCUST_RUN_TIME` | *(empty)* | **Required** for `locust:test` (headless) - e.g. `60s`, `1h30m` |
+| `LOCUST_HTTP_HOST` | `http://backend:8080` | Target for the HTTP/GraphQL scenarios |
+| `LOCUST_MYSQL_HOST` | `mysql-server` | Target for the MySQL scenario |
+| `LOCUST_MASTER_HOST` | *(unset)* | Master's IP, for `locust:join-cluster` from another PC - see [Cluster load testing](#cluster-load-testing) |
+
+Any of the target-host variables (`LOCUST_HTTP_HOST`, `LOCUST_MYSQL_HOST`, ...) can point at an external host instead of the bundled apps, without starting `apps` at all:
 
 ```bash
-make apps:up     # start MySQL + backend + frontend
-make apps:status
-make apps:down
-```
-
-See the [Endpoints](#endpoints) table above for every URL apps exposes once started.
-
-This decoupling means the same test tooling can target either the bundled
-apps or an external host, just by changing where its target-host env vars
-point:
-
-```bash
-# Target the bundled apps (start them first)
-make apps:up
-make locust:up LOCUST_FILE=locustfile_http.py   # uses LOCUST_HTTP_HOST=http://backend:8080
-
-# Target an external host instead (no need to start apps)
 make locust:up LOCUST_FILE=locustfile_http.py LOCUST_HTTP_HOST=https://staging.example.com
 ```
 
-apps and any tooling that connects to it (Locust, Microcks, Kong as a
-gateway in front of apps, Consul for service discovery) share the
-`apps-network` Docker network, so they can be started in any order.
+### Test Results
+
+Every `make <module>:test` run leaves a browsable report behind. These are all gitignored - regenerated on every run, never checked in:
+
+| Module | Report file(s) |
+|---|---|
+| `pytest` | `pytest/report/report.html` |
+| `vitest` | `vitest/report/index.html` |
+| `vitest:contract-test` | `vitest/report-contract/index.html` |
+| `playwright` | `playwright/report/index.html` |
+| `specmatic` | `specmatic/report/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml` |
+| `locust` | `locust/logs/<timestamp>/report.html`, plus the files below |
+
+**Locust** writes a whole timestamped directory per run, `locust/logs/YYYYMMDD_HHMMSS/`:
+
+- `target_host.txt` - the run's own config (target host, locustfile, tags, workers)
+- `result.log` / `master.log` - container output / Locust framework logs
+- `debug.log` - worker debug messages (only if `LOCUST_DEBUG_MODE=true`)
+- `locust_stats.csv` / `locust_stats_history.csv` - current aggregated stats / time-series data (appended every second)
+- `locust_failures.csv` / `locust_exceptions.csv` - failure and exception records
+- `report.html` - the final test report
 
 ### Persistent state / reset
 
@@ -361,54 +370,6 @@ make microcks:up            # long-running mock server
 make microcks:import-openapi # fetches the backend's live OpenAPI schema and loads it (requires apps:up)
 make microcks:open
 ```
-
-### Locust Configuration
-
-Environment variables driving `make locust:up`/`make locust:test` - see
-[Locust load testing scenarios](#locust-load-testing-scenarios) in Sample
-Scenarios for runnable examples per test type.
-
-**Configuration Parameters (.env):**
-```bash
-# Test Configuration
-LOCUST_FILE=locustfile_http.py     # Test file (locustfile_http.py, locustfile_graphql.py)
-LOCUST_TAGS=                       # Filter tests by tags (optional)
-LOCUST_WORKERS=5                   # Number of worker containers
-LOCUST_DEBUG_MODE=false            # Enable debug logging (true/false)
-
-# Target Configuration
-LOCUST_HTTP_HOST=http://backend:8080  # HTTP/GraphQL target
-LOCUST_HOST=http://backend:8080       # Locust host parameter
-LOCUST_MYSQL_HOST=mysql-server     # MySQL hostname
-LOCUST_MYSQL_PORT=3306             # MySQL port
-LOCUST_MYSQL_USER=testuser         # MySQL username
-LOCUST_MYSQL_PASSWORD=testpassword # MySQL password
-LOCUST_MYSQL_DATABASE=information_schema  # MySQL database
-LOCUST_MYSQL_CARTESIAN_LIMIT=10000 # LIMIT for cartesian join queries
-
-# Load parameters (make locust:up lets you set these from the UI too;
-# make locust:test needs LOCUST_RUN_TIME set up front - it's headless)
-LOCUST_USERS=10                    # Number of concurrent users
-LOCUST_SPAWN_RATE=1                # User spawn rate (users/second)
-LOCUST_RUN_TIME=60s                # [REQUIRED for locust:test] Test duration (e.g., 1h30m, 60s)
-
-# Cluster Configuration
-LOCUST_MASTER_HOST=192.168.1.100   # Master IP for distributed testing
-```
-
-**Log Files:**
-
-All logs are saved in timestamped directories: `locust/logs/YYYYMMDD_HHMMSS/`
-
-- `target_host.txt` - Test configuration (target host, locustfile, tags, workers)
-- `result.log` - Master + worker container output
-- `master.log` - Locust framework logs
-- `debug.log` - Worker debug messages (only if `LOCUST_DEBUG_MODE=true`)
-- `locust_stats.csv` - Current aggregated statistics (periodically overwritten)
-- `locust_stats_history.csv` - Time-series data (appended every second)
-- `locust_failures.csv` - Failure records
-- `locust_exceptions.csv` - Exception records
-- `report.html` - Final test report
 
 ## 📝 License
 
