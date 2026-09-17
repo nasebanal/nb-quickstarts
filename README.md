@@ -9,6 +9,7 @@ https://youtu.be/8UI0XZrSPkQ
 
 - [Overview](#overview)
 - [Getting Started](#getting-started)
+- [Endpoints](#-endpoints)
 - [License](#license)
 
 ## 🚀 Overview
@@ -78,6 +79,31 @@ Supported OSS, one module per technology:
    make consul:verify-apps
    make consul:open
    ```
+
+## 🔌 Endpoints
+
+Every module prints its own "Endpoints once started" block from `make <module>:up` (or plain `make <module>`) - this is the same information gathered in one place, across every module, for reference without starting anything. All host-published, so all reachable from your host machine directly; a module needs to actually be up (`make <module>:up`) for its own row to answer.
+
+| Module | Endpoint | URL / Address | Notes |
+|---|---|---|---|
+| apps | Frontend | http://localhost:5173 | Next.js |
+| apps | API docs (Scalar) | http://localhost:5173/api-specs | Reads the backend's live OpenAPI schema |
+| apps | Backend REST | http://localhost:8080 | FastAPI |
+| apps | Backend GraphQL | http://localhost:8080/graphql | Strawberry |
+| apps | MCP server | http://localhost:8080/mcp | Streamable HTTP |
+| apps | MySQL | localhost:3306 | database `testdb` |
+| Kong | Proxy | http://localhost:8000 | HTTPS: 8443 |
+| Kong | Proxy `/api/*` | http://localhost:8000/api/accounts | -> `apps_backend` (real backend by default - see [Kong: routing...](#kong-routing-to-the-real-backend-or-to-a-contract-mock-instead)), needs `apps:up` |
+| Kong | Proxy `/mock`, `/echo/get` | http://localhost:8000/mock, http://localhost:8000/echo/get | httpbin-backed demo routes, no dependency on `apps` |
+| Kong | Admin API | http://localhost:8001 | HTTPS: 8444 |
+| Kong | Manager UI | http://localhost:8002 | HTTPS: 8445; edits need `KONG_DB=postgres` |
+| Kafka | Broker | localhost:9092 | `KAFKA_PORT` |
+| Kafka | kafka-bridge health | http://localhost:8090/health | Only once `kafka:bridge-up` has run; `KAFKA_BRIDGE_HEALTH_PORT` |
+| Specmatic | Mock server | http://localhost:9091 | `SPECMATIC_STUB_PORT`; needs `apps:up` first (`make specmatic:stub-up`) |
+| Microcks | UI / mock API | http://localhost:9090 | `MICROCKS_PORT` |
+| Consul | HTTP API / UI | http://localhost:8500 | `CONSUL_HTTP_PORT` |
+| Consul | DNS | localhost:8600 | `CONSUL_DNS_PORT` |
+| Locust | Web UI | http://localhost:8089 | |
 
 ## ⚙️ Configuration
 
@@ -244,6 +270,14 @@ make apps:restart   # frontend needs recreating - Next.js dev mode bakes NEXT_PU
 
 `apps_backend`'s `url` is the seam: repoint it at a mock built from the same contract instead of the real backend, and neither `apps/frontend` nor any test hitting `/api/*` needs to change at all.
 
+These `host`/`port` values are Docker Compose **service names** on `apps-network` - only resolvable from inside that network (which is why Kong itself has to join it - see `kong/docker-compose.yml`), not from your host machine. From the host, use the published port instead (the third column):
+
+| Target | Host (in-network) | Port (in-network) | Path prefix | Published on host |
+|---|---|---|---|---|
+| Real backend | `backend` | `8080` | (none) | http://localhost:8080 |
+| Specmatic's stub | `specmatic-stub` | `9091` | (none) | http://localhost:9091 |
+| Microcks | `microcks` | `8080` | `/rest/nb-quickstarts+apps+backend/0.1.0` | http://localhost:9090 |
+
 **Specmatic's stub** — the same mock `vitest:contract-test` uses (above), now reachable through Kong too:
 
 ```bash
@@ -277,6 +311,13 @@ Both were verified this way, not just described: every request during a real `ma
 4. To revert: edit `apps_backend` again, Host back to `backend`, Port `8080`, Path empty, **Save**.
 
 There's only ever one `apps_backend` service — no separate service per backend/mock to flip between. An earlier attempt registered three services (real/Specmatic/Microcks) all routed to the same `/api` path, meant to be toggled by disabling the two not in use, but Kong's `Route` object has no `enabled` field (only `Service` does), and disabling a `Service` behind an already-matched `Route` doesn't fail over to another route - Kong's router just resolves one fixed winner among routes with an identical path and sticks with it regardless of that service's enabled state. So a single service edited in place, as above, is the reliable way to do this from the UI.
+
+**Getting back to the real backend, whichever way you swapped away from it** - `apps_backend` should end up as Host `backend`, Port `8080`, Path empty (`http://backend:8080`):
+
+- **Kong Manager**: `apps_backend` → **Edit** → Host `backend`, Port `8080`, Path empty → **Save**.
+- **Admin API, one line, no UI**: `curl -X PATCH http://localhost:8001/services/apps_backend -d "host=backend" -d "port=8080" -d "path="` - same effect as the Kong Manager edit above.
+- **`declarative.yml` + reset**: confirm `apps_backend`'s `url` in `kong/conf/declarative.yml` still reads `http://backend:8080` (it does, by default - this is only relevant if you edited the file itself, not just the live service via Kong Manager/Admin API), then `make kong:reset`.
+- **Most foolproof of the three**: `make kong:reset` always wins - it deletes every route/service/plugin Kong currently has live in its database and reloads straight from `kong/conf/declarative.yml`, so it doesn't matter what got changed (or fat-fingered) via the UI or Admin API in between; whatever's live gets fully discarded either way.
 
 ### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
 
