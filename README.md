@@ -218,20 +218,23 @@ Two matching Locust scenarios make the case for putting Kafka in front of a writ
 
 ```bash
 # Direct REST, no Kafka - every simulated user POSTs straight to the backend
-make locust:up LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 LOCUST_HEADLESS_FLAG=--headless LOCUST_RUN_TIME=60s
+make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 LOCUST_RUN_TIME=60s
 
 # The same load, produced onto the Kafka topic instead (needs kafka:bridge-up running)
-make locust:up LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 LOCUST_HEADLESS_FLAG=--headless LOCUST_RUN_TIME=60s
+make locust:test LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 LOCUST_RUN_TIME=60s
 ```
 
 Measured on a single laptop, against this repo's own default resource limits (SQLAlchemy's default connection pool, a single `uvicorn` worker in `--reload` mode): direct REST failed **79%** of `POST /items` requests (500s, connection resets, and up to 30s+ latency) under that load. The identical load produced onto Kafka instead completed **1,241,297 events at 0% failure**, ~24ms median produce latency, with the backend's own `/health` endpoint staying at ~2ms response time throughout — because `kafka-bridge` drains the topic at its own steady, sequential pace and never forwards a burst to the backend.
 
 ### Locust Configuration
 
-Load tests are driven by a single command, `make locust:up`. Pick the test
-by setting `LOCUST_FILE` (which test) and optionally `LOCUST_TAGS` (which
-subset) — in `.env` or on the command line. To switch test types cleanly,
-use `make locust:restart` (or `make locust:down` then `make locust:up`).
+Load tests are driven by `make locust:up` (UI mode - start containers, then
+configure and launch the test from the browser at http://localhost:8089) or
+`make locust:test` (headless - starts immediately, no UI, bounded by
+`LOCUST_RUN_TIME`). Pick the test by setting `LOCUST_FILE` (which test) and
+optionally `LOCUST_TAGS` (which subset) — in `.env` or on the command line.
+To switch test types cleanly, use `make locust:restart` (or `make
+locust:down` then `make locust:up`).
 
 **Test Types:**
 ```bash
@@ -273,20 +276,20 @@ LOCUST_MYSQL_PASSWORD=testpassword # MySQL password
 LOCUST_MYSQL_DATABASE=information_schema  # MySQL database
 LOCUST_MYSQL_CARTESIAN_LIMIT=10000 # LIMIT for cartesian join queries
 
-# Headless Mode (auto-start without UI)
-LOCUST_HEADLESS_FLAG=              # Set to --headless for headless mode
+# Load parameters (make locust:up lets you set these from the UI too;
+# make locust:test needs LOCUST_RUN_TIME set up front - it's headless)
 LOCUST_USERS=10                    # Number of concurrent users
 LOCUST_SPAWN_RATE=1                # User spawn rate (users/second)
-LOCUST_RUN_TIME=60s                # [REQUIRED in headless mode] Test duration (e.g., 1h30m, 60s)
+LOCUST_RUN_TIME=60s                # [REQUIRED for locust:test] Test duration (e.g., 1h30m, 60s)
 
 # Cluster Configuration
 LOCUST_MASTER_HOST=192.168.1.100   # Master IP for distributed testing
 ```
 
-> **Warning: Headless mode runs without user intervention.**
-> In headless mode (`LOCUST_HEADLESS_FLAG=--headless`), the load test starts automatically and continues until explicitly stopped.
+> **Warning: `make locust:test` runs without user intervention.**
+> It starts the load test automatically (headless, no UI) and continues until explicitly stopped.
 > **Always set `LOCUST_RUN_TIME`** to limit the test duration and prevent unintended sustained load on the target system.
-> If `LOCUST_RUN_TIME` is not set, `make locust:up` will exit with an error to avoid runaway load tests.
+> If `LOCUST_RUN_TIME` is not set, `make locust:test` will exit with an error to avoid runaway load tests.
 
 **Log Files:**
 
