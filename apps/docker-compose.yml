@@ -49,7 +49,7 @@ services:
       - "5173:5173"
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - frontend-node-modules:/app/node_modules
     environment:
       # URL called from the browser. The browser is outside the Docker
       # network, so this must be the host-published port, not the
@@ -73,3 +73,23 @@ volumes:
   # "<module>-db-data" naming, for consistency between the two). Only
   # `apps:reset` removes it.
   apps-db-data:
+  # Also named, not anonymous, and for the same reason - but here it's
+  # about container *creation* speed, not data survival. An anonymous
+  # volume isn't addressable, so it can't be reattached to a new container
+  # object: every time the frontend container itself gets removed and
+  # recreated (any apps:down -> apps:up, apps:restart, apps:reset - not
+  # just a plain apps:up with nothing to rebuild), Docker has to allocate
+  # a fresh one and populate it by copying the image's baked-in
+  # node_modules (656-788MB) into it from scratch, before the container
+  # can even start. Measured directly: an in-place --force-recreate (container
+  # object kept, volume reference reused) took 3.2s; removing the
+  # container first (matching what apps:down does) and recreating took
+  # 26.5s, and a fresh, differently-named anonymous volume showed up each
+  # time - confirmed via `docker inspect`. A named volume persists
+  # independently of the container's lifecycle, so it survives exactly
+  # the same `down`/`up` cycles apps-db-data already does, and gets reused
+  # instead of rebuilt from scratch. apps:reset's `down --volumes` still
+  # wipes this one too, so a real dependency change (package.json) is
+  # never masked by a stale copy - same protection as before, just without
+  # paying the copy cost on every ordinary restart.
+  frontend-node-modules:
