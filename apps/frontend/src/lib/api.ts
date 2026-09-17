@@ -1,6 +1,10 @@
 // Thin client for the backend (apps/backend, FastAPI). This runs in the
 // browser, so it must use the host-published URL, not the container name.
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+// Exported read-only so the UI can show what it's actually talking to
+// (see accounts/page.tsx) - useful since this can be repointed at Kong, a
+// Specmatic stub, or a Microcks mock via NEXT_PUBLIC_API_BASE (see
+// AGENTS.md's Kong section) without any other visible difference.
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 
 // Event-sourced: each Account is one quantity-change event, not a
 // standalone row with an absolute quantity. `quantity` is a signed delta -

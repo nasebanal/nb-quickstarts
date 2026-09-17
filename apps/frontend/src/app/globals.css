@@ -349,9 +349,23 @@ h1 {
   font-size: 1rem;
   line-height: 1.6;
   color: var(--nb-fg-muted);
+  margin-bottom: 8px;
+}
+
+/* Read-only debug info, not a setting - kept visually subordinate to the
+   concept description above it (smaller, subtler color) so it reads as
+   "for reference" rather than something to interact with. */
+.nb-api-base {
+  font-size: 0.8125rem;
+  color: var(--nb-fg-subtle);
+  margin-top: 0;
   margin-bottom: 32px;
   padding-bottom: 24px;
   border-bottom: 1px solid var(--nb-border-soft);
+}
+
+.nb-api-base code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 /* Scoped to .container (which wraps the header/footer chrome and every

@@ -30,6 +30,7 @@ export interface Dictionary {
     logoutButton: string;
     userMenuLabel: string;
     sessionExpiredError: string;
+    apiBaseLabel: string;
   };
   footer: {
     rightsReserved: string;
@@ -95,6 +96,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       logoutButton: "Logout",
       userMenuLabel: "User menu",
       sessionExpiredError: "Your session has expired (the backend restarted since you logged in) — logging you out.",
+      apiBaseLabel: "Connected backend",
     },
     footer: {
       rightsReserved: "All rights reserved.",
@@ -155,6 +157,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       logoutButton: "ログアウト",
       userMenuLabel: "ユーザーメニュー",
       sessionExpiredError: "セッションの有効期限が切れました(ログイン後にbackendが再起動されました) — ログアウトします。",
+      apiBaseLabel: "接続先Backend",
     },
     footer: {
       rightsReserved: "All rights reserved.",

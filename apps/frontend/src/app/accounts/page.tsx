@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/components/LocaleProvider";
-import { createAccount, UnauthorizedError } from "@/lib/api";
+import { API_BASE, createAccount, UnauthorizedError } from "@/lib/api";
 import { useBalances } from "@/lib/useBalances";
 
 export default function AccountsPage() {
@@ -74,6 +74,13 @@ export default function AccountsPage() {
       <div className="nb-content">
         <p className="nb-concept-description" data-testid="concept-description">
           {t.app.conceptDescription}
+        </p>
+        {/* Read-only - not a setting, just visibility into what
+            NEXT_PUBLIC_API_BASE currently resolves to (direct backend,
+            Kong, a Specmatic stub, a Microcks mock - see AGENTS.md's Kong
+            section). Nothing here lets you change it from the UI. */}
+        <p className="nb-api-base" data-testid="api-base">
+          {t.app.apiBaseLabel}: <code>{API_BASE}</code>
         </p>
 
         <section>
