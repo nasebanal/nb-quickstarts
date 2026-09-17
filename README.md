@@ -2,10 +2,6 @@
 
 **NASEBANAL Quickstarts helps you verify how the [NASEBANAL Stack](https://www.nasebanal.com) actually behaves** — the proven open-source technologies NASEBANAL builds on, not a scaffold for every technology out there. Each module spins up one piece of that stack (or a tool that verifies it) via Docker Compose + `make`, so you can try it, test against it, and see how the pieces fit together. Like the constituents of the NASEBANAL Stack itself, which modules are here may change as the stack evolves.
 
-You can find a quick demo movie below.
-
-https://youtu.be/8UI0XZrSPkQ
-
 ## 📋 Table of Contents
 
 - [Overview](#overview)
