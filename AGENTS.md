@@ -224,8 +224,65 @@ examples fresh on every run, never checked in:
 Every expected response body above is fetched live from the backend, so
 none of them can drift from reality even though the *shape* they're checked
 against now comes from the hand-maintained `openapi.yaml`, not the backend's
-own code. `specmatic:test` is a clean, 100%-coverage pass as a result: 11
-scenarios, 11 successes.
+own code. `specmatic:test` is a clean, 100%-coverage pass as a result: 12
+scenarios, 12 successes (11 from the externalized examples above, plus one
+more Specmatic derives on its own from `openapi.yaml`'s inline
+`GET /accounts/{account_id}` parameter example - see below).
+
+### Microcks: mocking the contract, and Kong as the swap point to either mock
+
+`openapi.yaml` also carries inline `examples:` (not `prepare_contract.sh`'s
+dynamically-generated externalized ones - separate mechanism, separate
+purpose) for every read operation, so `microcks:import-openapi` has
+something to actually mock instead of an empty `messagesMap` per operation
+(confirmed this was the initial state: imported the schema before adding
+examples, checked `GET /api/services/{id}` on Microcks' own API, every
+operation had `[]`). Two non-obvious things, found empirically:
+
+- **Microcks needs the plural `examples:` (a named map), not the singular
+  `example:`** - the latter parses fine as valid OpenAPI and Specmatic
+  accepts it too, but Microcks silently produces zero mock messages from it.
+  Request and response examples for the same scenario must also share the
+  *same key* (e.g. `e001_login` under both `/auth/login`'s `requestBody`
+  and its `200` response) - that's how Microcks pairs them into one
+  complete mock; an unpaired example (input with no matching output, or
+  vice versa) is discarded. Confirmed by testing both keyed and unkeyed
+  forms directly against a running Microcks instance.
+- **`POST /accounts` has no inline example, unlike every other operation** -
+  it needs a real bearer token, which an OpenAPI example has no way to
+  carry (a header, not part of `requestBody`). Adding one anyway was tried
+  first: Specmatic picked it up as an extra test scenario (inline schema
+  examples become Specmatic scenarios too, not just an externalized-example
+  concern), had no way to authenticate it, and it failed with 401 every
+  time - a real regression caught by the same `specmatic:test` run this
+  whole file is about keeping honest. Removed the example; `POST /accounts`
+  keeps its documented `201`/`401`/`422` responses with no example, and
+  Microcks simply can't mock it as a result (an accepted scope boundary,
+  not an oversight - see the comment on that operation in `openapi.yaml`).
+- Microcks' own REST mock URL has a different shape than the real API:
+  `/rest/<service-name>/<version>/<path>`, with the service name's spaces
+  encoded as `+` (confirmed against Microcks' own request log, which prints
+  the exact URL it matched) - e.g.
+  `/rest/nb-quickstarts+apps+backend/0.1.0/health`, not `/health`.
+
+**Kong as the swap point**: `apps_backend`'s `url` (see the Kong bullet
+above) can point at either mock instead of the real backend, and neither
+`apps/frontend` nor anything hitting `/api/*` needs to change - only
+`kong/conf/declarative.yml` and a `kong:reset`. For Specmatic's stub, just
+`http://specmatic-stub:9091`, since its mock paths match the real API
+directly. For Microcks, the whole `/rest/<service>/<version>` prefix has to
+be baked into `apps_backend.url` itself (e.g.
+`http://microcks:8080/rest/nb-quickstarts+apps+backend/0.1.0`), since
+`strip_path: true` on the Kong route only removes `/api` - Kong then
+appends whatever's left of the incoming path onto the service `url`'s own
+path, landing on Microcks' expected shape. Verified both directions
+end-to-end, not just wired up: repointed `apps_backend.url` to each mock in
+turn, `kong:reset`, then `curl`'d `/api/accounts/balances` and
+`/api/accounts/1` through `localhost:8000` and got back exactly the
+`openapi.yaml` example values from each mock, confirmed against
+Specmatic's/Microcks' own request logs that they were the ones actually
+serving it. See README's "Kong: routing to the real backend, or to a
+contract mock instead" for the exact commands.
 
 Microcks and locust are excluded from this table on purpose: Microcks is a
 long-running mock server with no natural "test run" to report on, and locust

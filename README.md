@@ -230,6 +230,43 @@ make vitest:contract-test    # Consumer: apps/frontend's real api.ts calls again
 
 `specmatic/bin/prepare_contract.sh` (shared by both `specmatic:test` and `specmatic:stub-up`) fetches the live schema and builds 7 externalized examples fresh on every run — a real bearer token, an id that actually exists, and deliberately-invalid requests covering every documented non-2xx response — so Specmatic's own coverage report reaches 100%. See `AGENTS.md`'s Specmatic section for the full story, including a dead end (Specmatic's own security-token config parses correctly but has no effect on generated requests) and why `SPECMATIC_GENERATIVE_TESTS` was tried and rejected in favor of explicit negative examples.
 
+`openapi.yaml` also carries its own inline `examples:` (named, matching keys between request and response) for the read operations — separate from `prepare_contract.sh`'s dynamically-generated ones, and there for a different consumer: Microcks, below.
+
+### Kong: routing to the real backend, or to a contract mock instead
+
+`apps_backend` in `kong/conf/declarative.yml` proxies `http://localhost:8000/api/*` to `apps/backend`'s own root (`strip_path: true`, so `/api/accounts` reaches `backend:8080/accounts`). `apps/frontend` can go through it instead of calling the backend directly:
+
+```bash
+make kong:up
+# .env: NEXT_PUBLIC_API_BASE=http://localhost:8000/api
+make apps:restart   # frontend needs recreating - Next.js dev mode bakes NEXT_PUBLIC_* into the bundle at server start
+```
+
+`apps_backend`'s `url` is the seam: repoint it at a mock built from the same contract instead of the real backend, and neither `apps/frontend` nor any test hitting `/api/*` needs to change at all.
+
+**Specmatic's stub** — the same mock `vitest:contract-test` uses (above), now reachable through Kong too:
+
+```bash
+make apps:up
+make specmatic:stub-up
+# kong/conf/declarative.yml: change apps_backend's url to http://specmatic-stub:9091
+make kong:reset
+curl http://localhost:8000/api/accounts/1   # -> Specmatic's stub, not the real backend
+```
+
+**Microcks**, once imported, mocks the read side the same way (`/health`, `/auth/login`, `GET /accounts`, `GET /accounts/balances`, `GET /accounts/{account_id}`) using `openapi.yaml`'s inline examples. `POST /accounts` needs a real bearer token, which an OpenAPI example has no way to carry (it's a header, not part of the request body) — out of scope for Microcks as a result; see `openapi.yaml`'s comment on that operation. Microcks' own REST mock URL has a different shape than the real API (`/rest/<service>/<version>/<path>`, service name space-encoded as `+`), so `apps_backend.url` needs that whole prefix baked in — Kong then just appends whatever's left after stripping `/api`:
+
+```bash
+make apps:up
+make microcks:up
+make microcks:import-openapi
+# kong/conf/declarative.yml: change apps_backend's url to http://microcks:8080/rest/nb-quickstarts+apps+backend/0.1.0
+make kong:reset
+curl http://localhost:8000/api/accounts/balances   # -> Microcks' mock, not the real backend
+```
+
+Both were verified this way, not just described: every request during a real `make playwright:test` run against a Kong-routed frontend showed up in Kong's own access log going to `/api/*`, and swapping `apps_backend.url` to each mock in turn returned exactly the example values from `openapi.yaml`, confirmed via `curl` and Microcks'/Specmatic's own request logs. Revert `apps_backend.url` to `http://backend:8080` and `make kong:reset` to point back at the real backend afterward — this is a manual swap for trying it out, not a toggle either module automates yet.
+
 ### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
 
 `make kafka:bridge-up` starts a small standalone consumer (`kafka/bridge/`) that reads events off the Kafka topic and forwards each one to a REST backend via `POST /accounts` — `apps/backend` by default, but `KAFKA_BRIDGE_TARGET_URL` can point anywhere, same as every other test tool's target host. It's deliberately separate from `kafka:up` (opt in explicitly) and lives in its own container rather than inside `apps/backend`, so a Kafka or backend outage only ever affects the bridge itself — it just retries forever, and only commits a Kafka offset after a successful delivery, so an outage pauses ingestion rather than losing events.
