@@ -5,7 +5,7 @@ services:
     image: nb-vitest
     volumes:
       - ../apps/frontend:/app
-      - /app/node_modules
+      - vitest-node-modules:/app/node_modules
       - ./report:/report
     working_dir: /app
     command: npm run test:report
@@ -21,7 +21,7 @@ services:
     image: nb-vitest
     volumes:
       - ../apps/frontend:/app
-      - /app/node_modules
+      - vitest-node-modules:/app/node_modules
       - ./report-contract:/report
     working_dir: /app
     environment:
@@ -35,3 +35,14 @@ networks:
   apps-network:
     name: apps-network
     external: true
+
+volumes:
+  # Named, not anonymous, and shared by both services above (same image,
+  # same node_modules content) - see AGENTS.md "A bind-mounted service's
+  # dependency directory needs its own volume" for why this matters more
+  # here than almost anywhere else in the repo: `run --rm` always creates a
+  # brand new container per invocation, so an anonymous volume would pay
+  # the full node_modules copy cost (656-788MB) on *every single*
+  # `vitest:test`/`vitest:contract-test` run, not just after a restart.
+  # Measured before this fix: 41s wall time for a 213ms test.
+  vitest-node-modules:
