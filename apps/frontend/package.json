@@ -8,7 +8,8 @@
     "start": "next start -H 0.0.0.0 -p 5173",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:report": "VITEST_HTML_REPORT=/report vitest run"
+    "test:report": "VITEST_HTML_REPORT=/report vitest run",
+    "test:contract-report": "VITEST_HTML_REPORT=/report vitest run --config vitest.contract.config.mts"
   },
   "dependencies": {
     "@scalar/api-reference-react": "^0.9.67",

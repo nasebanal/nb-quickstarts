@@ -44,8 +44,9 @@ Every module's ports are chosen so it can run at the same time as any other modu
 | consul | DNS | 8600 |
 | consul | server RPC | 8300 |
 | microcks | UI / mock API | 9090 |
+| specmatic | stub (mock server, `specmatic:stub-up`) | 9091 |
 
-pytest, vitest, playwright and specmatic don't publish a port (they run once and don't leave anything listening), so they don't appear in this table.
+pytest, vitest, playwright, and specmatic's own `specmatic:test` don't publish a port (they run once and don't leave anything listening), so they don't appear in this table - only `specmatic:stub-up` does, since that one's a long-running server.
 
 When adding a new module, pick a port that isn't already in this table.
 
@@ -87,7 +88,10 @@ Two more Kafka gotchas, both found the same way as the `log.dirs` one above — 
     - **One-time migration note**: before this, `mysql-server` had no declared volume at all, so MySQL wrote to a Docker-managed *anonymous* volume and `apps:down` always ran `--volumes` to avoid it going stale (see "Anonymous volumes" above) — which also meant every `apps:down`/`apps:restart` silently wiped MySQL data as a side effect. Anyone who already had `apps` running before this change will lose that old anonymous volume's data the first time they pick up the new compose file (the new named volume starts empty) — a one-time reset, not a recurring one. Since `apps`' MySQL only ever holds disposable demo/test data, this was judged an acceptable one-off cost.
     - **Another one-time migration note**: `Item`/`item`/`/items` was renamed to `Account`/`account`/`/accounts` across the whole backend (model, table, REST path, GraphQL, MCP tool names) - see above. `Base.metadata.create_all()` (in `app/main.py`) only creates missing tables, so an existing local volume from before this change ends up with both an orphaned, now-unused `items` table and a fresh, empty `accounts` table on next `apps:up` — the old data isn't gone, just stranded. Run `make apps:reset` once to get a clean `accounts` table instead of carrying the dead `items` table around.
 - **Branding**: intentionally does not depend on `@nasebanal/shared-navigation` or `@nasebanal/api-specs` (both private GitHub Packages) — doing so would break this repo's public/OSS/air-gapped-friendly install story. The header/footer/theme/i18n are self-contained re-implementations matching their visual output, using a locally committed logo (`apps/frontend/public/logo.png`) instead of a package-supplied one.
-- **OpenAPI**: there is no checked-in schema file. `/api-specs`, the MCP mount, Specmatic, and `microcks:import-openapi` all fetch the backend's *live* `/openapi.json` at the point of use instead — this is a demo app with no real schema-change workflow to keep a separately-exported copy in sync with, so there's nothing to export and nothing to go stale. Specmatic and `microcks:import-openapi` both therefore require `make apps:up` first (Specmatic already did, for the actual test requests; `microcks:import-openapi` only needs apps up for that one fetch — once imported, Microcks serves the mock independently).
+- **OpenAPI: contract-first, not code-first.** `apps/backend/openapi.yaml` is the checked-in, hand-maintained source of truth for the REST API - `app/main.py` overrides `app.openapi` to load and serve this file verbatim at `GET /openapi.json`, instead of letting FastAPI derive a schema from its own routes/Pydantic models (FastAPI's normal behavior, and what this repo did before). `/api-specs`, the MCP mount, Specmatic, and `microcks:import-openapi` all still fetch that same live `/openapi.json` endpoint - none of them needed to change, since the endpoint's URL and shape are unchanged; only where its *content* comes from changed. Specmatic and `microcks:import-openapi` both still require `make apps:up` first (Specmatic already did, for the actual test requests; `microcks:import-openapi` only needs apps up for that one fetch - once imported, Microcks serves the mock independently).
+  - **Why the reversal**: a schema generated *from* the implementation can never structurally disagree with it - Specmatic's provider verification (`specmatic:test`) against a code-first schema can only ever catch behavioral bugs (wrong status code, auth not enforced), never real contract drift, because the "contract" was never independent of the code being tested in the first place. A physically separate, hand-maintained file makes "does the implementation still honor this contract" a real, failable question - the actual point of Contract-Driven Development, where a Consumer (`apps/frontend`, `kafka-bridge`, an MCP client) and a Provider (`apps/backend`) both build against one shared file, independently.
+  - **The tradeoff, accepted deliberately**: `openapi.yaml` can now drift from what `app/routers/*.py` and `app/schemas.py` actually do, if someone changes one and forgets the other - exactly the risk the old code-first approach existed to eliminate. Keeping the two in sync by hand is the ongoing cost of the contract meaning something; `specmatic:test` is what catches it when they diverge.
+  - `openapi.yaml`'s own header comment explains why `/graphql` isn't described in it at all (GraphQL's request shape isn't OpenAPI-describable - same reasoning as the Specmatic section below) and how it maps onto `apps/backend`'s actual routes.
 - **Kafka integration (`kafka-bridge`)**: `kafka/bridge/consumer.py`, a separate container (`make kafka:bridge-up`, deliberately *not* `kafka:up` — opt in explicitly, matching how every other cross-module integration in this repo works, e.g. `consul:register-apps`/`microcks:import-openapi` are also separate from that module's `up`). It consumes `KAFKA_TOPIC` (default `quickstart-events`) and calls `POST {KAFKA_BRIDGE_TARGET_URL}/accounts` (default `http://backend:8080`, but env-var-driven like every other test tool's target host — not hardcoded to apps) for each message. Deliberately lives here, not as in-process code inside `apps/backend`: apps/backend ends up with zero Kafka dependency, so a Kafka outage can only ever affect this container, never the backend itself. Resilience is load-bearing, not incidental: connecting to Kafka, logging into the backend, and POSTing each event are all infinite retry loops (never a crash), and a message's Kafka offset is committed only *after* a successful POST — so an unreachable backend pauses ingestion (Kafka durably retains the backlog) rather than losing events. Verified directly: stopped `apps:up`'s backend mid-stream, watched `kafka-bridge` retry without crashing, restarted the backend, watched the queued event get delivered with no data loss.
   - **Two different failure modes, on purpose**: a *transient* failure (Kafka or the backend temporarily unreachable, a request rejected) is retried forever, per the above. A *permanent* one — a message that isn't valid JSON, or is missing `name` — is logged and its offset committed anyway (skipped, not retried): retrying an unparseable message forever would just deadlock the whole pipeline behind it. This distinction wasn't theoretical: an early version used `KafkaConsumer`'s own `value_deserializer` and caught only `KafkaError`, so a single leftover non-conforming message from manual testing (`{"test": "message"}`, no `name` field) raised a bare `KeyError` that escaped every `except` clause, crashed the process, and `restart: unless-stopped` silently crash-looped it forever (visible only as a `(Re-)joining group` line repeating in the logs with no forward progress). Fixed by parsing explicitly in the loop body (not via `value_deserializer`) inside its own `try`/`except InvalidEvent`, so a bad message can't come from anywhere except that one call site.
   - **Why a bridge at all, and why Kafka in particular — the comparison demo**: `locust/bin/locustfile_http_overload.py` (hammers `POST /accounts` directly, no Kafka) vs `locust/bin/locustfile_kafka.py` (produces the same events onto the Kafka topic instead). Measured at 600 users / 60s against this repo's own default resource limits (`create_engine(...)` in `apps/backend/app/db.py` uses SQLAlchemy's default pool, single `uvicorn` worker, `--reload` mode): direct REST failed 79% of `POST /accounts` (500s, connection resets, up to 30s+ latency); the same load produced onto Kafka completed 1,241,297 events at 0% failure and ~24ms median produce latency, with `apps/backend`'s own `/health` staying at ~2ms throughout — because `kafka-bridge` drains the topic at its own steady, sequential pace, never forwarding a burst to the backend. That gap **is** the point of putting Kafka in front of a write path at all.
@@ -106,7 +110,7 @@ Test and verification tools are added as modules separate from `apps`. Which ver
   - Consul is likewise joined to `apps-network` (in addition to its own `consul-net`), because Consul's own agent — not the caller — is what performs each service's HTTP/TCP health check, so it needs to resolve `backend`/`frontend`/`mysql-server` by container name. `make consul:register-apps` registers the real apps containers (`apps-backend` → `backend:8080` HTTP-checked against `/health`, `apps-frontend` → `frontend:5173` HTTP-checked with `Method: HEAD`, `apps-mysql` → `mysql-server:3306` TCP-checked); `consul:deregister-apps` removes them; `consul:discover-apps` prints Consul's own cached health status. `consul:verify-apps` goes a step further — it queries Consul for each service's address/port and then actually connects to exactly what was returned (from a throwaway container on `apps-network`, since the Makefile itself runs on the host and can't resolve those container names), proving the discover → connect flow really works instead of just trusting Consul's cached check result.
     - The frontend's check uses `Method: HEAD`, not the default GET: a GET against Next.js dev server's `/` streams back its entire React payload, and Consul stores an HTTP check's response body in the check's `Output` field — past Consul's size cap it truncates mid-escape-sequence, corrupting the JSON of every subsequent `/v1/health/service` query for that service. HEAD gets the same "is this actually a live HTTP server" signal with an empty body, so nothing to truncate.
     - The original generic `consul:register-service`/`register-db` samples (fake `127.0.0.1` addresses) were removed — their own health check always came up `critical` (`127.0.0.1` from inside the Consul container just points at itself), so they never actually demonstrated a working check. The apps-backed versions above replace them.
-- **One-shot test runs** (a `test` verb, no `up`/`down`): pytest, vitest, playwright, specmatic. These run `docker compose run --rm <service>` and exit, so there's no "leave it running" concept.
+- **One-shot test runs** (a `test` verb, no `up`/`down`): pytest, vitest, playwright, specmatic, `vitest:contract-test`. These run `docker compose run --rm <service>` and exit, so there's no "leave it running" concept.
 
 Current breakdown:
 
@@ -114,8 +118,9 @@ Current breakdown:
 | --- | --- | --- | --- |
 | `pytest` | Unit tests for `apps/backend` | No | Swaps the DB for an in-memory SQLite database. Lives in `apps/backend/tests/`. |
 | `vitest` | Unit tests for `apps/frontend` | No | Mocks `fetch` to test the logic in `api.ts`. |
+| `vitest:contract-test` | Consumer contract test of `apps/frontend`'s own API usage | Yes, plus `specmatic:stub-up` | Runs `src/lib/contract/api.consumer.test.ts` against Specmatic's stub instead of a mocked `fetch` or the real backend - see the Specmatic section below. |
 | `playwright` | E2E browser tests against the running frontend | Yes | Uses the `data-testid` attributes in `apps/frontend` as selectors. |
-| `specmatic` | Contract test of the running backend against its live OpenAPI schema | Yes | `curl`s `http://backend:8080/openapi.json`, then `specmatic test openapi.json --host backend --port 8080` |
+| `specmatic:test` | Provider contract test of the running backend against `apps/backend/openapi.yaml` | Yes | Runs `specmatic/bin/prepare_contract.sh` (fetches the live schema + builds examples), then `specmatic test`. |
 | `microcks` | Long-running mock server loaded from the backend's live OpenAPI schema | Only for `microcks:import-openapi` itself; not to keep serving the mock afterward | `make microcks:import-openapi` fetches `http://localhost:8080/openapi.json` and uploads it. |
 
 ### Report files
@@ -129,23 +134,97 @@ specmatic, also a `junit/`) directory back onto the host, so every `make
 | --- | --- |
 | `pytest` | `pytest/report/report.html` (`pytest-html`, self-contained) |
 | `vitest` | `vitest/report/index.html` (Vitest's built-in `html` reporter) |
+| `vitest:contract-test` | `vitest/report-contract/index.html` (same reporter, separate output dir) |
 | `playwright` | `playwright/report/index.html` (Playwright's built-in `html` reporter) |
 | `specmatic` | `specmatic/report/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml` |
 
 These directories are gitignored — they're regenerated on every run, not
 checked in.
 
-`specmatic` needs one extra step: FastAPI's generated `openapi.json` declares
-`"openapi": "3.1.0"`, but Specmatic v2.28.0 can't yet load a 3.1 document that
-has a plain (non-`$ref`) integer path parameter (a known upstream gap,
-[specmatic/specmatic#628](https://github.com/specmatic/specmatic/issues/628)).
-`specmatic/docker-compose.yml` works around this by overriding the container
-`entrypoint` to `sh` and running `curl -sf http://backend:8080/openapi.json |
-jq '.openapi = "3.0.3"'` before invoking `specmatic test` — the JSON Schema
-Specmatic actually reads is a compatible subset either way, so only the
-version label changes. This only affects Specmatic's own in-memory copy; the
-live `/openapi.json` served by the backend (and the Scalar `/api-specs` page)
-is untouched.
+**Provider verification (`specmatic:test`) vs Consumer verification
+(`specmatic:stub-up` + `vitest:contract-test`)** - Specmatic can check the
+contract (`apps/backend/openapi.yaml`, see the "OpenAPI: contract-first, not
+code-first" bullet above) from both directions, and this repo demonstrates
+both:
+
+- **Provider**: does `apps/backend` actually honor the contract it claims to
+  implement? `specmatic:test` sends real requests to the real running
+  backend and checks the real responses against `openapi.yaml`.
+- **Consumer**: does `apps/frontend`'s own API usage - the paths it calls,
+  the request shapes it sends, the response shapes it expects to parse -
+  hold up against the contract, independent of whatever the real backend
+  happens to be doing right now? `specmatic:stub-up` starts a mock server
+  built from that same contract (schema + examples - anything that matches
+  an example gets that example's exact response; anything else gets a
+  schema-valid response with *randomly generated* values, confirmed
+  empirically, which is actually a stronger check than always seeing
+  realistic canned data). `vitest:contract-test` then runs
+  `apps/frontend/src/lib/contract/api.consumer.test.ts` - real HTTP calls
+  through `api.ts`, not a mocked `fetch` (that's `vitest:test`, a different,
+  unrelated suite) and not the real backend (that's Playwright) - against
+  that stub, and checks the responses parse into the shapes `api.ts`'s
+  TypeScript types expect. `vitest.config.mts` excludes
+  `src/lib/contract/**` from the default `vitest:test` run (spreading
+  Vitest's own `defaultExclude` rather than replacing it) precisely because
+  this suite isn't self-contained the way every other vitest test is - it
+  needs `make apps:up` (once, to seed the stub's schema+examples) and
+  `make specmatic:stub-up` first, same as `playwright:test`/`specmatic:test`
+  need `apps:up`.
+
+Both `specmatic` service and the `specmatic-stub` service in
+`specmatic/docker-compose.yml` run the exact same
+`specmatic/bin/prepare_contract.sh` first - it fetches the live
+`/openapi.json` (which, since it's contract-first now, is already 3.0.3 with
+no `/graphql` entry - no relabeling needed) and builds 7 externalized
+examples fresh on every run, never checked in:
+
+- **`POST /accounts` needs a real bearer token** to get past its documented
+  `401`. Specmatic *does* see that the route requires `Authorization` (it's
+  declared in `components.securitySchemes`), but has no way to know what
+  value would actually be accepted - that's a runtime secret (`/auth/login`
+  issues a random token per call, held only in the backend's in-memory
+  `_TOKENS` dict), not something derivable from the schema. Note:
+  Specmatic's own `specmatic.yaml`-based `security.OpenAPI.securitySchemes`
+  config exists for exactly this and does parse correctly (confirmed via
+  the CLI's own error messages while getting the shape right - the class is
+  `io.specmatic.core.BearerSecuritySchemeConfiguration`, `type: bearer` +
+  `token: ...`, nested under `security.OpenAPI.securitySchemes.<name>`), but
+  empirically had **no effect** on `specmatic test`'s generated requests
+  even with a real, freshly-issued token wired up - still 401. Dropped in
+  favor of an externalized example with the token in its `Authorization`
+  header, which reliably works - and, empirically, the stub's example
+  matching keys off the request *body*, not the header value, so any
+  syntactically-present bearer token reaches the example's response (see
+  `api.consumer.test.ts`'s comments for how the Consumer test exploits this
+  deliberately, to also exercise the `401` path).
+- **`GET /accounts/{account_id}` needs an id that actually exists.** Left to
+  itself Specmatic tries an arbitrary integer and gets a `404`. An inline
+  `examples: [1]` on the path param in `openapi.yaml` itself (matching
+  FastAPI: `account_id: int = Path(examples=[1])` in `routers/accounts.py`)
+  is not enough on its own - Specmatic only actually uses an id value from
+  an externalized example, not from the schema's own declared `examples`.
+  Account id 1 is always the seed data's first row (this table is
+  append-only, nothing ever deletes it), so it's safe to hardcode.
+- **Four more examples cover every other documented non-2xx response** -
+  `POST /auth/login` → `422`, `POST /accounts` → `422` and `401`, and
+  `GET /accounts/{account_id}` → `422` and `404` - each sent with
+  deliberately invalid input (an empty body, a non-numeric id, a bogus
+  token, a nonexistent id) and its real response fetched live and reused as
+  the example's expected body. Without these, Specmatic's own coverage
+  report listed each as "not covered" even though the happy-path contract
+  was fully verified - adding a negative example for each is enough on its
+  own; no need for Specmatic's `SPECMATIC_GENERATIVE_TESTS` env var (which
+  generates negative/mutated requests automatically). That was tried first
+  and rejected: it also generates extra requests straight from the schema
+  that bypass every externalized example above, bringing back the same
+  401/404 problems those exist to solve, on top of new failures. Explicit
+  negative examples get full coverage without any of that.
+
+Every expected response body above is fetched live from the backend, so
+none of them can drift from reality even though the *shape* they're checked
+against now comes from the hand-maintained `openapi.yaml`, not the backend's
+own code. `specmatic:test` is a clean, 100%-coverage pass as a result: 11
+scenarios, 11 successes.
 
 Microcks and locust are excluded from this table on purpose: Microcks is a
 long-running mock server with no natural "test run" to report on, and locust

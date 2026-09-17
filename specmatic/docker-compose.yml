@@ -8,27 +8,51 @@ services:
       # subtree straight onto the host instead.
       - ./report:/app/build/reports/specmatic
       - ./junit:/app/junit
+      - ./bin:/app/bin:ro
     entrypoint: sh
     # Fetches the spec live from the backend it's about to test (this is a
     # demo app with no real schema-change workflow, so there's no reason to
     # keep a separately-exported copy in sync by hand - and specmatic-test
     # already requires apps:up to make the actual test requests anyway).
-    #
-    # FastAPI's generated openapi.json declares "openapi": "3.1.0", but this
-    # Specmatic release (v2.28.0) can't yet parse plain integer path
-    # parameters under a 3.1 document ("is not yet supported" load error) -
-    # see https://github.com/specmatic/specmatic/issues/628. The 3.1 JSON
-    # Schema our spec actually uses is otherwise a compatible subset, so we
-    # relabel just the version string to 3.0.3 before handing it to
-    # Specmatic. This only affects Specmatic's own copy - the live
-    # /openapi.json served by the backend (and the Scalar docs page) is
-    # untouched.
+    # See bin/prepare_contract.sh for the version relabel, the /graphql
+    # exclusion, and the 5 externalized examples it builds fresh every run -
+    # shared with the specmatic-stub service below, which needs the exact
+    # same contract to mock.
     command:
       - -c
       - >
-        curl -sf http://backend:8080/openapi.json | jq '.openapi = "3.0.3"' > openapi.json &&
+        sh bin/prepare_contract.sh &&
         specmatic test openapi.json --host backend --port 8080
-        --junitReportDir /app/junit
+        --examples=examples --junitReportDir /app/junit
+    networks:
+      - apps-network
+
+  # A mock server built from the same contract (schema + examples) that
+  # specmatic:test verifies the real backend against - so apps/frontend can
+  # be tested as a Consumer against the *contract*, independent of whatever
+  # the real backend happens to be doing right now. Requests that match one
+  # of prepare_contract.sh's examples get that example's exact response;
+  # anything else gets a schema-valid response with randomly generated
+  # values (confirmed: GET /accounts with no matching example returns a
+  # real Account shape with a random id/name/quantity, not a canned one) -
+  # which is actually a stronger check for a consumer than always seeing
+  # the same realistic-looking values, since it can't accidentally pass by
+  # relying on one specific example's data.
+  specmatic-stub:
+    image: znsio/specmatic:latest
+    container_name: nb-specmatic-stub
+    working_dir: /app
+    volumes:
+      - ./bin:/app/bin:ro
+    entrypoint: sh
+    ports:
+      - "${SPECMATIC_STUB_PORT:-9091}:9091"
+    command:
+      - -c
+      - >
+        sh bin/prepare_contract.sh &&
+        specmatic stub openapi.json --host 0.0.0.0 --port 9091
+        --examples=examples
     networks:
       - apps-network
 
