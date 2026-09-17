@@ -1,0 +1,289 @@
+# The contract. This file is the source of truth for apps/backend's REST
+# API - authored and versioned by hand, not generated from the FastAPI
+# route code. apps/backend loads this file at startup and serves it
+# verbatim at GET /openapi.json (see app/main.py) instead of letting
+# FastAPI derive a schema from its own routes.
+#
+# This is a deliberate reversal of this repo's earlier "no checked-in
+# schema, always live-generated" stance: a schema generated FROM the
+# implementation can never structurally disagree with it, so a provider
+# verification test (Specmatic) run against it can only ever catch
+# behavioral bugs, not real contract drift. With a physically separate,
+# hand-maintained contract, "does the implementation still honor this
+# file" becomes a real, failable question - which is the whole point of
+# Contract-Driven Development. Consumers (apps/frontend, kafka-bridge,
+# Specmatic's stub for consumer-side testing) and the Provider
+# (apps/backend) both build against this one file independently.
+#
+# GraphQL (/graphql) is deliberately not described here - it's a separate
+# protocol with its own schema (introspectable at /graphql itself), and
+# OpenAPI can't describe its request shape ({query, variables}) in any
+# meaningful way. See AGENTS.md's Specmatic section for the full reasoning.
+#
+# Keep this in sync by hand whenever app/routers/*.py or app/schemas.py
+# change - that's the tradeoff for the contract actually meaning something.
+openapi: 3.0.3
+info:
+  title: nb-quickstarts apps backend
+  description: >-
+    テスト対象アプリのバックエンドAPI(accounts
+    リソースの最小限のイベントソーシング実装)。この契約(openapi.yaml)がソース・オブ・トゥルースで、実装側がこれに従う。
+  version: 0.1.0
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health
+      operationId: health_health_get
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Login
+      operationId: login_auth_login_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+  /accounts:
+    get:
+      tags: [accounts]
+      summary: List Accounts
+      operationId: list_accounts_accounts_get
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                title: Response List Accounts Accounts Get
+                items:
+                  $ref: "#/components/schemas/AccountOut"
+    post:
+      tags: [accounts]
+      summary: Create Account
+      operationId: create_account_accounts_post
+      security:
+        - HTTPBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountCreate"
+      responses:
+        "201":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountOut"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+  /accounts/balances:
+    get:
+      tags: [accounts]
+      summary: List Balances
+      operationId: list_balances_accounts_balances_get
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                title: Response List Balances Accounts Balances Get
+                items:
+                  $ref: "#/components/schemas/AccountBalance"
+  /accounts/{account_id}:
+    get:
+      tags: [accounts]
+      summary: Get Account
+      operationId: get_account_accounts__account_id__get
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: Account Id
+            examples: [1]
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountOut"
+        "404":
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+components:
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer
+  schemas:
+    AccountBalance:
+      type: object
+      title: AccountBalance
+      description: >-
+        A name's current balance: the sum of every event's `quantity` for
+        that name, plus how many events contributed to it (see
+        `account_service.get_balances`).
+      required: [name, balance, eventCount]
+      properties:
+        name:
+          type: string
+          title: Name
+        balance:
+          type: integer
+          title: Balance
+        eventCount:
+          type: integer
+          title: Eventcount
+    AccountCreate:
+      type: object
+      title: AccountCreate
+      description: >-
+        `quantity` is a signed delta (e.g. -3 to record consumption), not an
+        absolute value - see `Account` in models.py.
+      required: [name]
+      properties:
+        name:
+          type: string
+          title: Name
+        quantity:
+          type: integer
+          title: Quantity
+          default: 0
+    AccountOut:
+      type: object
+      title: AccountOut
+      required: [id, name, quantity, source, createdAt]
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        quantity:
+          type: integer
+          title: Quantity
+        source:
+          type: string
+          title: Source
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+    HealthResponse:
+      type: object
+      title: HealthResponse
+      required: [status]
+      properties:
+        status:
+          type: string
+          title: Status
+    LoginRequest:
+      type: object
+      title: LoginRequest
+      required: [employeeCode]
+      properties:
+        employeeCode:
+          type: string
+          title: Employeecode
+    LoginResponse:
+      type: object
+      title: LoginResponse
+      required: [token, employeeCode]
+      properties:
+        token:
+          type: string
+          title: Token
+        employeeCode:
+          type: string
+          title: Employeecode
+    HTTPError:
+      type: object
+      title: HTTPError
+      description: FastAPI's default error body shape - HTTPException(detail=...).
+      required: [detail]
+      properties:
+        detail:
+          type: string
+          title: Detail
+    HTTPValidationError:
+      type: object
+      title: HTTPValidationError
+      properties:
+        detail:
+          type: array
+          title: Detail
+          items:
+            $ref: "#/components/schemas/ValidationError"
+    ValidationError:
+      type: object
+      title: ValidationError
+      required: [loc, msg, type]
+      properties:
+        loc:
+          type: array
+          title: Location
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context

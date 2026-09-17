@@ -24,6 +24,7 @@ locust/.debug_log_pid
 # Generated test-report output (see AGENTS.md "Report files")
 pytest/report/
 vitest/report/
+vitest/report-contract/
 playwright/report/
 playwright/test-results/
 specmatic/report/

@@ -9,3 +9,29 @@ services:
       - ./report:/report
     working_dir: /app
     command: npm run test:report
+
+  # Consumer-side contract test: runs only src/lib/contract/ against a
+  # Specmatic stub (make specmatic:stub-up), not the real backend - see
+  # that directory's api.consumer.test.ts for why. Needs apps-network to
+  # reach the stub by its service name, unlike the `vitest` service above
+  # (fetch entirely mocked, no network needed at all).
+  vitest-contract:
+    build:
+      context: ../apps/frontend
+    image: nb-vitest
+    volumes:
+      - ../apps/frontend:/app
+      - /app/node_modules
+      - ./report-contract:/report
+    working_dir: /app
+    environment:
+      NEXT_PUBLIC_API_BASE: http://specmatic-stub:${SPECMATIC_STUB_PORT:-9091}
+    command: npm run test:contract-report
+    networks:
+      - apps-network
+
+networks:
+  # Owned by apps/docker-compose.yml; see AGENTS.md "Cross-module Docker network".
+  apps-network:
+    name: apps-network
+    external: true

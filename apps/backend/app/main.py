@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+import yaml
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_mcp import FastApiMCP
@@ -8,6 +10,8 @@ from app.db import Base, SessionLocal, engine, wait_for_database
 from app.graphql.schema import graphql_router
 from app.routers import accounts, auth, health
 from app.seed import seed_if_empty
+
+OPENAPI_SPEC_PATH = Path(__file__).resolve().parent.parent / "openapi.yaml"
 
 
 @asynccontextmanager
@@ -19,15 +23,23 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(
-    title="nb-quickstarts apps backend",
-    description=(
-        "テスト対象アプリのバックエンドAPI(accounts リソースの最小限のイベントソーシング実装)。"
-        "OpenAPI スキーマは Specmatic の契約テストにそのまま使う想定。"
-    ),
-    version="0.1.0",
-    lifespan=lifespan,
-)
+app = FastAPI(lifespan=lifespan)
+
+
+# The contract (openapi.yaml) is the source of truth, not this app's own
+# routes - see that file's header comment for why. FastAPI normally derives
+# GET /openapi.json from the registered routes/Pydantic models on first
+# request (and caches it on app.openapi_schema); overriding app.openapi
+# makes it serve the checked-in file instead, unconditionally. Must be set
+# before FastApiMCP(app) below, since it introspects app.openapi() at mount
+# time to build its tool list.
+def _load_openapi_schema() -> dict:
+    if app.openapi_schema is None:
+        app.openapi_schema = yaml.safe_load(OPENAPI_SPEC_PATH.read_text())
+    return app.openapi_schema
+
+
+app.openapi = _load_openapi_schema
 
 app.add_middleware(
     CORSMiddleware,

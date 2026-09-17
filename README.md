@@ -107,9 +107,13 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
   against it (`quantity` is a signed debit/credit delta, not an absolute
   balance), and `GET /accounts/balances` (also a GraphQL `balances` query)
   returns each account's current balance and transaction count — the sum
-  and count of its own entries. No OpenAPI schema is checked in — Specmatic and
-  `microcks:import-openapi` both fetch it live from the running backend
-  instead (`/api-specs` and the MCP mount already did).
+  and count of its own entries. Contract-first, not code-first: the REST
+  API's OpenAPI schema is a checked-in, hand-maintained file
+  (`apps/backend/openapi.yaml`), not generated from the route code —
+  `app/main.py` serves it verbatim at `GET /openapi.json`, which is what
+  `/api-specs`, the MCP mount, Specmatic, and `microcks:import-openapi` all
+  still fetch (see [Specmatic: contract testing](#specmatic-contract-testing-provider-and-consumer)
+  below for why).
   The read/write logic lives in `app/services/account_service.py`, which both
   the REST and GraphQL routers call. Kafka events reach it too, via `make
   kafka:bridge-up` — a separate container that consumes the topic and calls
@@ -197,12 +201,34 @@ make apps:up                # start the apps under test first
 make pytest:test            # apps/backend unit tests (in-memory SQLite, apps:up not required)
 make vitest:test            # apps/frontend unit tests (fetch mocked, apps:up not required)
 make playwright:test        # E2E browser test against the running frontend (requires apps:up)
-make specmatic:test         # contract test of the running backend against its own live OpenAPI schema (requires apps:up)
+make specmatic:test         # Provider contract test: does the backend honor apps/backend/openapi.yaml? (requires apps:up)
+
+make specmatic:stub-up      # mock server built from the same contract (requires apps:up)
+make vitest:contract-test   # Consumer contract test: does the frontend's API usage hold up against it?
 
 make microcks:up            # long-running mock server
 make microcks:import-openapi # fetches the backend's live OpenAPI schema and loads it (requires apps:up)
 make microcks:open
 ```
+
+### Specmatic: contract testing (Provider and Consumer)
+
+`apps/backend/openapi.yaml` is the contract — a checked-in, hand-maintained OpenAPI file, not one generated from the route code (`app/main.py` serves it verbatim at `GET /openapi.json`). That's a deliberate reversal from earlier in this repo's history: a schema generated *from* the implementation can never structurally disagree with it, so a provider verification test run against it can only ever catch behavioral bugs, never real contract drift. A physically separate file makes "does the implementation still honor this contract" a real, failable question — the actual point of Contract-Driven Development, where a Consumer and a Provider both build against one shared file independently. The tradeoff: `openapi.yaml` can drift from what the code actually does if you change one and forget the other — keeping them in sync by hand is the ongoing cost, and `specmatic:test` is what catches it when they diverge.
+
+Specmatic checks the contract from both directions:
+
+```bash
+make apps:up
+make specmatic:test          # Provider: real requests against the real running backend
+```
+
+```bash
+make apps:up                 # needed once, to seed the stub's schema + examples
+make specmatic:stub-up       # mock server built from the same contract (localhost:9091)
+make vitest:contract-test    # Consumer: apps/frontend's real api.ts calls against the mock, not a mocked fetch or the real backend
+```
+
+`specmatic/bin/prepare_contract.sh` (shared by both `specmatic:test` and `specmatic:stub-up`) fetches the live schema and builds 7 externalized examples fresh on every run — a real bearer token, an id that actually exists, and deliberately-invalid requests covering every documented non-2xx response — so Specmatic's own coverage report reaches 100%. See `AGENTS.md`'s Specmatic section for the full story, including a dead end (Specmatic's own security-token config parses correctly but has no effect on generated requests) and why `SPECMATIC_GENERATIVE_TESTS` was tried and rejected in favor of explicit negative examples.
 
 ### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
 
