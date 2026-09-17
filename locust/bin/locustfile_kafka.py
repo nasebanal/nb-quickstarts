@@ -1,4 +1,4 @@
-"""Produces the same kind of item-creation events as
+"""Produces the same kind of account-creation events as
 locustfile_http_overload.py, but onto the Kafka topic instead of directly
 into the backend's REST API - the "buffered" side of the comparison demo.
 kafka-bridge (make kafka:bridge-up) then drains the topic into the backend
@@ -39,10 +39,10 @@ class KafkaUser(User):
     wait_time = lambda self: 0  # noqa: E731 - no think time, matching the overload scenario
 
     @task
-    def produce_item_event(self):
+    def produce_account_event(self):
         start = time.monotonic()
         try:
-            _get_producer().send(TOPIC, {"name": "Kafka Load Item", "quantity": 1}).get(timeout=5)
+            _get_producer().send(TOPIC, {"name": "Kafka Load Account", "quantity": 1}).get(timeout=5)
         except Exception as exc:  # noqa: BLE001 - reported to Locust's stats, not raised
             events.request.fire(
                 request_type="KAFKA",

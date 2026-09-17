@@ -6,7 +6,7 @@ interface AuthContextValue {
   token: string | null;
   employeeCode: string | null;
   // True until the sessionStorage restore below has run once. Consumers
-  // (e.g. the /items guard) must not redirect on a missing token while this
+  // (e.g. the /accounts guard) must not redirect on a missing token while this
   // is true, or a plain page reload would bounce a logged-in viewer home
   // before the restore has a chance to run.
   initializing: boolean;

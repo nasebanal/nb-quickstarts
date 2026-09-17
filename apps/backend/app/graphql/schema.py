@@ -1,16 +1,16 @@
 """GraphQL is a thin layer that just calls the same
-app.services.item_service as REST (app/routers/items.py)."""
+app.services.account_service as REST (app/routers/accounts.py)."""
 
 import strawberry
 from strawberry.fastapi import GraphQLRouter
 
 from app.db import SessionLocal
-from app.schemas import ItemCreate
-from app.services import item_service
+from app.schemas import AccountCreate
+from app.services import account_service
 
 
 @strawberry.type
-class ItemType:
+class AccountType:
     id: int
     name: str
     quantity: int
@@ -18,46 +18,46 @@ class ItemType:
 
 
 @strawberry.type
-class ItemBalanceType:
+class AccountBalanceType:
     name: str
     balance: int
     event_count: int
 
 
 @strawberry.input
-class ItemInput:
+class AccountInput:
     name: str
     quantity: int = 0
 
 
-def _to_graphql_type(item) -> ItemType:
-    return ItemType(id=item.id, name=item.name, quantity=item.quantity, source=item.source)
+def _to_graphql_type(account) -> AccountType:
+    return AccountType(id=account.id, name=account.name, quantity=account.quantity, source=account.source)
 
 
 @strawberry.type
 class Query:
     @strawberry.field
-    def items(self) -> list[ItemType]:
+    def accounts(self) -> list[AccountType]:
         with SessionLocal() as db:
-            return [_to_graphql_type(item) for item in item_service.list_items(db)]
+            return [_to_graphql_type(account) for account in account_service.list_accounts(db)]
 
     @strawberry.field
-    def balances(self) -> list[ItemBalanceType]:
+    def balances(self) -> list[AccountBalanceType]:
         with SessionLocal() as db:
             return [
-                ItemBalanceType(name=b.name, balance=b.balance, event_count=b.event_count)
-                for b in item_service.get_balances(db)
+                AccountBalanceType(name=b.name, balance=b.balance, event_count=b.event_count)
+                for b in account_service.get_balances(db)
             ]
 
 
 @strawberry.type
 class Mutation:
     @strawberry.mutation
-    def create_item(self, input: ItemInput) -> ItemType:
-        data = ItemCreate(name=input.name, quantity=input.quantity)
+    def create_account(self, input: AccountInput) -> AccountType:
+        data = AccountCreate(name=input.name, quantity=input.quantity)
         with SessionLocal() as db:
-            item = item_service.register_item(db, data, source="api")
-            return _to_graphql_type(item)
+            account = account_service.register_account(db, data, source="api")
+            return _to_graphql_type(account)
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)

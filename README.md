@@ -101,25 +101,25 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 `apps/` holds the actual apps under test:
 
 - `apps/backend` — Python (FastAPI). REST + GraphQL over a minimal,
-  event-sourced `items` table (`id`, `name`, `quantity`, `source`,
+  event-sourced `accounts` table (`id`, `name`, `quantity`, `source`,
   `createdAt`) in MySQL (`testdb`), modeling a simple accounting ledger:
   `name` is an account (e.g. "Cash"), each row is one transaction posted
   against it (`quantity` is a signed debit/credit delta, not an absolute
-  balance), and `GET /items/balances` (also a GraphQL `balances` query)
+  balance), and `GET /accounts/balances` (also a GraphQL `balances` query)
   returns each account's current balance and transaction count — the sum
   and count of its own entries. No OpenAPI schema is checked in — Specmatic and
   `microcks:import-openapi` both fetch it live from the running backend
   instead (`/api-specs` and the MCP mount already did).
-  The read/write logic lives in `app/services/item_service.py`, which both
+  The read/write logic lives in `app/services/account_service.py`, which both
   the REST and GraphQL routers call. Kafka events reach it too, via `make
   kafka:bridge-up` — a separate container that consumes the topic and calls
-  `POST /items` over REST, so `apps/backend` itself has no Kafka dependency
+  `POST /accounts` over REST, so `apps/backend` itself has no Kafka dependency
   at all (see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion)
   below). Also mounts an MCP server at `/mcp` (via `fastapi-mcp`), auto-derived
   from the same REST routes — point a local MCP client (e.g. Claude Desktop)
   at `http://localhost:8080/mcp`.
 - `apps/frontend` — TypeScript (Next.js). `/` is the landing page; logging
-  in (via a modal) takes you to the real `/items` route, which shows only
+  in (via a modal) takes you to the real `/accounts` route, which shows only
   the account balances table (`useBalances.ts`, polled every 1s — no raw
   transaction log rendered, since that's exactly what balloons under a load
   test) and a "record a transaction" form whose account field is a
@@ -206,7 +206,7 @@ make microcks:open
 
 ### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
 
-`make kafka:bridge-up` starts a small standalone consumer (`kafka/bridge/`) that reads events off the Kafka topic and forwards each one to a REST backend via `POST /items` — `apps/backend` by default, but `KAFKA_BRIDGE_TARGET_URL` can point anywhere, same as every other test tool's target host. It's deliberately separate from `kafka:up` (opt in explicitly) and lives in its own container rather than inside `apps/backend`, so a Kafka or backend outage only ever affects the bridge itself — it just retries forever, and only commits a Kafka offset after a successful delivery, so an outage pauses ingestion rather than losing events.
+`make kafka:bridge-up` starts a small standalone consumer (`kafka/bridge/`) that reads events off the Kafka topic and forwards each one to a REST backend via `POST /accounts` — `apps/backend` by default, but `KAFKA_BRIDGE_TARGET_URL` can point anywhere, same as every other test tool's target host. It's deliberately separate from `kafka:up` (opt in explicitly) and lives in its own container rather than inside `apps/backend`, so a Kafka or backend outage only ever affects the bridge itself — it just retries forever, and only commits a Kafka offset after a successful delivery, so an outage pauses ingestion rather than losing events.
 
 ```bash
 make apps:up
@@ -224,7 +224,7 @@ make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=600 LOCUST
 make locust:test LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 LOCUST_RUN_TIME=60s
 ```
 
-Measured on a single laptop, against this repo's own default resource limits (SQLAlchemy's default connection pool, a single `uvicorn` worker in `--reload` mode): direct REST failed **79%** of `POST /items` requests (500s, connection resets, and up to 30s+ latency) under that load. The identical load produced onto Kafka instead completed **1,241,297 events at 0% failure**, ~24ms median produce latency, with the backend's own `/health` endpoint staying at ~2ms response time throughout — because `kafka-bridge` drains the topic at its own steady, sequential pace and never forwards a burst to the backend.
+Measured on a single laptop, against this repo's own default resource limits (SQLAlchemy's default connection pool, a single `uvicorn` worker in `--reload` mode): direct REST failed **79%** of `POST /accounts` requests (500s, connection resets, and up to 30s+ latency) under that load. The identical load produced onto Kafka instead completed **1,241,297 events at 0% failure**, ~24ms median produce latency, with the backend's own `/health` endpoint staying at ~2ms response time throughout — because `kafka-bridge` drains the topic at its own steady, sequential pace and never forwards a burst to the backend.
 
 ### Locust Configuration
 

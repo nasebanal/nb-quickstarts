@@ -4,17 +4,17 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/components/LocaleProvider";
-import { createItem, UnauthorizedError } from "@/lib/api";
+import { createAccount, UnauthorizedError } from "@/lib/api";
 import { useBalances } from "@/lib/useBalances";
 
-export default function ItemsPage() {
+export default function AccountsPage() {
   const { t } = useLocale();
   const { token, initializing, logout } = useAuth();
   const router = useRouter();
   const { balances, refresh } = useBalances();
-  const [itemName, setItemName] = useState("");
-  const [itemQuantity, setItemQuantity] = useState("0");
-  const [itemError, setItemError] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [accountQuantity, setAccountQuantity] = useState("0");
+  const [accountError, setAccountError] = useState("");
 
   // Transactions post against an existing account, picked from the chart
   // of accounts the balances table itself already represents - not typed
@@ -22,10 +22,10 @@ export default function ItemsPage() {
   // resolves; left alone after that so it doesn't fight your own selection
   // on every later poll tick.
   useEffect(() => {
-    if (!itemName && balances.length > 0) {
-      setItemName(balances[0].name);
+    if (!accountName && balances.length > 0) {
+      setAccountName(balances[0].name);
     }
-  }, [balances, itemName]);
+  }, [balances, accountName]);
 
   // Still no token once AuthProvider has finished trying to restore one
   // from sessionStorage means either a real logout or navigating here
@@ -38,14 +38,14 @@ export default function ItemsPage() {
     }
   }, [initializing, token, router]);
 
-  const onCreateItem = async (event: FormEvent<HTMLFormElement>) => {
+  const onCreateAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!token) return;
-    setItemError("");
+    setAccountError("");
     try {
-      await createItem(token, { name: itemName, quantity: Number(itemQuantity) });
-      setItemName("");
-      setItemQuantity("0");
+      await createAccount(token, { name: accountName, quantity: Number(accountQuantity) });
+      setAccountName("");
+      setAccountQuantity("0");
       // The polling hook picks this up on its own within POLL_INTERVAL_MS
       // anyway - this just makes the table update immediately after your
       // own registration instead of waiting for the next tick.
@@ -57,11 +57,11 @@ export default function ItemsPage() {
         // token the backend no longer recognizes. Explain why, then clear
         // it: the page's own token-guard effect above reacts to that by
         // sending the viewer back home to log in again.
-        setItemError(t.app.sessionExpiredError);
+        setAccountError(t.app.sessionExpiredError);
         setTimeout(logout, 1500);
         return;
       }
-      setItemError(err instanceof Error ? err.message : String(err));
+      setAccountError(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -100,14 +100,14 @@ export default function ItemsPage() {
 
         <section>
           <h2>{t.app.registerHeading}</h2>
-          <form data-testid="item-form" onSubmit={onCreateItem}>
+          <form data-testid="account-form" onSubmit={onCreateAccount}>
             <select
               name="name"
-              value={itemName}
-              onChange={(event) => setItemName(event.target.value)}
+              value={accountName}
+              onChange={(event) => setAccountName(event.target.value)}
               required
               disabled={balances.length === 0}
-              data-testid="item-account-select"
+              data-testid="account-select"
             >
               {balances.length === 0 && <option value="">{t.app.noAccountsPlaceholder}</option>}
               {balances.map((balance) => (
@@ -120,16 +120,16 @@ export default function ItemsPage() {
               name="quantity"
               type="number"
               placeholder={t.app.quantityPlaceholder}
-              value={itemQuantity}
-              onChange={(event) => setItemQuantity(event.target.value)}
+              value={accountQuantity}
+              onChange={(event) => setAccountQuantity(event.target.value)}
               required
             />
-            <button type="submit" data-testid="item-submit">
+            <button type="submit" data-testid="account-submit">
               {t.app.registerButton}
             </button>
           </form>
-          <p className="error" data-testid="item-error">
-            {itemError}
+          <p className="error" data-testid="account-error">
+            {accountError}
           </p>
         </section>
       </div>

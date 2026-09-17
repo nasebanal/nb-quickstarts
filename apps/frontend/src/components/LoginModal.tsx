@@ -20,7 +20,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
       const result = await login(employeeCodeInput);
       setAuth(result.token, result.employeeCode);
       onClose();
-      router.push("/items");
+      router.push("/accounts");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }

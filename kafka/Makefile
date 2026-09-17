@@ -45,7 +45,7 @@ kafka:
 	@echo ""
 	@echo "Note: kafka-bridge forwards Kafka topic events to a REST backend"
 	@echo "      (apps/backend by default - see KAFKA_BRIDGE_TARGET_URL) via POST"
-	@echo "      /items. It retries forever if Kafka or the backend is unreachable,"
+	@echo "      /accounts. It retries forever if Kafka or the backend is unreachable,"
 	@echo "      so it never crashes and never commits an offset for an event it"
 	@echo "      couldn't deliver."
 

@@ -1,4 +1,4 @@
-"""Hammers POST /items directly over REST, with no wait_time between
+"""Hammers POST /accounts directly over REST, with no wait_time between
 requests - the "no Kafka" side of the comparison demo (see
 locustfile_kafka.py for the buffered side). Each simulated user opens a
 synchronous, blocking connection for every request; with enough concurrent
@@ -25,9 +25,9 @@ class OverloadUser(HttpUser):
         self.token = response.json()["token"]
 
     @task
-    def create_item(self):
+    def create_account(self):
         self.client.post(
-            "/items",
-            json={"name": "Overload Item", "quantity": 1},
+            "/accounts",
+            json={"name": "Overload Account", "quantity": 1},
             headers={"Authorization": f"Bearer {self.token}"},
         )

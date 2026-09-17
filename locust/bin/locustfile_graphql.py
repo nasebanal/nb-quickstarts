@@ -11,11 +11,11 @@ class WebsiteUser(HttpUser):
     @task
     @tag('graphql-query')
     def graphql_query(self):
-        """GraphQL: Query items (read operation)"""
+        """GraphQL: Query accounts (read operation)"""
         response = self.client.post("/graphql", name="/graphql (query)", json={
             "query": """
                 query {
-                    items {
+                    accounts {
                         id
                         name
                         quantity
@@ -29,27 +29,27 @@ class WebsiteUser(HttpUser):
         if self.debug_mode and response.status_code == 200:
             try:
                 data = response.json()
-                items = data.get("data", {}).get("items")
-                if items is not None:
-                    print(f"✅ [GraphQL Query] Retrieved {len(items)} item(s)", flush=True)
-                    for item in items[:3]:  # Show first 3 only
-                        print(f"  - Item:{item.get('name')} Qty:{item.get('quantity')}", flush=True)
-                    if len(items) > 3:
-                        print(f"  ... and {len(items) - 3} more", flush=True)
+                accounts = data.get("data", {}).get("accounts")
+                if accounts is not None:
+                    print(f"✅ [GraphQL Query] Retrieved {len(accounts)} account(s)", flush=True)
+                    for account in accounts[:3]:  # Show first 3 only
+                        print(f"  - Account:{account.get('name')} Qty:{account.get('quantity')}", flush=True)
+                    if len(accounts) > 3:
+                        print(f"  ... and {len(accounts) - 3} more", flush=True)
             except Exception as e:
                 print(f"⚠️  [GraphQL Query] Failed to parse response: {e}", flush=True)
 
     @task
     @tag('graphql-mutation')
     def graphql_mutation(self):
-        """GraphQL: Mutation - Register item (write operation)"""
+        """GraphQL: Mutation - Register account (write operation)"""
         import random
         suffix = random.randint(1000, 9999)
         self.client.post("/graphql", name="/graphql (mutation)", json={
             "query": f"""
                 mutation {{
-                    createItem(input: {{
-                        name: "Load Test Item {suffix}"
+                    createAccount(input: {{
+                        name: "Load Test Account {suffix}"
                         quantity: {suffix % 100}
                     }}) {{
                         id

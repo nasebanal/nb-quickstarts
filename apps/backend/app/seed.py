@@ -1,7 +1,7 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Item
+from app.models import Account
 
 # A tiny, coherent chart of accounts (not arbitrary "Item A/B/C" labels),
 # matching the app's accounting-ledger framing: opened Cash with a deposit,
@@ -22,9 +22,9 @@ _SAMPLE_EVENTS = [
 
 
 def seed_if_empty(db: Session) -> None:
-    count = db.scalar(select(func.count()).select_from(Item))
+    count = db.scalar(select(func.count()).select_from(Account))
     if count:
         return
     for data in _SAMPLE_EVENTS:
-        db.add(Item(source="seed", **data))
+        db.add(Account(source="seed", **data))
     db.commit()

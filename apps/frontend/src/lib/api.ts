@@ -2,11 +2,11 @@
 // browser, so it must use the host-published URL, not the container name.
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 
-// Event-sourced: each Item is one quantity-change event, not a standalone
-// row with an absolute quantity. `quantity` is a signed delta - see
-// apps/backend/app/models.py. A name's current balance is the sum of all
-// its events (ItemBalance, from /items/balances).
-export interface Item {
+// Event-sourced: each Account is one quantity-change event, not a
+// standalone row with an absolute quantity. `quantity` is a signed delta -
+// see apps/backend/app/models.py. A name's current balance is the sum of
+// all its events (AccountBalance, from /accounts/balances).
+export interface Account {
   id: number;
   name: string;
   quantity: number;
@@ -14,12 +14,12 @@ export interface Item {
   createdAt: string;
 }
 
-export interface ItemInput {
+export interface AccountInput {
   name: string;
   quantity: number;
 }
 
-export interface ItemBalance {
+export interface AccountBalance {
   name: string;
   balance: number;
   eventCount: number;
@@ -43,7 +43,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!response.ok) {
     const body = await response.text();
     if (response.status === 401) {
-      throw new UnauthorizedError(body);
+      throw new UnauthorizedError(`${response.status} ${response.statusText}: ${body}`);
     }
     throw new Error(`${response.status} ${response.statusText}: ${body}`);
   }
@@ -57,16 +57,16 @@ export function login(employeeCode: string): Promise<{ token: string; employeeCo
   });
 }
 
-export function listItems(): Promise<Item[]> {
-  return request("/items");
+export function listAccounts(): Promise<Account[]> {
+  return request("/accounts");
 }
 
-export function listBalances(): Promise<ItemBalance[]> {
-  return request("/items/balances");
+export function listBalances(): Promise<AccountBalance[]> {
+  return request("/accounts/balances");
 }
 
-export function createItem(token: string, input: ItemInput): Promise<Item> {
-  return request("/items", {
+export function createAccount(token: string, input: AccountInput): Promise<Account> {
+  return request("/accounts", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(input),
