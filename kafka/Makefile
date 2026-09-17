@@ -23,12 +23,6 @@ kafka:
 	@echo "  kafka:bridge-up   - Build (if needed) and start kafka-bridge, forwarding topic events to a REST backend"
 	@echo "  kafka:bridge-down - Stop and remove kafka-bridge"
 	@echo ""
-	@echo "Note: kafka-bridge forwards Kafka topic events to a REST backend"
-	@echo "      (apps/backend by default - see KAFKA_BRIDGE_TARGET_URL) via POST"
-	@echo "      /items. It retries forever if Kafka or the backend is unreachable,"
-	@echo "      so it never crashes and never commits an offset for an event it"
-	@echo "      couldn't deliver."
-	@echo ""
 	@echo "Topic Management:"
 	@echo "  kafka:add-topics      - Create Kafka topics"
 	@echo "  kafka:list-topics     - List Kafka topics"
@@ -45,6 +39,12 @@ kafka:
 	@echo "  KAFKA_VERSION=3.8.1"
 	@echo "  KAFKA_PORT=9092"
 	@echo "  KAFKA_TOPIC_NAME=quickstart-events"
+	@echo ""
+	@echo "Note: kafka-bridge forwards Kafka topic events to a REST backend"
+	@echo "      (apps/backend by default - see KAFKA_BRIDGE_TARGET_URL) via POST"
+	@echo "      /items. It retries forever if Kafka or the backend is unreachable,"
+	@echo "      so it never crashes and never commits an offset for an event it"
+	@echo "      couldn't deliver."
 
 kafka\:%:
 	@$(MAKE) kafka-$(subst kafka:,,$@)

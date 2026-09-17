@@ -19,6 +19,9 @@ microcks:
 	@echo "  microcks:open           - Open the Microcks UI in browser"
 	@echo "  microcks:import-openapi - Fetch the backend's live OpenAPI schema and import it as a mock API (needs apps:up)"
 	@echo ""
+	@echo "Configuration (.env file):"
+	@echo "  MICROCKS_PORT=9090 # UI / mock API port"
+	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  UI / mock API: http://localhost:$${MICROCKS_PORT:-9090}"
 
