@@ -94,7 +94,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
    make locust:up
    make locust:open
 
-   # Consul (register apps' backend/frontend/mysql - needs apps:up)
+   # Consul (register apps' backend/mysql - needs apps:up)
    make consul:up
    make consul:register-apps
    make consul:verify-apps

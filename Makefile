@@ -22,7 +22,7 @@ include locust/Makefile
 # Deliberately excludes pytest/vitest/playwright/specmatic (one-shot `test`
 # runs, no `up`/`down` concept). apps goes first (up) / last (down) since
 # kong/consul/microcks resolve its containers by name over apps-network.
-# consul:up alone does NOT register apps-backend/frontend/mysql with it -
+# consul:up alone does NOT register apps-backend/mysql with it -
 # run `make consul:register-apps` separately, same as any other module.
 # locust:up (which all:up calls) always starts in UI mode and does NOT run
 # a load test on its own - use `make locust:test` separately (headless,

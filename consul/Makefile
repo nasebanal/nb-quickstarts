@@ -21,12 +21,12 @@ consul:
 	@echo "  consul:open               - Open Consul UI in browser"
 	@echo ""
 	@echo "Service Registration (the real apps stack - requires apps:up):"
-	@echo "  consul:register-apps      - Register apps' backend/frontend/mysql with real health checks"
+	@echo "  consul:register-apps      - Register apps' backend/mysql with real health checks"
 	@echo "  consul:deregister-apps    - Deregister them"
 	@echo ""
 	@echo "Service Discovery:"
 	@echo "  consul:get-services       - List all registered services (raw catalog)"
-	@echo "  consul:discover-apps      - Discover apps' backend/frontend/mysql + health status"
+	@echo "  consul:discover-apps      - Discover apps' backend/mysql + health status"
 	@echo "  consul:verify-apps        - Discover apps' endpoints via Consul, then actually connect to what it returned"
 	@echo ""
 	@echo "Configuration (.env file):"
@@ -90,39 +90,36 @@ consul-get-services:
 #################### CONSUL <-> APPS INTEGRATION ###################
 # Consul is on apps-network (see consul/docker-compose.yml), so its own
 # agent - which is what actually performs HTTP/TCP health checks - can
-# resolve "backend"/"frontend"/"mysql-server" by container name. Requires
+# resolve "backend"/"mysql-server" by container name. Requires
 # `make apps:up` first, or the checks just come up critical.
+#
+# apps/frontend is deliberately NOT registered here: Consul's registry
+# exists for services other services discover and connect to (that's what
+# consul-verify-apps below demonstrates) - a browser-facing web app isn't
+# that, it's reached directly by a person, not looked up by another
+# service. apps-backend and apps-mysql are the two things anything else
+# would actually discover through Consul.
 
 consul-register-apps:
-	@echo "Registering apps' backend/frontend/mysql with Consul..."
-	@# apps-frontend's check uses Method:HEAD, not the HTTP check's default
-	@# GET - a GET against Next.js dev server's "/" streams its whole React
-	@# payload back, and Consul stores a check's response body in the check
-	@# Output field; past its size cap, Consul truncates mid-escape-sequence
-	@# and corrupts the JSON of every subsequent /v1/health/service query for
-	@# it. HEAD gets the same "is this actually an HTTP server that
-	@# responds" signal with an empty body, so nothing to truncate.
+	@echo "Registering apps' backend/mysql with Consul..."
 	@curl -s -X PUT http://localhost:8500/v1/agent/service/register \
 		-d '{"ID": "apps-backend", "Name": "apps-backend", "Tags": ["rest", "graphql", "mcp"], "Address": "backend", "Port": 8080, "Check": {"HTTP": "http://backend:8080/health", "Interval": "10s"}}'
 	@curl -s -X PUT http://localhost:8500/v1/agent/service/register \
-		-d '{"ID": "apps-frontend", "Name": "apps-frontend", "Tags": ["nextjs"], "Address": "frontend", "Port": 5173, "Check": {"HTTP": "http://frontend:5173/", "Method": "HEAD", "Interval": "10s"}}'
-	@curl -s -X PUT http://localhost:8500/v1/agent/service/register \
 		-d '{"ID": "apps-mysql", "Name": "apps-mysql", "Tags": ["mysql"], "Address": "mysql-server", "Port": 3306, "Check": {"TCP": "mysql-server:3306", "Interval": "10s"}}'
-	@echo "Registered apps-backend, apps-frontend, apps-mysql."
+	@echo "Registered apps-backend, apps-mysql."
 	@echo "Check health: make consul:discover-apps  (or http://localhost:8500/ui)"
 	@echo "Prove it actually works: make consul:verify-apps"
 
 consul-deregister-apps:
-	@echo "Deregistering apps' backend/frontend/mysql from Consul..."
+	@echo "Deregistering apps' backend/mysql from Consul..."
 	@curl -s -X PUT http://localhost:8500/v1/agent/service/deregister/apps-backend
-	@curl -s -X PUT http://localhost:8500/v1/agent/service/deregister/apps-frontend
 	@curl -s -X PUT http://localhost:8500/v1/agent/service/deregister/apps-mysql
 	@echo ""
 	@echo "Deregistered."
 
 consul-discover-apps:
 	@echo "Discovering apps' service endpoints..."
-	@for name in apps-backend apps-frontend apps-mysql; do \
+	@for name in apps-backend apps-mysql; do \
 		curl -s "http://localhost:8500/v1/health/service/$$name" | jq '.[] | {ServiceID: .Service.ID, ServiceName: .Service.Service, Address: .Service.Address, Port: .Service.Port, HealthStatus: [.Checks[] | .Status] | unique}'; \
 	done
 	@echo ""
@@ -137,7 +134,7 @@ consul-discover-apps:
 # aren't resolvable there.
 consul-verify-apps:
 	@echo "Discovering apps services via Consul, then connecting to what it returned..."
-	@for entry in apps-backend:http:/health apps-frontend:http:/ apps-mysql:tcp:; do \
+	@for entry in apps-backend:http:/health apps-mysql:tcp:; do \
 		NAME=$$(echo "$$entry" | cut -d: -f1); PROTO=$$(echo "$$entry" | cut -d: -f2); PATH_SUFFIX=$$(echo "$$entry" | cut -d: -f3); \
 		RESULT=$$(curl -s "http://localhost:8500/v1/health/service/$$NAME?passing"); \
 		ADDR=$$(echo "$$RESULT" | jq -r '.[0].Service.Address // empty'); \
