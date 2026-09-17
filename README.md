@@ -82,28 +82,28 @@ Supported OSS, one module per technology:
 
 ## 🔌 Endpoints
 
-Every module prints its own "Endpoints once started" block from `make <module>:up` (or plain `make <module>`) - this is the same information gathered in one place, across every module, for reference without starting anything. All host-published, so all reachable from your host machine directly; a module needs to actually be up (`make <module>:up`) for its own row to answer.
+Every module prints its own "Endpoints once started" block from `make <module>:up` (or plain `make <module>`) - this is the same information gathered in one place, across every module, for reference without starting anything. The "Host-published" column is reachable from your host machine (browser, `curl`, etc.); the "Container network hostname" column is the Docker Compose **service name** - only resolvable from *inside* `apps-network` (i.e. from another container joined to it, e.g. Kong's `apps_backend` service, or one test tool container calling another) - not from your host machine, and often a different port than the host-published one. A module needs to actually be up (`make <module>:up`) for its own row to answer either way.
 
-| Module | Endpoint | URL / Address | Notes |
-|---|---|---|---|
-| apps | Frontend | http://localhost:5173 | Next.js |
-| apps | API docs (Scalar) | http://localhost:5173/api-specs | Reads the backend's live OpenAPI schema |
-| apps | Backend REST | http://localhost:8080 | FastAPI |
-| apps | Backend GraphQL | http://localhost:8080/graphql | Strawberry |
-| apps | MCP server | http://localhost:8080/mcp | Streamable HTTP |
-| apps | MySQL | localhost:3306 | database `testdb` |
-| Kong | Proxy | http://localhost:8000 | HTTPS: 8443 |
-| Kong | Proxy `/api/*` | http://localhost:8000/api/accounts | -> `apps_backend` (real backend by default - see [Kong: routing...](#kong-routing-to-the-real-backend-or-to-a-contract-mock-instead)), needs `apps:up` |
-| Kong | Proxy `/mock`, `/echo/get` | http://localhost:8000/mock, http://localhost:8000/echo/get | httpbin-backed demo routes, no dependency on `apps` |
-| Kong | Admin API | http://localhost:8001 | HTTPS: 8444 |
-| Kong | Manager UI | http://localhost:8002 | HTTPS: 8445; edits need `KONG_DB=postgres` |
-| Kafka | Broker | localhost:9092 | `KAFKA_PORT` |
-| Kafka | kafka-bridge health | http://localhost:8090/health | Only once `kafka:bridge-up` has run; `KAFKA_BRIDGE_HEALTH_PORT` |
-| Specmatic | Mock server | http://localhost:9091 | `SPECMATIC_STUB_PORT`; needs `apps:up` first (`make specmatic:stub-up`) |
-| Microcks | UI / mock API | http://localhost:9090 | `MICROCKS_PORT` |
-| Consul | HTTP API / UI | http://localhost:8500 | `CONSUL_HTTP_PORT` |
-| Consul | DNS | localhost:8600 | `CONSUL_DNS_PORT` |
-| Locust | Web UI | http://localhost:8089 | |
+| Module | Endpoint | Host-published | Container network hostname | Notes |
+|---|---|---|---|---|
+| apps | Frontend | http://localhost:5173 | `frontend:5173` | Next.js |
+| apps | API docs (Scalar) | http://localhost:5173/api-specs | `frontend:5173/api-specs` | Reads the backend's live OpenAPI schema |
+| apps | Backend REST | http://localhost:8080 | `backend:8080` | FastAPI |
+| apps | Backend GraphQL | http://localhost:8080/graphql | `backend:8080/graphql` | Strawberry |
+| apps | MCP server | http://localhost:8080/mcp | `backend:8080/mcp` | Streamable HTTP |
+| apps | MySQL | localhost:3306 | `mysql-server:3306` | database `testdb` |
+| Kong | Proxy | http://localhost:8000 | `kong:8000` | HTTPS: 8443 (host), `kong:8443` (in-network) |
+| Kong | Proxy `/api/*` | http://localhost:8000/api/accounts | `kong:8000/api/accounts` | -> `apps_backend` (real backend by default - see [Kong: routing...](#kong-routing-to-the-real-backend-or-to-a-contract-mock-instead)), needs `apps:up` |
+| Kong | Proxy `/mock`, `/echo/get` | http://localhost:8000/mock, http://localhost:8000/echo/get | `kong:8000/mock`, `kong:8000/echo/get` | httpbin-backed demo routes, no dependency on `apps` |
+| Kong | Admin API | http://localhost:8001 | `kong:8001` | HTTPS: 8444 (host), `kong:8444` (in-network) |
+| Kong | Manager UI | http://localhost:8002 | `kong:8002` | HTTPS: 8445 (host), `kong:8445` (in-network); edits need `KONG_DB=postgres` |
+| Kafka | Broker | localhost:9092 | `kafka:29092` | `KAFKA_PORT`; the in-network listener is a *different* port (`29092`, `PLAINTEXT_INTERNAL`) than the host-published one (`9092`, `PLAINTEXT`) - see `kafka/docker-compose.yml`'s `KAFKA_LISTENERS` comment |
+| Kafka | kafka-bridge health | http://localhost:8090/health | `kafka-bridge:8090/health` | Only once `kafka:bridge-up` has run; `KAFKA_BRIDGE_HEALTH_PORT` |
+| Specmatic | Mock server | http://localhost:9091 | `specmatic-stub:9091` | `SPECMATIC_STUB_PORT`; needs `apps:up` first (`make specmatic:stub-up`) |
+| Microcks | UI / mock API | http://localhost:9090 | `microcks:8080` | `MICROCKS_PORT` maps to a *different* in-network port (`8080`) - see `microcks/docker-compose.yml` |
+| Consul | HTTP API / UI | http://localhost:8500 | `consul:8500` | `CONSUL_HTTP_PORT` |
+| Consul | DNS | localhost:8600 | `consul:8600` | `CONSUL_DNS_PORT` |
+| Locust | Web UI | http://localhost:8089 | `locust-master:8089` | |
 
 ## ⚙️ Configuration
 
