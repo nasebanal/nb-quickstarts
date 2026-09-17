@@ -23,12 +23,71 @@ services:
     # Specmatic. This only affects Specmatic's own copy - the live
     # /openapi.json served by the backend (and the Scalar docs page) is
     # untouched.
+    #
+    # /graphql is also dropped from Specmatic's copy: strawberry's
+    # GraphQLRouter publishes a POST /graphql entry with no requestBody
+    # schema at all (GraphQL's request shape - {query, variables} - isn't
+    # something OpenAPI can describe from introspection), so Specmatic has
+    # nothing to generate a body from and gets a 400 "Unsupported content
+    # type" back every time. GraphQL already has its own contract test
+    # (pytest's test_graphql_query_and_mutation) - Specmatic testing an
+    # OpenAPI-shaped stand-in for it can't work by construction, not just
+    # because of a missing example.
+    #
+    # Two more gaps the live schema alone can't cover, both fixed with
+    # externalized examples (--examples) built fresh on every run:
+    #   - POST /accounts needs a real bearer token. Specmatic *does* see
+    #     that the route needs Authorization (it's declared in
+    #     components.securitySchemes), but has no way to know what value
+    #     would actually be accepted - that's a runtime secret, not
+    #     something derivable from the schema. (Specmatic's own
+    #     specmatic.yaml OpenAPI securitySchemes config exists for exactly
+    #     this, but empirically had no effect on `specmatic test`'s
+    #     generated requests even with a real, freshly-issued token wired
+    #     up correctly - dropped in favor of this, which reliably works.)
+    #     So: log in first, and give Specmatic an example request with that
+    #     token already in the Authorization header.
+    #   - GET /accounts/{account_id} needs an id that actually exists. Left
+    #     to itself Specmatic tries an arbitrary integer and gets a 404 -
+    #     an inline `examples: [1]` on the path param in the OpenAPI schema
+    #     itself (see routers/accounts.py) is not enough; Specmatic only
+    #     honors id values from an externalized example. Account id 1 is
+    #     always the seed data's first row (this table is append-only,
+    #     nothing ever deletes it), so it's safe to hardcode.
+    #
+    # Three more examples exercise the 422s FastAPI auto-documents for every
+    # route with a request body or a typed path param (Pydantic validation
+    # errors) - without these, Specmatic's coverage report lists them as
+    # "not covered" even though the happy-path contract itself is fully
+    # verified. Each one's expected response body is fetched live from the
+    # backend, same as the GET /accounts/1 example above, so it can't drift
+    # from whatever FastAPI's error shape actually is.
     command:
       - -c
       - >
-        curl -sf http://backend:8080/openapi.json | jq '.openapi = "3.0.3"' > openapi.json &&
+        mkdir -p examples &&
+        curl -sf http://backend:8080/openapi.json |
+        jq '.openapi = "3.0.3" | del(.paths."/graphql")' > openapi.json &&
+        TOKEN=$$(curl -sf -X POST http://backend:8080/auth/login
+        -H "Content-Type: application/json" -d '{"employeeCode": "specmatic"}' | jq -r .token) &&
+        jq -n --arg token "$$TOKEN"
+        '{"http-request": {"method": "POST", "path": "/accounts", "headers": {"Authorization": ("Bearer " + $$token)}, "body": {"name": "Specmatic Test Account", "quantity": 1}}, "http-response": {"status": 201, "body": {"id": 1, "name": "Specmatic Test Account", "quantity": 1, "source": "api", "createdAt": "2024-01-01T00:00:00"}}}'
+        > examples/post-accounts.json &&
+        curl -sf http://backend:8080/accounts/1 | jq
+        '{"http-request": {"method": "GET", "path": "/accounts/1"}, "http-response": {"status": 200, "body": .}}'
+        > examples/get-accounts-account_id.json &&
+        curl -s -X POST http://backend:8080/auth/login -H "Content-Type: application/json" -d '{}' | jq
+        '{"http-request": {"method": "POST", "path": "/auth/login", "body": {}}, "http-response": {"status": 422, "body": .}}'
+        > examples/post-auth-login-422.json &&
+        curl -s -X POST http://backend:8080/accounts -H "Content-Type: application/json"
+        -H "Authorization: Bearer $$TOKEN" -d '{}' | jq --arg token "$$TOKEN"
+        '{"http-request": {"method": "POST", "path": "/accounts", "headers": {"Authorization": ("Bearer " + $$token)}, "body": {}}, "http-response": {"status": 422, "body": .}}'
+        > examples/post-accounts-422.json &&
+        curl -s http://backend:8080/accounts/not-a-number | jq
+        '{"http-request": {"method": "GET", "path": "/accounts/not-a-number"}, "http-response": {"status": 422, "body": .}}'
+        > examples/get-accounts-account_id-422.json &&
         specmatic test openapi.json --host backend --port 8080
-        --junitReportDir /app/junit
+        --examples=examples --junitReportDir /app/junit
     networks:
       - apps-network
 

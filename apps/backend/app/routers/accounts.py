@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_employee_code
@@ -24,7 +24,14 @@ def list_balances(db: Session = Depends(get_db)) -> list[AccountBalance]:
 
 
 @router.get("/{account_id}", response_model=AccountOut)
-def get_account(account_id: int, db: Session = Depends(get_db)) -> AccountOut:
+def get_account(
+    # examples=[1]: the seed data's first row - stable and always present
+    # (this table is append-only, nothing ever deletes it) - so contract
+    # testers that read OpenAPI examples (e.g. Specmatic) exercise a real
+    # id instead of a random one that's guaranteed to 404.
+    account_id: int = Path(examples=[1]),
+    db: Session = Depends(get_db),
+) -> AccountOut:
     account = account_service.get_account(db, account_id)
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="account not found")
