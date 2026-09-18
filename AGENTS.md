@@ -118,6 +118,7 @@ Test and verification tools are added as modules separate from `apps`. Which ver
   - Consul is likewise joined to `apps-network` (in addition to its own `consul-net`), because Consul's own agent — not the caller — is what performs each service's HTTP/TCP health check, so it needs to resolve `backend`/`mysql-server` by container name. `make consul:register-apps` registers the real apps containers (`apps-backend` → `backend:8080` HTTP-checked against `/health`, `apps-mysql` → `mysql-server:3306` TCP-checked); `consul:deregister-apps` removes them; `consul:discover-apps` prints Consul's own cached health status. `consul:verify-apps` goes a step further — it queries Consul for each service's address/port and then actually connects to exactly what was returned (from a throwaway container on `apps-network`, since the Makefile itself runs on the host and can't resolve those container names), proving the discover → connect flow really works instead of just trusting Consul's cached check result. `apps/frontend` is deliberately not registered: Consul's registry is for services *other services* discover and connect to, which a browser-facing web app isn't — registering it alongside `apps-backend`/`apps-mysql` was an irregular addition, removed.
     - The original generic `consul:register-service`/`register-db` samples (fake `127.0.0.1` addresses) were removed — their own health check always came up `critical` (`127.0.0.1` from inside the Consul container just points at itself), so they never actually demonstrated a working check. The apps-backed versions above replace them.
 - **One-shot test runs** (a `test` verb, no `up`/`down`): pytest, vitest, playwright, specmatic, `vitest:contract-test`. These run `docker compose run --rm <service>` and exit, so there's no "leave it running" concept.
+  - **ZAP** (`zap:baseline`/`zap:full-scan`/`zap:api-scan`) is the same one-shot `docker compose run --rm zap <script>` shape, just with three different scan scripts instead of one fixed `command:` in `zap/docker-compose.yml` (unlike specmatic's single-purpose service) - the actual script + args come from `zap/Makefile` per target. `zap:baseline` spiders + passively observes `apps/frontend` (`http://frontend:5173`) - safe, never sends an attack payload, confirmed against this repo's own `apps`: 12 WARN (missing security headers - `apps/frontend` is a dev-mode Next.js server, not hardened), 0 FAIL. `zap:full-scan` runs the same target through ZAP's active scanner - real SQLi/XSS/command-injection/etc. probes. `zap:api-scan` instead targets `apps/backend`'s live `/openapi.json` (`-f openapi`), so it's endpoint-aware - it hits every documented route, not just what a spider happens to crawl; confirmed 116 PASS / 2 WARN / 0 FAIL across every active rule (SQLi, XXE, SSTI, command injection, ...) run against every `apps/backend` route. All three exit non-zero on any real (non-INFO) finding by default - `-I` is passed explicitly to keep that WARN-level findings still exit 0 (only a FAIL would not), matching pytest/specmatic's pass/fail convention. `zap:full-scan`/`zap:api-scan` send real attack payloads, so - unlike every other test tool's target host - `zap`'s target is hardcoded to `apps`, not read from an overridable env var; there's deliberately no `ZAP_TARGET_URL` an external host could be fat-fingered into.
 
 Current breakdown:
 
@@ -129,12 +130,15 @@ Current breakdown:
 | `playwright` | E2E browser tests against the running frontend | Yes | Uses the `data-testid` attributes in `apps/frontend` as selectors. |
 | `specmatic:test` | Provider contract test of the running backend against `apps/backend/openapi.yaml` | Yes | Runs `specmatic/bin/prepare_contract.sh` (fetches the live schema + builds examples), then `specmatic test`. |
 | `microcks` | Long-running mock server loaded from the backend's live OpenAPI schema | Only for `microcks:import-openapi` itself; not to keep serving the mock afterward | `make microcks:import-openapi` fetches `http://localhost:8080/openapi.json` and uploads it. |
+| `zap:baseline` | Passive DAST scan of `apps/frontend` | Yes | Never sends an attack payload - spiders + observes only. |
+| `zap:full-scan` | Active DAST scan of `apps/frontend` | Yes | Sends real attack payloads (SQLi, XSS, ...) - `apps` only, never an external host. |
+| `zap:api-scan` | Active, OpenAPI-driven DAST scan of `apps/backend` | Yes | Scans every route in `apps/backend/openapi.yaml`'s live schema, not just what a spider crawls. |
 
 ### Report files
 
-pytest, vitest, playwright and specmatic each bind-mount a `report/` (and, for
+pytest, vitest, playwright, specmatic and zap each bind-mount a `report/` (and, for
 specmatic, also a `junit/`) directory back onto the host, so every `make
-<module>:test` run leaves a browsable HTML report behind without needing to
+<module>:test` (or `make zap:<scan>`) run leaves a browsable HTML report behind without needing to
 `docker cp` anything out of a stopped container:
 
 | Module | Report file |
@@ -144,6 +148,7 @@ specmatic, also a `junit/`) directory back onto the host, so every `make
 | `vitest:contract-test` | `vitest/report-contract/index.html` (same reporter, separate output dir) |
 | `playwright` | `playwright/report/index.html` (Playwright's built-in `html` reporter) |
 | `specmatic` | `specmatic/report/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml` |
+| `zap:baseline`/`zap:full-scan`/`zap:api-scan` | `zap/report/<scan>-report.html` (also `.json`) - each scan's own filename, overwritten on the next run of that same scan |
 
 These directories are gitignored — they're regenerated on every run, not
 checked in.
