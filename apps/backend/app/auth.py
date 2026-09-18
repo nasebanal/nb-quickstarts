@@ -1,5 +1,7 @@
 import json
+import os
 import secrets
+import threading
 from pathlib import Path
 
 from fastapi import Depends, HTTPException, status
@@ -19,6 +21,21 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 # routine dev-loop restarts don't keep kicking you out.
 _TOKENS_FILE = Path(__file__).resolve().parent.parent / ".tokens.json"
 
+# FastAPI runs sync path operations (like login, below) in a threadpool, so
+# concurrent logins - e.g. Locust's overload scenarios, which log in on
+# every simulated user - genuinely run issue_token() from multiple OS
+# threads at once, not just interleaved on one event loop. Without this,
+# two threads' write_text() calls can race and interleave, corrupting the
+# file (observed directly: a complete JSON object followed by leftover
+# trailing bytes from a second, differently-sized concurrent write - valid
+# JSON's "Extra data" error, crash-looping the whole app on every restart
+# thereafter, since _load_tokens() runs at import time). The lock below
+# serializes the read-modify-write; _save_tokens' write-to-temp-then-
+# os.replace makes the file swap itself atomic too, so a reader (a fresh
+# process starting up) never observes a partially-written file even
+# without holding the lock.
+_tokens_lock = threading.Lock()
+
 
 def _load_tokens() -> dict[str, str]:
     if _TOKENS_FILE.exists():
@@ -27,7 +44,9 @@ def _load_tokens() -> dict[str, str]:
 
 
 def _save_tokens() -> None:
-    _TOKENS_FILE.write_text(json.dumps(_TOKENS))
+    tmp_file = _TOKENS_FILE.with_suffix(".json.tmp")
+    tmp_file.write_text(json.dumps(_TOKENS))
+    os.replace(tmp_file, _TOKENS_FILE)
 
 
 _TOKENS: dict[str, str] = _load_tokens()
@@ -37,8 +56,9 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 
 def issue_token(employee_code: str) -> str:
     token = secrets.token_urlsafe(24)
-    _TOKENS[token] = employee_code
-    _save_tokens()
+    with _tokens_lock:
+        _TOKENS[token] = employee_code
+        _save_tokens()
     return token
 
 
