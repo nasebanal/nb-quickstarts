@@ -25,6 +25,7 @@ Supported OSS, one module per technology:
 - **[Microcks](https://microcks.io/)** — API mocking, seeded from `apps/backend`'s OpenAPI schema
 - **[Locust](https://locust.io/)** — load testing
 - **[OWASP ZAP](https://www.zaproxy.org/)** — web app vulnerability scanning (DAST)
+- **[agentgateway](https://agentgateway.dev/)** — MCP/A2A gateway for AI agent connectivity
 
 ### Endpoints
 
@@ -50,6 +51,8 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Consul | HTTP API / UI | http://localhost:8500 | `consul:8500` | `CONSUL_HTTP_PORT` |
 | Consul | DNS | localhost:8600 | `consul:8600` | `CONSUL_DNS_PORT` |
 | Locust | Web UI | http://localhost:8089 | `locust-master:8089` | |
+| agentgateway | MCP (Streamable HTTP) | http://localhost:8010/mcp | `agentgateway:3000/mcp` | `AGENTGATEWAY_PORT`; needs `apps:up` (fetches `apps/backend`'s live OpenAPI schema) |
+| agentgateway | Dashboard UI | http://localhost:15000 | `agentgateway:15000` | `AGENTGATEWAY_ADMIN_PORT`; redirects to `/ui` |
 
 ## 🏁 Getting Started
 
@@ -103,6 +106,11 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 
    # OWASP ZAP (vulnerability scanning against apps - needs apps:up)
    make zap:baseline
+
+   # agentgateway (exposes apps/backend as MCP tools - needs apps:up)
+   make agentgateway:up
+   make agentgateway:tools
+   make agentgateway:open
    ```
 
 ## 🧪 Sample Scenarios
@@ -159,6 +167,30 @@ Microcks can't mock `POST /accounts` - it needs a real bearer token, which an Op
 Verified this way, not just described: every request during a real `make playwright:test` run against a Kong-routed frontend showed up in Kong's own access log going to `/api/*`, and pointing `apps_backend` at each mock in turn returned exactly the example values from `openapi.yaml`, confirmed via `curl` and Microcks'/Specmatic's own request logs.
 
 There's only ever one `apps_backend` service to edit — no separate service per backend/mock to flip between. (An earlier attempt registered three services, one per target, meant to be toggled by an "enabled" flag - that doesn't work: Kong's `Route` object has no `enabled` field, only `Service` does, and disabling a `Service` behind an already-matched `Route` doesn't fail over to another route.) If Kong Manager's edit doesn't seem to stick, or you just want a clean slate regardless of what got changed live, `make kong:reset` reloads everything straight from `kong/conf/declarative.yml`, which defaults `apps_backend` back to the real backend.
+
+### agentgateway: exposing apps/backend as MCP tools
+
+`apps/backend` already mounts its own MCP server natively at `/mcp` (via `fastapi-mcp`, auto-derived from its REST routes - see [Endpoints](#endpoints)). agentgateway is a different way to get there: instead of backend-side MCP code, it builds MCP tools *entirely from the OpenAPI contract* (`apps/backend/openapi.yaml`) - the same contract Specmatic/Microcks/Kong already build against, fetched live from `/openapi.json` (`agentgateway/config.yaml`'s `schema.url`, no separate fetch step needed).
+
+```bash
+make apps:up
+make agentgateway:up
+make agentgateway:tools   # does the MCP handshake by hand, lists what's actually being served
+```
+
+Verified end-to-end: `agentgateway:tools` lists six tools - `health_health_get`, `login_auth_login_post`, `list_accounts_accounts_get`, `create_account_accounts_post`, `list_balances_accounts_balances_get`, `get_account_accounts__account_id__get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_balances_accounts_balances_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts/balances` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
+
+Point an MCP client (Claude Desktop, [mcp-inspector](https://github.com/modelcontextprotocol/inspector), ...) at `http://localhost:8010/mcp` to use it interactively. `create_account_accounts_post` needs a real bearer token, same as `POST /accounts` itself does everywhere else - call `login_auth_login_post` first and pass its token back as an `Authorization` header, or the tool call 401s the same way an unauthenticated `curl` would.
+
+agentgateway also ships a real dashboard UI (a React SPA, built into the image by default - `Dockerfile`'s `CARGO_FEATURES=agentgateway-app/ui`), served off its **admin** port, separate from the MCP port above:
+
+```bash
+make agentgateway:open   # http://localhost:15000 -> redirects to /ui
+```
+
+Its admin port binds to loopback-only inside the container by default (`config.adminAddr`, unset) - unreachable from the host even with the port published, confirmed directly (`308` then nothing). `agentgateway/config.yaml` sets `config.adminAddr: 0.0.0.0:15000` so it actually answers on the port `docker-compose.yml` publishes.
+
+agentgateway fetches `apps/backend`'s OpenAPI schema once, at its own startup - not lazily on first request. If `apps/backend` isn't actually accepting connections yet at that exact moment (e.g. it just restarted), agentgateway exits with `Error: fetch http://backend:8080/openapi.json ... Connection refused` instead of retrying - confirmed directly. `make agentgateway:restart` once `apps:up`'s backend is confirmed healthy resolves it.
 
 ### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
 
@@ -348,6 +380,14 @@ make locust:up LOCUST_FILE=locustfile_http.py LOCUST_HTTP_HOST=https://staging.e
 | `ZAP_VERSION` | `2.17.0` | `zaproxy/zap-stable` image tag |
 
 No target-host variable, unlike every module above - see [OWASP ZAP: scanning apps for vulnerabilities](#owasp-zap-scanning-apps-for-vulnerabilities) for why.
+
+### agentgateway
+
+| Variable | Default | Description |
+|---|---|---|
+| `AGENTGATEWAY_VERSION` | `v1.5.0` | `cr.agentgateway.dev/agentgateway` image tag |
+| `AGENTGATEWAY_PORT` | `8010` | Host-published MCP endpoint port - defaults away from agentgateway's own `3000` default, a common Node/React dev-server port already likely to be taken on the host |
+| `AGENTGATEWAY_ADMIN_PORT` | `15000` | Host-published dashboard UI / admin API port |
 
 ### Test Results
 

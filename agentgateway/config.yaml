@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://agentgateway.dev/schema/config
+#
+# Exposes apps/backend's REST API as MCP tools, built straight from its live
+# OpenAPI schema (apps/backend/openapi.yaml) - the same contract Specmatic,
+# Microcks and Kong's apps_backend route already build against. `schema.url`
+# fetches it live (agentgateway supports file/inline/url sources for this;
+# url means no separate fetch step, unlike Specmatic/Microcks which pull a
+# local copy first) - so nothing here needs to change if the contract does.
+#
+# POST /accounts needs a real bearer token (issued by the login tool below),
+# same as every other client of this API - the MCP tool for it works, but
+# calling it without first calling login_auth_login_post and passing its
+# token back as an Authorization header returns the same 401 a curl without
+# one would.
+#
+# config.adminAddr defaults to loopback-only (127.0.0.1:15000 inside the
+# container - see agentgateway's own config.rs), so it'd be unreachable
+# from the host even with the port published; 0.0.0.0 makes it actually
+# answer on the port docker-compose.yml publishes. Serves agentgateway's
+# own dashboard UI at `/` (built into the image by default - see its
+# Dockerfile's CARGO_FEATURES=agentgateway-app/ui) - `make
+# agentgateway:open` opens it.
+config:
+  adminAddr: 0.0.0.0:15000
+binds:
+- port: 3000
+  listeners:
+  - routes:
+    - backends:
+      - mcp:
+          targets:
+          - name: apps-backend
+            openapi:
+              schema:
+                url: http://backend:8080/openapi.json
+              host: backend:8080
+      policies:
+        # Only needed for a browser-based MCP client (e.g. an inspector UI)
+        # calling this cross-origin - mcp-session-id/mcp-protocol-version
+        # are custom headers the MCP Streamable HTTP transport relies on,
+        # hidden from JS by default under CORS unless exposed here (same
+        # reasoning as apps/backend's own CORSMiddleware exposing `Via`
+        # for the Kong status check - see apps/frontend/src/lib/api.ts).
+        cors:
+          allowOrigins:
+          - "*"
+          allowHeaders:
+          - content-type
+          - mcp-protocol-version
+          - mcp-session-id
+          exposeHeaders:
+          - mcp-session-id
+          - mcp-protocol-version
+          maxAge: 5m
