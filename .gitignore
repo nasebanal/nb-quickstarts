@@ -32,3 +32,4 @@ playwright/report/
 playwright/test-results/
 specmatic/report/
 specmatic/junit/
+zap/report/

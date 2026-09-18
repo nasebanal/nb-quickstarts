@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 .DEFAULT_GOAL := default
-.PHONY: apps pytest vitest playwright specmatic microcks kong kafka locust consul all default
+.PHONY: apps pytest vitest playwright specmatic microcks kong kafka locust consul zap all default
 
 # Load environment variables from .env file if it exists
 -include .env
@@ -17,6 +17,7 @@ include playwright/Makefile
 include specmatic/Makefile
 include microcks/Makefile
 include locust/Makefile
+include zap/Makefile
 
 #################### ALL (every long-running module at once) ###################
 # Deliberately excludes pytest/vitest/playwright/specmatic (one-shot `test`
@@ -83,9 +84,13 @@ all-status:
 
 # Runs the one-shot `test` modules (pytest/vitest/playwright/specmatic) in
 # sequence - NOT microcks/locust, which aren't a `test` verb (see AGENTS.md
-# "Test/verification tool modules"). playwright/specmatic need apps
-# running, so this brings it up first; it does NOT tear apps down
-# afterward, matching every other module's own test target.
+# "Test/verification tool modules"), and NOT zap, deliberately: zap:baseline
+# alone takes noticeably longer than the four below combined, and
+# zap:full-scan/zap:api-scan send real attack payloads - not something to
+# run unattended as a side effect of `all:test`. Run those explicitly.
+# playwright/specmatic need apps running, so this brings it up first; it
+# does NOT tear apps down afterward, matching every other module's own test
+# target.
 all-test: apps-up
 	@$(MAKE) pytest-test
 	@$(MAKE) vitest-test
@@ -123,6 +128,7 @@ default:
 	@echo "  specmatic    Show Specmatic (contract test) commands"
 	@echo "  microcks     Show Microcks (mock server) commands"
 	@echo "  locust       Show Locust Load Testing commands"
+	@echo "  zap          Show OWASP ZAP (web vulnerability scanning) commands"
 	@echo "  all          Show commands that act on every module above at once"
 	@echo ""
 	@echo "Run 'make <command>' for more information on a command."

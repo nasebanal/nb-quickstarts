@@ -1,0 +1,21 @@
+services:
+  # No fixed `command:` - unlike specmatic's single-purpose service, ZAP
+  # runs one of three different scripts (zap-baseline.py/zap-full-scan.py/
+  # zap-api-scan.py) depending on the make target, so the actual command is
+  # supplied by `docker compose run` in zap/Makefile instead.
+  zap:
+    image: zaproxy/zap-stable:${ZAP_VERSION:-2.17.0}
+    working_dir: /zap/wrk
+    volumes:
+      # ZAP's scan scripts always write reports under their own working
+      # dir with no flag to redirect elsewhere - mount that straight onto
+      # the host instead, same pattern as specmatic/docker-compose.yml.
+      - ./report:/zap/wrk:rw
+    networks:
+      - apps-network
+
+networks:
+  # Owned by apps/docker-compose.yml; see AGENTS.md "Cross-module Docker network".
+  apps-network:
+    name: apps-network
+    external: true

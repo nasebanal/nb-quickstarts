@@ -24,6 +24,7 @@ Supported OSS, one module per technology:
 - **[Specmatic](https://specmatic.io/)** — OpenAPI contract tests
 - **[Microcks](https://microcks.io/)** — API mocking, seeded from `apps/backend`'s OpenAPI schema
 - **[Locust](https://locust.io/)** — load testing
+- **[OWASP ZAP](https://www.zaproxy.org/)** — web app vulnerability scanning (DAST)
 
 ### Endpoints
 
@@ -99,6 +100,9 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
    make consul:register-apps
    make consul:verify-apps
    make consul:open
+
+   # OWASP ZAP (vulnerability scanning against apps - needs apps:up)
+   make zap:baseline
    ```
 
 ## 🧪 Sample Scenarios
@@ -236,6 +240,29 @@ make locust:join-cluster LOCUST_MASTER_HOST=<PC1-IP> LOCUST_WORKERS=5
 - Ports 8089 (UI), 5557 (master-worker communication), 5558 (master-worker communication) accessible
 - Same `LOCUST_FILE` on all machines
 
+### OWASP ZAP: scanning apps for vulnerabilities
+
+Three scans, all one-shot (`docker compose run --rm`, no `up`/`down`) and all requiring `make apps:up` first:
+
+```bash
+make apps:up
+make zap:baseline    # passive scan of apps/frontend - spiders + observes, never attacks (~1-2 min)
+```
+
+```bash
+make zap:full-scan   # active scan of apps/frontend - sends real attack payloads (SQLi, XSS, ...), several minutes+
+```
+
+```bash
+make zap:api-scan    # scans apps/backend directly from its live OpenAPI schema (apps/backend/openapi.yaml) - endpoint-aware, so it exercises every documented route, not just what a spider happens to crawl
+```
+
+Verified all three end-to-end against this repo's own `apps`: `baseline` found 12 WARN-level findings (missing security headers like CSP/`X-Content-Type-Options`, mostly - `apps/frontend` is a dev-mode Next.js server, not hardened for production) and 0 FAIL; `api-scan` ran every active rule (SQLi, XXE, command injection, SSTI, ...) against every `apps/backend` route from the OpenAPI schema and came back 116 PASS, 2 WARN (the same missing-header class), 0 FAIL.
+
+Same pass/fail convention as `pytest`/`specmatic`: a real (non-INFO) alert exits non-zero, so `zap:baseline` etc. can gate a pipeline the same way; see `zap/report/<scan>-report.html` for what was actually found.
+
+**`zap:full-scan` and `zap:api-scan` send real attack payloads** - only ever point these at `apps` (this repo's own bundled test target, exactly what the Makefile does), never at an external host. Unlike Locust or Playwright, `zap`'s targets aren't overridable via an env var for this reason - there's no `ZAP_TARGET_URL` to accidentally repoint at production.
+
 ## ⚙️ Configuration
 
 Every module reads its settings from one `.env` file at the repo root (`cp .env.example .env` first - see [Getting Started](#-getting-started)). Below are each module's main parameters; `.env.example` has the full list, including lower-level ones (Kafka's KRaft/listener settings, image versions, MySQL credentials, ...) most people never need to touch. Override any of them via `.env` or inline on the command line:
@@ -307,6 +334,14 @@ Any of the target-host variables (`LOCUST_HTTP_HOST`, `LOCUST_MYSQL_HOST`, ...) 
 make locust:up LOCUST_FILE=locustfile_http.py LOCUST_HTTP_HOST=https://staging.example.com
 ```
 
+### ZAP
+
+| Variable | Default | Description |
+|---|---|---|
+| `ZAP_VERSION` | `2.17.0` | `zaproxy/zap-stable` image tag |
+
+No target-host variable, unlike every module above - see [OWASP ZAP: scanning apps for vulnerabilities](#owasp-zap-scanning-apps-for-vulnerabilities) for why.
+
 ### Test Results
 
 Every `make <module>:test` run leaves a browsable report behind. These are all gitignored - regenerated on every run, never checked in:
@@ -319,6 +354,7 @@ Every `make <module>:test` run leaves a browsable report behind. These are all g
 | `playwright` | `playwright/report/index.html` |
 | `specmatic` | `specmatic/report/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml` |
 | `locust` | `locust/logs/<timestamp>/report.html`, plus the files below |
+| `zap` | `zap/report/<scan>-report.html` (also `.json`) - `baseline`/`full-scan`/`api-scan`, overwritten each run |
 
 **Locust** writes a whole timestamped directory per run, `locust/logs/YYYYMMDD_HHMMSS/`:
 
