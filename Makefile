@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 .DEFAULT_GOAL := default
-.PHONY: apps pytest vitest playwright specmatic microcks kong kafka locust consul zap all default
+.PHONY: apps pytest vitest playwright specmatic microcks kong kafka locust consul zap agentgateway all default
 
 # Load environment variables from .env file if it exists
 -include .env
@@ -18,6 +18,7 @@ include specmatic/Makefile
 include microcks/Makefile
 include locust/Makefile
 include zap/Makefile
+include agentgateway/Makefile
 
 #################### ALL (every long-running module at once) ###################
 # Deliberately excludes pytest/vitest/playwright/specmatic (one-shot `test`
@@ -31,7 +32,7 @@ include zap/Makefile
 
 all:
 	@echo "🚀 All"
-	@echo "Start/stop/test every long-running module together: apps, kong, kafka, consul, microcks, locust."
+	@echo "Start/stop/test every long-running module together: apps, kong, kafka, consul, microcks, locust, agentgateway."
 	@echo ""
 	@echo "  all:up      - Start them all (apps first)"
 	@echo "  all:down    - Stop them all (apps last)"
@@ -50,8 +51,10 @@ all-up:
 	@$(MAKE) consul-up
 	@$(MAKE) microcks-up
 	@$(MAKE) locust-up
+	@$(MAKE) agentgateway-up
 
 all-down:
+	@$(MAKE) agentgateway-down
 	@$(MAKE) locust-down
 	@$(MAKE) microcks-down
 	@$(MAKE) consul-down
@@ -81,6 +84,9 @@ all-status:
 	@echo ""
 	@echo "=== locust ==="
 	@$(MAKE) locust-status
+	@echo ""
+	@echo "=== agentgateway ==="
+	@$(MAKE) agentgateway-status
 
 # Runs the one-shot `test` modules (pytest/vitest/playwright/specmatic) in
 # sequence - NOT microcks/locust, which aren't a `test` verb (see AGENTS.md
@@ -129,6 +135,7 @@ default:
 	@echo "  microcks     Show Microcks (mock server) commands"
 	@echo "  locust       Show Locust Load Testing commands"
 	@echo "  zap          Show OWASP ZAP (web vulnerability scanning) commands"
+	@echo "  agentgateway Show agentgateway (MCP/A2A gateway) commands"
 	@echo "  all          Show commands that act on every module above at once"
 	@echo ""
 	@echo "Run 'make <command>' for more information on a command."
