@@ -21,6 +21,11 @@ zap:
 	@echo "  zap:api-scan  - Scans apps/backend's REST API directly from its live OpenAPI schema (active, endpoint-aware)"
 	@echo "  zap:scan      - Runs all three above in sequence, stops at the first one that fails"
 	@echo ""
+	@echo "  zap:stop      - Kill a scan that's already running (Ctrl+C on its own terminal works"
+	@echo "                  too, but a scan started elsewhere - another shell, a background job -"
+	@echo "                  needs this instead; also cleans up the container docker compose run"
+	@echo "                  --rm would otherwise leave behind after a hard kill)"
+	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  ZAP_VERSION=2.17.0 # zaproxy/zap-stable image tag"
 	@echo ""
@@ -31,6 +36,15 @@ zap:
 	@echo "      details. zap:full-scan/zap:api-scan send actual attack"
 	@echo "      payloads (SQLi, XSS, ...) - only ever run these against apps"
 	@echo "      (this repo's own bundled test target), never a real site."
+	@echo ""
+	@echo "Note: apps/frontend runs Next.js in dev mode (Turbopack), which"
+	@echo "      recompiles/rewrites its cache on unusual requests - a"
+	@echo "      zap:full-scan sending enough attack payloads at its many"
+	@echo "      hashed _next/static/* asset URLs can pin the frontend"
+	@echo "      container's CPU into a runaway loop that doesn't recover"
+	@echo "      on its own even after the scan is stopped. If apps/frontend"
+	@echo "      seems stuck after a full-scan, restart just that container:"
+	@echo "      docker compose -p apps -f apps/docker-compose.yml restart frontend"
 
 zap\:%:
 	@$(MAKE) zap-$(subst zap:,,$@)
@@ -52,6 +66,26 @@ zap-full-scan: apps-network-ensure
 		zap-full-scan.py -t http://frontend:5173 \
 		-r full-scan-report.html -J full-scan-report.json -I
 	@echo "Report: zap/report/full-scan-report.html"
+
+# Ctrl+C on the terminal running zap:baseline/full-scan/api-scan/scan
+# already stops it (docker compose run forwards SIGINT, and --rm cleans up
+# the container) - this is for when that's not an option: the scan was
+# started in another shell or backgrounded. `docker compose kill/rm
+# <service>` doesn't reliably reach a `docker compose run` container the
+# way it does one started by `up` (confirmed: it left a live "zap-zap-run-*"
+# container untouched) - so this targets by the
+# `com.docker.compose.project=zap` label directly instead, which every
+# container this module ever creates carries regardless of run/up. `docker
+# kill` (SIGKILL, not a graceful stop) is deliberate - a scan mid-attack
+# won't necessarily respond to a polite stop request either way, and this
+# needs to work even against an unresponsive container.
+zap-stop:
+	@echo "Stopping any running ZAP scan..."
+	@docker ps -q --filter "label=com.docker.compose.project=zap" | xargs -r docker kill >/dev/null
+	@docker ps -aq --filter "label=com.docker.compose.project=zap" | xargs -r docker rm -f >/dev/null
+	@echo "Stopped. If apps/frontend seems unresponsive afterward (a full-scan"
+	@echo "left its dev server pegged - see the note above), restart it:"
+	@echo "  docker compose -p apps -f apps/docker-compose.yml restart frontend"
 
 zap-api-scan: apps-network-ensure
 	@echo "⚠️  Running ZAP API scan (active) against apps/backend's live OpenAPI schema..."
