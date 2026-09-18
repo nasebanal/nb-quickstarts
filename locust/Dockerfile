@@ -1,4 +1,4 @@
-ARG LOCUSTIO_VERSION=2.42.2
+ARG LOCUSTIO_VERSION=2.44.1
 FROM locustio/locust:${LOCUSTIO_VERSION}
 
 # pymysql/cryptography: MySQL connectivity (locustfile_mysql.py).
