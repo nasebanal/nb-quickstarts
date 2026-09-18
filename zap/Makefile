@@ -19,6 +19,7 @@ zap:
 	@echo "  zap:baseline  - Passive scan of apps/frontend (safe - spiders + observes, never attacks, ~1-2 min)"
 	@echo "  zap:full-scan - Active scan of apps/frontend (sends real attack payloads - takes longer, several minutes+)"
 	@echo "  zap:api-scan  - Scans apps/backend's REST API directly from its live OpenAPI schema (active, endpoint-aware)"
+	@echo "  zap:scan      - Runs all three above in sequence, stops at the first one that fails"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  ZAP_VERSION=2.17.0 # zaproxy/zap-stable image tag"
@@ -59,3 +60,16 @@ zap-api-scan: apps-network-ensure
 		zap-api-scan.py -t http://backend:8080/openapi.json -f openapi \
 		-r api-scan-report.html -J api-scan-report.json -I
 	@echo "Report: zap/report/api-scan-report.html"
+
+# Runs the same three scans as `zap:baseline`/`zap:full-scan`/`zap:api-scan`
+# individually, in one shot - each is its own `$(MAKE)` call (not a single
+# recipe with all three commands inline) so a real (non-INFO) finding in an
+# earlier scan stops the rest, same as `all:test` stopping at the first
+# tool that fails. Not part of `all:test` itself - see zap/Makefile's own
+# module comment (and AGENTS.md's ZAP bullet) for why.
+zap-scan:
+	@$(MAKE) zap-baseline
+	@$(MAKE) zap-full-scan
+	@$(MAKE) zap-api-scan
+	@echo ""
+	@echo "All three scans passed. Reports: zap/report/{baseline,full-scan,api-scan}-report.html"
