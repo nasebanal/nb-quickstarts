@@ -38,6 +38,23 @@ services:
         paths:
           - /api
         strip_path: true
+    plugins:
+      # apps/frontend's "Via Kong" indicator (see api.ts's checkViaKong())
+      # detects Kong by reading the `Via` response header Kong itself
+      # always adds - but browsers hide non-safelisted response headers
+      # from JS unless Access-Control-Expose-Headers lists them. The real
+      # backend's own CORSMiddleware already exposes it (see
+      # apps/backend/app/main.py), but repointing this service's `url` at
+      # a mock (e.g. Specmatic's stub) swaps in a server that doesn't know
+      # to - so add it here, at the gateway, where it applies no matter
+      # what's behind this service. `add` (not `append`) is a no-op when
+      # the upstream already sets it, so this doesn't double it up against
+      # the real backend.
+      - name: response-transformer
+        config:
+          add:
+            headers:
+              - "Access-Control-Expose-Headers:Via"
 
 # You can add more services, routes, plugins here
 # Example:
