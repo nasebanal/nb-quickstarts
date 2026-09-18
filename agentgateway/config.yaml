@@ -12,6 +12,16 @@
 # calling it without first calling login_auth_login_post and passing its
 # token back as an Authorization header returns the same 401 a curl without
 # one would.
+#
+# config.adminAddr defaults to loopback-only (127.0.0.1:15000 inside the
+# container - see agentgateway's own config.rs), so it'd be unreachable
+# from the host even with the port published; 0.0.0.0 makes it actually
+# answer on the port docker-compose.yml publishes. Serves agentgateway's
+# own dashboard UI at `/` (built into the image by default - see its
+# Dockerfile's CARGO_FEATURES=agentgateway-app/ui) - `make
+# agentgateway:open` opens it.
+config:
+  adminAddr: 0.0.0.0:15000
 binds:
 - port: 3000
   listeners:

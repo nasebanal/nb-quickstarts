@@ -18,16 +18,19 @@ agentgateway:
 	@echo "  agentgateway:down    - Stop and remove it"
 	@echo "  agentgateway:status  - Check container status"
 	@echo "  agentgateway:restart - Restart it"
+	@echo "  agentgateway:open    - Open its dashboard UI in the browser"
 	@echo ""
 	@echo "Verification:"
 	@echo "  agentgateway:tools   - Do the MCP handshake by hand and list the tools it's actually serving"
 	@echo ""
 	@echo "Configuration (.env file):"
-	@echo "  AGENTGATEWAY_VERSION=v1.5.0 # cr.agentgateway.dev/agentgateway image tag"
-	@echo "  AGENTGATEWAY_PORT=8010      # Host-published MCP endpoint port"
+	@echo "  AGENTGATEWAY_VERSION=v1.5.0   # cr.agentgateway.dev/agentgateway image tag"
+	@echo "  AGENTGATEWAY_PORT=8010        # Host-published MCP endpoint port"
+	@echo "  AGENTGATEWAY_ADMIN_PORT=15000 # Host-published dashboard UI / admin API port"
 	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  MCP (Streamable HTTP): http://localhost:$${AGENTGATEWAY_PORT:-8010}/mcp"
+	@echo "  Dashboard UI:          http://localhost:$${AGENTGATEWAY_ADMIN_PORT:-15000}"
 	@echo ""
 	@echo "Note: point an MCP client (Claude Desktop, mcp-inspector, ...) at the"
 	@echo "      endpoint above to call apps/backend's REST API as MCP tools -"
@@ -44,6 +47,7 @@ agentgateway-up: apps-network-ensure
 	@echo "Starting agentgateway..."
 	@docker compose -p agentgateway -f agentgateway/docker-compose.yml up -d
 	@echo "MCP endpoint: http://localhost:$${AGENTGATEWAY_PORT:-8010}/mcp"
+	@echo "Dashboard UI: http://localhost:$${AGENTGATEWAY_ADMIN_PORT:-15000}"
 	@echo "Verify: make agentgateway:tools"
 
 agentgateway-down:
@@ -58,6 +62,9 @@ agentgateway-status:
 agentgateway-restart:
 	@$(MAKE) agentgateway-down
 	@$(MAKE) agentgateway-up
+
+agentgateway-open:
+	@bin/open_browser.sh http://localhost:$${AGENTGATEWAY_ADMIN_PORT:-15000}
 
 agentgateway-tools:
 	@echo "Calling MCP initialize + tools/list against agentgateway..."
