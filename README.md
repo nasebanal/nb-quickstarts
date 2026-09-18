@@ -257,11 +257,18 @@ make zap:full-scan   # active scan of apps/frontend - sends real attack payloads
 make zap:api-scan    # scans apps/backend directly from its live OpenAPI schema (apps/backend/openapi.yaml) - endpoint-aware, so it exercises every documented route, not just what a spider happens to crawl
 ```
 
-Verified all three end-to-end against this repo's own `apps`: `baseline` found 12 WARN-level findings (missing security headers like CSP/`X-Content-Type-Options`, mostly - `apps/frontend` is a dev-mode Next.js server, not hardened for production) and 0 FAIL; `api-scan` ran every active rule (SQLi, XXE, command injection, SSTI, ...) against every `apps/backend` route from the OpenAPI schema and came back 116 PASS, 2 WARN (the same missing-header class), 0 FAIL.
+```bash
+make zap:scan        # runs all three above in sequence, stops at the first one that fails
+make zap:stop        # kills a scan that's running elsewhere (another shell, a background job) - Ctrl+C works fine for one running in your own terminal
+```
+
+Verified end-to-end against this repo's own `apps`: `baseline` found 12 WARN-level findings (missing security headers like CSP/`X-Content-Type-Options`, mostly - `apps/frontend` is a dev-mode Next.js server, not hardened for production) and 0 FAIL; `api-scan` ran every active rule (SQLi, XXE, command injection, SSTI, ...) against every `apps/backend` route from the OpenAPI schema and came back 116 PASS, 2 WARN (the same missing-header class), 0 FAIL.
 
 Same pass/fail convention as `pytest`/`specmatic`: a real (non-INFO) alert exits non-zero, so `zap:baseline` etc. can gate a pipeline the same way; see `zap/report/<scan>-report.html` for what was actually found.
 
 **`zap:full-scan` and `zap:api-scan` send real attack payloads** - only ever point these at `apps` (this repo's own bundled test target, exactly what the Makefile does), never at an external host. Unlike Locust or Playwright, `zap`'s targets aren't overridable via an env var for this reason - there's no `ZAP_TARGET_URL` to accidentally repoint at production.
+
+**`zap:full-scan` can overload `apps/frontend`'s dev server.** Confirmed directly: a full scan's attack payloads against the many hashed `_next/static/*` asset URLs a Next.js dev server (Turbopack) generates drove it into a recompile/cache-rewrite loop, pinning the container's CPU at 800%+ - it stayed unresponsive even after the scan itself was stopped, and needed `docker compose -p apps -f apps/docker-compose.yml restart frontend` to recover. Use `zap:stop` to kill a runaway scan, and restart `apps/frontend` afterward if it's still unresponsive.
 
 ## ⚙️ Configuration
 
