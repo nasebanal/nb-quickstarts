@@ -235,24 +235,39 @@ make kafka:up
 make kafka:bridge-up
 ```
 
-Two matching Locust scenarios make the case for putting Kafka in front of a write path at all — same event, same volume, two paths in:
+Two matching Locust scenarios make the case for putting Kafka in front of a write path at all — same event, same volume, two paths in. Use the **same** users / spawn rate for both; these are the settings where direct REST fails (single laptop, this repo's default limits: SQLAlchemy's default connection pool, a single `uvicorn` worker in `--reload` mode, 3 Locust workers):
 
-```bash
-# Direct REST, no Kafka - every simulated user POSTs straight to the backend
-make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 LOCUST_RUN_TIME=60s
+| Users / spawn rate | Run time | Direct REST (`locustfile_http_overload.py`) | Via Kafka (`locustfile_kafka.py`) |
+|---|---|---|---|
+| 100 / 20 | 30s | 0% failures, but median already ~220ms (p95 ~570ms) - too light to show errors | - |
+| **300 / 100** | 40s | **~30% failures**, median at the 30s DB-pool timeout | 1.66M events, **0% failures**, ~4ms median, backend `/health` ~3ms |
+| **600 / 200** | 60s | **~79% failures** (500s, connection resets, 30s+ latency) | 1.24M events, **0% failures**, ~24ms median, backend `/health` ~2ms |
 
-# The same load, produced onto the Kafka topic instead (needs kafka:bridge-up running)
-make locust:test LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 LOCUST_RUN_TIME=60s
-```
+**Steps** (300 / 100 shown; swap in 600 / 200 / `60s` for the heavier run):
 
-Where the errors start (single laptop, same limits, `locustfile_http_overload.py`, 3 workers, `OTEL` export on): 100 users / spawn 20 → **0% failures** but median latency already ~220ms (p95 ~570ms); **300 users / spawn 100 → ~30% failures**, median at the 30s DB-pool timeout; 600 / 200 → ~79% (below). After a run that heavy the backend stays unresponsive for ~90s until the queued pool waits time out - wait before the next test. The same 300 / 100 through Kafka (`locustfile_kafka.py`) produced 1.66M events with **0% failures**, ~4ms median, while the backend's `/health` stayed at ~3ms. `make locust` prints these commands too; watch either run live in Grafana if `observability:up` (5xx ratio, p95 latency, DB connections used).
+1. Start the target and the Kafka path (optionally Grafana too - set `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318` in `.env`, then `apps:restart`):
+   ```bash
+   make apps:up
+   make kafka:up && make kafka:bridge-up
+   make observability:up        # optional: watch it live at http://localhost:3030
+   ```
+2. **Direct REST - this is the one that errors:**
+   ```bash
+   make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s
+   ```
+   Or with the UI: `make locust:up LOCUST_FILE=locustfile_http_overload.py`, then enter `300` / `100` at http://localhost:8089.
+3. **Wait for the backend to recover** before the next run. After a run this heavy it stays unresponsive for ~90s, until the DB-pool waits queued behind it time out:
+   ```bash
+   until curl -sf -m 5 http://localhost:8080/health >/dev/null; do sleep 10; done
+   ```
+4. **The same load through Kafka:**
+   ```bash
+   make locust:test LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s
+   ```
+   (`make locust:up LOCUST_FILE=locustfile_kafka.py` + the same `300` / `100` in the UI works too. To switch between the two cleanly in UI mode, use `make locust:restart`.)
+5. **Compare**: `Failure Count` per row in `locust/logs/<timestamp>/locust_stats.csv` (or that run's `report.html`), and `curl -w '%{time_total}\n' http://localhost:8080/health` while each runs. In Grafana ("Apps backend (OpenTelemetry)"): 5xx ratio, p95 latency and DB connections used spike during step 2 and stay flat during step 4.
 
-```bash
-make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s   # errors
-make locust:test LOCUST_FILE=locustfile_kafka.py         LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s   # same load via Kafka, no errors
-```
-
-Measured on a single laptop, against this repo's own default resource limits (SQLAlchemy's default connection pool, a single `uvicorn` worker in `--reload` mode): direct REST failed **79%** of `POST /accounts` requests (500s, connection resets, and up to 30s+ latency) under that load. The identical load produced onto Kafka instead completed **1,241,297 events at 0% failure**, ~24ms median produce latency, with the backend's own `/health` endpoint staying at ~2ms response time throughout — because `kafka-bridge` drains the topic at its own steady, sequential pace and never forwards a burst to the backend.
+Kafka stays flat because `kafka-bridge` drains the topic at its own steady, sequential pace and never forwards a burst to the backend. That also means the topic keeps draining into the backend long after step 4 ends (right after a 300 / 100 run, the bridge's consumer lag was still ~1.6M events - check with `docker exec nb-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka:29092 --describe --all-groups`); `make kafka:reset` clears the backlog before a fresh comparison.
 
 ### Locust load testing scenarios
 
