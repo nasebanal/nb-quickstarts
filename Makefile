@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 .DEFAULT_GOAL := default
-.PHONY: apps pytest vitest playwright specmatic microcks kong kafka locust consul zap agentgateway all default
+.PHONY: apps pytest vitest playwright specmatic microcks kong kafka locust consul zap agentgateway observability all default
 
 # Load environment variables from .env file if it exists
 -include .env
@@ -19,6 +19,7 @@ include microcks/Makefile
 include locust/Makefile
 include zap/Makefile
 include agentgateway/Makefile
+include observability/Makefile
 
 #################### ALL (every long-running module at once) ###################
 # Deliberately excludes pytest/vitest/playwright/specmatic (one-shot `test`
@@ -32,14 +33,14 @@ include agentgateway/Makefile
 
 all:
 	@echo "🚀 All"
-	@echo "Start/stop/test every long-running module together: apps, kong, kafka, consul, microcks, locust, agentgateway."
+	@echo "Start/stop/test every long-running module together: apps, kong, kafka, consul, microcks, locust, agentgateway, observability."
 	@echo ""
 	@echo "  all:up      - Start them all (apps first)"
 	@echo "  all:down    - Stop them all (apps last)"
 	@echo "  all:restart - all:down then all:up"
 	@echo "  all:status  - Show container status for every module"
 	@echo "  all:test    - Run pytest/vitest/playwright/specmatic in sequence (starts apps:up first)"
-	@echo "  all:reset   - Wipe apps/kong/kafka/consul persistent state, restart the rest"
+	@echo "  all:reset   - Wipe apps/kong/kafka/consul/observability persistent state, restart the rest"
 
 all\:%:
 	@$(MAKE) all-$(subst all:,,$@)
@@ -52,8 +53,10 @@ all-up:
 	@$(MAKE) microcks-up
 	@$(MAKE) locust-up
 	@$(MAKE) agentgateway-up
+	@$(MAKE) observability-up
 
 all-down:
+	@$(MAKE) observability-down
 	@$(MAKE) agentgateway-down
 	@$(MAKE) locust-down
 	@$(MAKE) microcks-down
@@ -87,6 +90,9 @@ all-status:
 	@echo ""
 	@echo "=== agentgateway ==="
 	@$(MAKE) agentgateway-status
+	@echo ""
+	@echo "=== observability ==="
+	@$(MAKE) observability-status
 
 # Runs the one-shot `test` modules (pytest/vitest/playwright/specmatic) in
 # sequence - NOT microcks/locust, which aren't a `test` verb (see AGENTS.md
@@ -114,6 +120,7 @@ all-reset:
 	@$(MAKE) kong-reset
 	@$(MAKE) kafka-reset
 	@$(MAKE) consul-reset
+	@$(MAKE) observability-reset
 	@$(MAKE) microcks-restart
 	@$(MAKE) locust-restart
 
@@ -136,6 +143,7 @@ default:
 	@echo "  locust       Show Locust Load Testing commands"
 	@echo "  zap          Show OWASP ZAP (web vulnerability scanning) commands"
 	@echo "  agentgateway Show agentgateway (MCP/A2A gateway) commands"
+	@echo "  observability Show Observability (OpenTelemetry + Prometheus + Tempo + Grafana) commands"
 	@echo "  all          Show commands that act on every module above at once"
 	@echo ""
 	@echo "Run 'make <command>' for more information on a command."

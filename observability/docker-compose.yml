@@ -1,0 +1,89 @@
+services:
+  # Single OTLP entry point. Apps (and any gateway with OTel support) export
+  # here; it fans traces out to Tempo and exposes metrics in Prometheus
+  # format for Prometheus to scrape. Swapping the backend later (e.g. to
+  # NewRelic, which also ingests OTLP) is a change to otel-collector.yaml
+  # only - the apps' instrumentation stays the same.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:${OTEL_COLLECTOR_VERSION:-0.116.1}
+    container_name: nb-otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "${OTEL_GRPC_PORT:-4317}:4317"
+      - "${OTEL_HTTP_PORT:-4318}:4318"
+    depends_on:
+      - tempo
+    networks:
+      - observability-net
+      - apps-network
+
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.1.0}
+    container_name: nb-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-7d}
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9094}:9090"
+    networks:
+      - observability-net
+      # Also on apps-network so prometheus.yml can scrape modules' own
+      # /metrics endpoints (Kong, Consul, ...) by container name.
+      - apps-network
+
+  tempo:
+    image: grafana/tempo:${TEMPO_VERSION:-2.7.1}
+    container_name: nb-tempo
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    # Named volumes are created root-owned but Tempo runs as a non-root
+    # user, so it couldn't write /var/tempo without this.
+    user: root
+    volumes:
+      - ./tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "${TEMPO_PORT:-3200}:3200"
+    networks:
+      - observability-net
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-11.4.0}
+    container_name: nb-grafana
+    environment:
+      # Local-only quickstart: anonymous access as Admin, no login screen.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      # 3030, not Grafana's own 3000 default - 3000 is a very common
+      # Node/React dev-server port on the host (same reasoning as
+      # agentgateway's AGENTGATEWAY_PORT).
+      - "${GRAFANA_PORT:-3030}:3000"
+    depends_on:
+      - prometheus
+      - tempo
+    networks:
+      - observability-net
+
+networks:
+  observability-net:
+    name: observability-net
+  # Owned by apps/docker-compose.yml; see AGENTS.md "Cross-module Docker network".
+  apps-network:
+    name: apps-network
+    external: true
+
+volumes:
+  prometheus-data:
+  tempo-data:
+  grafana-data:

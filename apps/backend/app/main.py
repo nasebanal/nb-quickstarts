@@ -10,6 +10,7 @@ from app.db import Base, SessionLocal, engine, wait_for_database
 from app.graphql.schema import graphql_router
 from app.routers import accounts, auth, health
 from app.seed import seed_if_empty
+from app.telemetry import setup_telemetry
 
 OPENAPI_SPEC_PATH = Path(__file__).resolve().parent.parent / "openapi.yaml"
 
@@ -24,6 +25,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+setup_telemetry(app, engine)
 
 
 # The contract (openapi.yaml) is the source of truth, not this app's own

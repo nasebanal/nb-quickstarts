@@ -26,6 +26,7 @@ Supported OSS, one module per technology:
 - **[Locust](https://locust.io/)** — load testing
 - **[OWASP ZAP](https://www.zaproxy.org/)** — web app vulnerability scanning (DAST)
 - **[agentgateway](https://agentgateway.dev/)** — MCP/A2A gateway for AI agent connectivity
+- **[Observability](#observability-opentelemetry-prometheus-tempo-and-grafana)** — [OpenTelemetry](https://opentelemetry.io/) Collector + [Prometheus](https://prometheus.io/) + [Tempo](https://grafana.com/oss/tempo/) + [Grafana](https://grafana.com/oss/grafana/), receiving OTLP from `apps/backend`
 
 ### Endpoints
 
@@ -53,6 +54,10 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Locust | Web UI | http://localhost:8089 | `locust-master:8089` | |
 | agentgateway | MCP (Streamable HTTP) | http://localhost:8010/mcp | `agentgateway:3000/mcp` | `AGENTGATEWAY_PORT`; needs `apps:up` (fetches `apps/backend`'s live OpenAPI schema) |
 | agentgateway | Dashboard UI | http://localhost:15000 | `agentgateway:15000` | `AGENTGATEWAY_ADMIN_PORT`; redirects to `/ui` |
+| Observability | Grafana | http://localhost:3030 | `grafana:3000` | `GRAFANA_PORT`; anonymous Admin, no login; dashboard "Apps backend (OpenTelemetry)" is pre-provisioned |
+| Observability | Prometheus | http://localhost:9094 | `prometheus:9090` | `PROMETHEUS_PORT` |
+| Observability | Tempo (query API) | http://localhost:3200 | `tempo:3200` | `TEMPO_PORT` |
+| Observability | OTLP (HTTP / gRPC) | http://localhost:4318, localhost:4317 | `otel-collector:4318`, `otel-collector:4317` | `OTEL_HTTP_PORT` / `OTEL_GRPC_PORT`; what apps export to |
 
 ## 🏁 Getting Started
 
@@ -111,6 +116,13 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
    make agentgateway:up
    make agentgateway:tools
    make agentgateway:open
+
+   # Observability (OTel Collector + Prometheus + Tempo + Grafana)
+   # Set OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 in .env first,
+   # then apps:restart so apps/backend starts exporting.
+   make observability:up
+   make observability:verify
+   make observability:open
    ```
 
 ## 🧪 Sample Scenarios
@@ -192,6 +204,27 @@ Its admin port binds to loopback-only inside the container by default (`config.a
 
 agentgateway fetches `apps/backend`'s OpenAPI schema once, at its own startup - not lazily on first request. If `apps/backend` isn't actually accepting connections yet at that exact moment (e.g. it just restarted), agentgateway exits with `Error: fetch http://backend:8080/openapi.json ... Connection refused` instead of retrying - confirmed directly. `make agentgateway:restart` once `apps:up`'s backend is confirmed healthy resolves it.
 
+### Observability: OpenTelemetry, Prometheus, Tempo and Grafana
+
+`apps/backend` can export OpenTelemetry traces (FastAPI requests + SQLAlchemy queries) and HTTP server metrics over OTLP. It's **off by default** - `apps:up` behaves exactly as before unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. The `observability` module is the local place to send it: an OTel Collector receives OTLP, forwards traces to Tempo and exposes metrics for Prometheus, and Grafana ships with the data sources and one dashboard already provisioned.
+
+```bash
+# .env
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+
+make observability:up
+make apps:restart          # backend reads the endpoint at startup
+make locust:test           # or just click around the frontend
+make observability:verify  # each component ready + nb-backend metrics/traces arrived
+make observability:open    # Grafana -> NASEBANAL -> "Apps backend (OpenTelemetry)"
+```
+
+The dashboard shows request rate per path, 5xx ratio, p50/p95/p99 latency, active requests / DB connections in use, and recent traces (click through to the span waterfall, including each SQL query). `/health` is excluded from instrumentation, since Consul and healthchecks would otherwise dominate every panel.
+
+The instrumentation is standard OTel SDK code (`apps/backend/app/telemetry.py`) that honors the usual `OTEL_*` env vars, so pointing `OTEL_EXPORTER_OTLP_ENDPOINT` (plus `OTEL_EXPORTER_OTLP_HEADERS`) at another OTLP backend such as NewRelic - which the real NASEBANAL apps use - works without code changes. Only the Collector's config (`observability/otel-collector.yaml`) is specific to the local stack.
+
+Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't export to Destinations, and Cloudflare can't reach a `localhost` collector), and Kong/Consul/agentgateway/Kafka metrics (each has its own Prometheus/OTel integration that could be added to `observability/prometheus.yml` / their own config).
+
 ### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
 
 `make kafka:bridge-up` starts a small standalone consumer (`kafka/bridge/`) that reads events off the Kafka topic and forwards each one to a REST backend via `POST /accounts` — `apps/backend` by default, but `KAFKA_BRIDGE_TARGET_URL` can point anywhere, same as every other test tool's target host. It's deliberately separate from `kafka:up` (opt in explicitly) and lives in its own container rather than inside `apps/backend`, so a Kafka or backend outage only ever affects the bridge itself — it just retries forever, and only commits a Kafka offset after a successful delivery, so an outage pauses ingestion rather than losing events.
@@ -210,6 +243,13 @@ make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=600 LOCUST
 
 # The same load, produced onto the Kafka topic instead (needs kafka:bridge-up running)
 make locust:test LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=600 LOCUST_SPAWN_RATE=200 LOCUST_RUN_TIME=60s
+```
+
+Where the errors start (single laptop, same limits, `locustfile_http_overload.py`, 3 workers, `OTEL` export on): 100 users / spawn 20 → **0% failures** but median latency already ~220ms (p95 ~570ms); **300 users / spawn 100 → ~30% failures**, median at the 30s DB-pool timeout; 600 / 200 → ~79% (below). After a run that heavy the backend stays unresponsive for ~90s until the queued pool waits time out - wait before the next test. The same 300 / 100 through Kafka (`locustfile_kafka.py`) produced 1.66M events with **0% failures**, ~4ms median, while the backend's `/health` stayed at ~3ms. `make locust` prints these commands too; watch either run live in Grafana if `observability:up` (5xx ratio, p95 latency, DB connections used).
+
+```bash
+make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s   # errors
+make locust:test LOCUST_FILE=locustfile_kafka.py         LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s   # same load via Kafka, no errors
 ```
 
 Measured on a single laptop, against this repo's own default resource limits (SQLAlchemy's default connection pool, a single `uvicorn` worker in `--reload` mode): direct REST failed **79%** of `POST /accounts` requests (500s, connection resets, and up to 30s+ latency) under that load. The identical load produced onto Kafka instead completed **1,241,297 events at 0% failure**, ~24ms median produce latency, with the backend's own `/health` endpoint staying at ~2ms response time throughout — because `kafka-bridge` drains the topic at its own steady, sequential pace and never forwards a burst to the backend.
@@ -389,6 +429,18 @@ No target-host variable, unlike every module above - see [OWASP ZAP: scanning ap
 | `AGENTGATEWAY_PORT` | `8010` | Host-published MCP endpoint port - defaults away from agentgateway's own `3000` default, a common Node/React dev-server port already likely to be taken on the host |
 | `AGENTGATEWAY_ADMIN_PORT` | `15000` | Host-published dashboard UI / admin API port |
 
+### Observability
+
+| Variable | Default | Description |
+|---|---|---|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | *(empty = off)* | Where `apps/backend` exports OTLP. Set to `http://otel-collector:4318` for the local stack (needs `apps:restart`) |
+| `GRAFANA_PORT` | `3030` | Host-published Grafana port - defaults away from Grafana's own `3000`, a common Node/React dev-server port |
+| `PROMETHEUS_PORT` | `9094` | Host-published Prometheus port (`9090`/`9091` are taken by Microcks/Specmatic) |
+| `TEMPO_PORT` | `3200` | Host-published Tempo query API port |
+| `OTEL_GRPC_PORT` / `OTEL_HTTP_PORT` | `4317` / `4318` | Host-published OTLP ports |
+| `PROMETHEUS_RETENTION` | `7d` | How long Prometheus keeps metrics |
+| `OTEL_COLLECTOR_VERSION` / `PROMETHEUS_VERSION` / `TEMPO_VERSION` / `GRAFANA_VERSION` | see `.env.example` | Image tags |
+
 ### Test Results
 
 Every `make <module>:test` run leaves a browsable report behind. These are all gitignored - regenerated on every run, never checked in:
@@ -414,10 +466,10 @@ Every `make <module>:test` run leaves a browsable report behind. These are all g
 
 ### Persistent state / reset
 
-`apps`, `kong`, `kafka`, and `consul` each keep their data in a named
+`apps`, `kong`, `kafka`, `consul`, and `observability` each keep their data in a named
 Docker volume, so a plain `down`/`restart` preserves it. Each has its own
 `reset` command that wipes that volume and starts fresh (`make all:reset`
-runs all four, plus a plain restart for `microcks`/`locust`, which hold no
+runs all five, plus a plain restart for `microcks`/`locust`, which hold no
 persistent state to begin with):
 
 | Module | What persists | Docker volume | Reset command |
@@ -426,6 +478,7 @@ persistent state to begin with):
 | `kong` | Gateway services/routes (`KONG_DB=postgres` mode only) | `kong_kong-db-data` | `make kong:reset` |
 | `kafka` | Topics and their messages | `kafka_kafka-data` | `make kafka:reset` |
 | `consul` | Service catalog/registrations | `consul_consul-data`, `consul_consul-config` | `make consul:reset` |
+| `observability` | Prometheus metrics, Tempo traces, Grafana state | `observability_prometheus-data`, `observability_tempo-data`, `observability_grafana-data` | `make observability:reset` |
 
 These are Docker-managed volumes, not host directories — there's no
 `./data/...` folder in this repo to go look at. Inspect one with
