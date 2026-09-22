@@ -38,6 +38,7 @@ locust:
 	@echo "  make locust:up LOCUST_FILE=locustfile_http.py"
 	@echo "  make locust:up LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS=graphql-query"
 	@echo "  make locust:up LOCUST_FILE=locustfile_mysql.py   LOCUST_TAGS=mysql-select"
+	@echo "  make locust:up LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100  # direct-REST overload: ~30% of POST /accounts fail (use the same users/spawn rate for the Kafka run below)"
 	@echo "  make kafka:up && make kafka:bridge-up && make locust:up LOCUST_FILE=locustfile_kafka.py  # Kafka-buffered ingestion (see README 'Kafka bridge')"
 	@echo "  (to switch test types cleanly, run locust:restart, or locust:down then locust:up)"
 	@echo ""
@@ -86,6 +87,13 @@ locust-test: apps-network-ensure
 	@$(MAKE) locust-run LOCUST_HEADLESS_FLAG=--headless
 
 locust-run:
+	@# Fail fast on a wrong LOCUST_FILE: the master would otherwise start, log
+	@# "Could not find ..." and exit, while this target still printed "started".
+	@if [ ! -f "locust/bin/$${LOCUST_FILE:-locustfile_http.py}" ]; then \
+		echo "Error: LOCUST_FILE '$${LOCUST_FILE:-locustfile_http.py}' not found in locust/bin/"; \
+		echo "Available: $$(ls locust/bin/*.py | xargs -n1 basename | tr '\n' ' ')"; \
+		exit 1; \
+	fi
 	@echo "Starting Locust containers via Docker Compose..."
 	@echo "Using Locust file: $${LOCUST_FILE:-locustfile_http.py}"
 	@echo "Tags: $${LOCUST_TAGS:-none}"
@@ -142,6 +150,21 @@ locust-run:
 			nohup docker logs -f nb-locust-master > $$RESULT_LOGFILE 2>&1 & \
 			echo $$! > locust/.result_log_pid; \
 		fi
+	@# The compose "up -d" above returns as soon as containers are created, so a
+	@# master that crashes on startup (bad locustfile, import error, ...) would
+	@# otherwise still get a success message. A headless run that already
+	@# finished cleanly (exit 0) is fine; only a non-zero exit is a failure.
+	@sleep 2; \
+		STATE=$$(docker inspect -f '{{.State.Status}} {{.State.ExitCode}}' nb-locust-master 2>/dev/null); \
+		case "$$STATE" in \
+			"exited "[1-9]*|"dead "*|"restarting "*|"") \
+				echo ""; \
+				echo "Error: Locust master failed to start (state: $${STATE:-not found}). Last log lines:"; \
+				docker logs --tail 15 nb-locust-master 2>&1 | sed 's/^/  | /'; \
+				echo ""; \
+				echo "Check LOCUST_FILE ($${LOCUST_FILE:-locustfile_http.py}), LOCUST_TAGS and the locustfile itself, then re-run."; \
+				exit 1 ;; \
+		esac
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089"
 
 locust-down:

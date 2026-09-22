@@ -1,0 +1,38 @@
+# OTLP in, two pipelines out:
+#   traces  -> Tempo (OTLP/gRPC)
+#   metrics -> Prometheus exposition format on :8889, scraped by Prometheus
+#              (see prometheus.yml). Scrape rather than remote-write keeps
+#              Prometheus's own config the single place scrape targets live.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+
+exporters:
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    # Copy OTel resource attributes (service.name, ...) onto every series as
+    # labels, so dashboards can filter on service_name directly.
+    resource_to_telemetry_conversion:
+      enabled: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/tempo]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]

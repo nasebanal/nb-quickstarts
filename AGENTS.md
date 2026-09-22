@@ -46,6 +46,10 @@ Every module's ports are chosen so it can run at the same time as any other modu
 | consul | server RPC | 8300 |
 | microcks | UI / mock API | 9090 |
 | specmatic | stub (mock server, `specmatic:stub-up`) | 9091 |
+| observability | Grafana | 3030 |
+| observability | Prometheus | 9094 |
+| observability | Tempo query API | 3200 |
+| observability | OTLP gRPC / HTTP | 4317 / 4318 |
 
 pytest, vitest, playwright, and specmatic's own `specmatic:test` don't publish a port (they run once and don't leave anything listening), so they don't appear in this table - only `specmatic:stub-up` does, since that one's a long-running server.
 
@@ -74,7 +78,7 @@ This is a distinct problem from the one below - `-V` (`--renew-anon-volumes`) fo
 
 ## Persistent state and `reset` targets
 
-`apps`, `kong`, `kafka`, and `consul` each store their data in a named Docker volume, so a plain `down`/`restart` preserves it, and each has its own `reset` target that wipes that volume and starts clean: `apps:reset` (`apps_apps-db-data` — MySQL), `kong:reset` (`kong_kong-db-data` — Postgres, `KONG_DB=postgres` mode; re-imports `kong/conf/declarative.yml`), `kafka:reset` (`kafka_kafka-data` — topics/messages), `consul:reset` (`consul_consul-data` + `consul_consul-config` — the service catalog). `microcks` and `locust` hold no persistent state at all (nothing to reset beyond a plain restart). `make all:reset` runs all four resets plus a restart for the other two.
+`apps`, `kong`, `kafka`, `consul`, and `observability` each store their data in a named Docker volume, so a plain `down`/`restart` preserves it, and each has its own `reset` target that wipes that volume and starts clean: `apps:reset` (`apps_apps-db-data` — MySQL), `kong:reset` (`kong_kong-db-data` — Postgres, `KONG_DB=postgres` mode; re-imports `kong/conf/declarative.yml`), `kafka:reset` (`kafka_kafka-data` — topics/messages), `consul:reset` (`consul_consul-data` + `consul_consul-config` — the service catalog), `observability:reset` (`observability_prometheus-data` / `observability_tempo-data` / `observability_grafana-data` — metrics, traces, Grafana state). `microcks` and `locust` hold no persistent state at all (nothing to reset beyond a plain restart). `make all:reset` runs all five resets plus a restart for the other two.
 
 **Kafka's volume was silently dead until fixed here**: the `apache/kafka` image's actual default `log.dirs` is `/tmp/kraft-combined-logs`, not `/var/lib/kafka/data` — so the declared `kafka-data` volume (mounted at `/var/lib/kafka/data`) never received any of Kafka's real data, and every container recreation silently lost all topics regardless of `down`'s `--volumes` flag. Fixed by setting `KAFKA_LOG_DIRS: /var/lib/kafka/data` in `kafka/docker-compose.yml` so Kafka actually writes where the volume is mounted (verified: created a topic, `kafka:down` → `kafka:up`, topic still listed). Before trusting any other module's "does X persist" claim, verify it directly (create something, cycle `down`/`up`, check it's still there) rather than inferring it from the compose file's volume declaration alone — a declared volume doesn't guarantee anything actually writes to that path.
 
@@ -136,6 +140,7 @@ Current breakdown:
 | `zap:full-scan` | Active DAST scan of `apps/frontend` | Yes | Sends real attack payloads (SQLi, XSS, ...) - `apps` only, never an external host. |
 | `zap:api-scan` | Active, OpenAPI-driven DAST scan of `apps/backend` | Yes | Scans every route in `apps/backend/openapi.yaml`'s live schema, not just what a spider crawls. |
 | `agentgateway` | Long-running MCP/A2A gateway exposing `apps/backend` as MCP tools | Yes | Builds tools live from `openapi.yaml` (`schema.url`), independent of `apps/backend`'s own native `/mcp` mount - `make agentgateway:tools` verifies. |
+| `observability` | Long-running OTel Collector + Prometheus + Tempo + Grafana receiving OTLP from `apps/backend` | Yes | `apps/backend` exports only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (off by default, `apps/backend/app/telemetry.py`) - `make observability:verify` checks each component and that `nb-backend` metrics/traces arrived. Grafana on `3030` (not its `3000` default, a common host dev-server port); Prometheus on `9094` (`9090`/`9091` are microcks/specmatic). Exists as a local OTLP backend standing in for NewRelic, which the real NASEBANAL apps use. |
 
 ### Report files
 

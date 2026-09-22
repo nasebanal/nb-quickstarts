@@ -36,6 +36,12 @@ services:
       MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
       MYSQL_DATABASE: testdb
       PYTHONUNBUFFERED: 1
+      # OpenTelemetry export - empty (the default) leaves it off. Set
+      # OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 in .env to
+      # send traces/metrics to the observability module (needs
+      # observability:up, and apps:restart to pick it up).
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_SERVICE_NAME: nb-backend
     depends_on:
       - mysql-server
     networks:
