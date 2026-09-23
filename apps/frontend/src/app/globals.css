@@ -608,6 +608,10 @@ h1 {
   height: auto;
 }
 
+.nb-docs-diagram-zoomable {
+  cursor: zoom-in;
+}
+
 /* Terminal-style transcript of a real, captured command run (see
    TerminalOutput.tsx) - same window-chrome-dots idea as the landing page's
    TerminalIllustration, generalized to wrapping multi-line text. Always
@@ -681,13 +685,13 @@ h1 {
   cursor: zoom-in;
 }
 
-/* Click-to-enlarge (ZoomableImage.tsx) - same shape as nb-landing-page's
-   blog LightboxImage.tsx (a from-scratch implementation there too, no
-   library): a fixed, full-viewport, near-opaque backdrop with the image at
-   its own natural size, capped to the viewport. Above both .nb-header's
-   sticky z-index (1000) and .nb-modal-overlay's (1100) - a screenshot
-   inside /docs can be enlarged regardless of what else is stacked above
-   the page content. */
+/* Click-to-enlarge (ZoomableImage.tsx, MermaidDiagram.tsx) - same shape as
+   nb-landing-page's blog LightboxImage.tsx (a from-scratch implementation
+   there too, no library): a fixed, full-viewport, near-opaque backdrop
+   with the content at a size capped to the viewport. Above both
+   .nb-header's sticky z-index (1000) and .nb-modal-overlay's (1100) - a
+   screenshot or the architecture diagram can be enlarged regardless of
+   what else is stacked above the page content. */
 .nb-docs-lightbox {
   position: fixed;
   inset: 0;
@@ -700,6 +704,15 @@ h1 {
   cursor: zoom-out;
 }
 
+/* The one wrapper LightboxOverlay puts around whatever content it's given
+   (an <img>, a Mermaid <svg>) - stops the backdrop's own onClose-on-click
+   from firing when the content itself is clicked (see Lightbox.tsx), and
+   overrides the backdrop's zoom-out cursor back to a normal one over the
+   content itself. */
+.nb-docs-lightbox-content {
+  cursor: default;
+}
+
 .nb-docs-lightbox-image {
   max-width: 95vw;
   max-height: 95vh;
@@ -707,7 +720,24 @@ h1 {
   height: auto;
   object-fit: contain;
   border-radius: 6px;
-  cursor: default;
+}
+
+/* Unlike a screenshot (an opaque PNG - .nb-docs-lightbox-image needs
+   nothing extra), a Mermaid SVG's canvas is transparent outside its own
+   shapes - on the thumbnail that's fine, since .nb-docs-diagram already
+   gives it a --nb-surface background, but the lightbox's backdrop is
+   almost-black (.nb-docs-lightbox above), so without its own background
+   here the diagram would float with the backdrop showing through between
+   its nodes. Same background/radius as .nb-docs-diagram, so the enlarged
+   view reads as the same card, just bigger. */
+.nb-docs-lightbox-diagram {
+  background: var(--nb-surface);
+  padding: 24px;
+  border-radius: 12px;
+}
+
+.nb-docs-lightbox-diagram svg {
+  display: block;
 }
 
 .nb-docs-lightbox-close {
