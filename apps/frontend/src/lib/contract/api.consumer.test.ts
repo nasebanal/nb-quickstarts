@@ -24,10 +24,10 @@ import { describe, expect, it } from "vitest";
 import { createAccount, listAccounts, listBalances, login, UnauthorizedError } from "../api";
 
 describe("api client against the Specmatic contract stub", () => {
-  it("login returns a token and employeeCode", async () => {
+  it("login returns a token and username", async () => {
     const result = await login("E001");
     expect(typeof result.token).toBe("string");
-    expect(typeof result.employeeCode).toBe("string");
+    expect(typeof result.username).toBe("string");
   });
 
   it("listAccounts returns an array shaped like Account[]", async () => {

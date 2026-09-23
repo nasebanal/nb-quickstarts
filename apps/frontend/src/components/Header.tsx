@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "./AuthProvider";
 import { LanguageToggle } from "./LanguageToggle";
@@ -17,23 +18,37 @@ import { UserMenu } from "./UserMenu";
 export function Header() {
   const { t } = useLocale();
   const { token } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
+  const inDocs = pathname?.startsWith("/docs") ?? false;
 
   return (
     <header className="nb-header">
       {/* Inner content shares the page's 1200px container so the navbar
           lines up with the hero/how-it-works content below it. */}
       <div className="container nb-header-inner">
-        {/* Full reload of the current page (not a soft client nav, and not a
-            navigation to "/") — matches nb-landing-page's logo-reloads-the-
-            page behavior while staying on whatever route you're already on.
-            The session survives because AuthProvider persists the token to
-            sessionStorage (see AuthProvider.tsx). */}
+        {/* Everywhere else: a full reload of the current page (not a soft
+            client nav, and not a navigation to "/") — matches
+            nb-landing-page's logo-reloads-the-page behavior while staying on
+            whatever route you're already on. The session survives because
+            AuthProvider persists the token to sessionStorage (see
+            AuthProvider.tsx).
+            Inside /docs specifically: a soft nav back to /docs (the Overview
+            page) instead - the Docs link opens this whole section in its own
+            tab/window (see the header link below), so the logo there acts as
+            that tab's own "home", the same way it acts as the app's home
+            everywhere else. Reloading whatever scenario subpage you're deep
+            in wouldn't do that; only navigating back to /docs itself does. */}
         <button
           type="button"
           className="nb-header-brand nb-header-brand-button"
           onClick={() => {
-            window.location.reload();
+            if (inDocs) {
+              router.push("/docs");
+            } else {
+              window.location.reload();
+            }
           }}
         >
           <Image src="/logo.png" alt="NASEBANAL" width={36} height={36} priority />
@@ -50,6 +65,20 @@ export function Header() {
             data-testid="api-docs-link"
           >
             {t.hero.apiReferenceLabel}
+          </Link>
+          {/* Same treatment as API Reference above - opens in a separate
+              window/tab rather than navigating away, since /docs shares this
+              same Header/Footer chrome (AppChrome only opts /api-specs out of
+              it) and losing your place on whatever page you're on to read
+              docs would be an unwelcome navigation. */}
+          <Link
+            href="/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nb-header-nav-link"
+            data-testid="docs-link"
+          >
+            {t.hero.docsLabel}
           </Link>
           <LanguageToggle />
           <ThemeToggle />

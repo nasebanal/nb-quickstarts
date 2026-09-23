@@ -92,10 +92,22 @@ h1 {
   margin-bottom: 4px;
 }
 
+/* Sticky, not fixed: this is already the first element under <body> (see
+   AppChrome.tsx), so sticky "sticks" from the very first scroll pixel -
+   same always-visible-on-scroll result as nb-landing-page's fixed
+   ScrollAwareHeader (@nasebanal/shared-navigation, not depended on here -
+   see the "Branding" note in AGENTS.md), without also needing that
+   approach's padding-top compensation on whatever follows it, since a
+   sticky element never leaves the document's normal flow. */
 .nb-header {
   padding: 12px 0;
   background: var(--nb-header-bg);
   border-bottom: 1px solid var(--nb-border-soft);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .nb-header-inner {
@@ -350,6 +362,292 @@ h1 {
   line-height: 1.6;
   color: var(--nb-fg-muted);
   margin-bottom: 8px;
+}
+
+/* /docs — a two-column shell (sidebar + article) laid out directly inside
+   .container by docs/layout.tsx, not by AppChrome - every other route stays
+   a single column. */
+.nb-docs-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 40px 0 80px;
+}
+
+.nb-docs-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Sticky so the tree stays visible while a long scenario page scrolls -
+   88px clears the sticky-ish header (12px*2 padding + ~48px logo/controls
+   row + a little breathing room) so the sidebar's own top item isn't
+   flush against it. */
+.nb-docs-sidebar {
+  flex: 0 0 220px;
+  position: sticky;
+  top: 88px;
+}
+
+.nb-docs-sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nb-docs-nav-link {
+  display: block;
+  padding: 6px 10px;
+  margin-top: 2px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: var(--nb-fg-muted);
+  text-decoration: none;
+}
+
+.nb-docs-nav-link:hover {
+  background: var(--nb-border-soft);
+  color: var(--nb-fg);
+}
+
+/* Exact-pathname match (DocsSidebar.tsx), not prefix - each scenario is its
+   own leaf, not a sub-route of another one. */
+.nb-docs-nav-link[aria-current="page"] {
+  background: var(--nb-accent);
+  color: white;
+  font-weight: 600;
+}
+
+.nb-docs-nav-group {
+  margin-top: 18px;
+}
+
+.nb-docs-nav-group-label {
+  display: block;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--nb-fg-subtle);
+}
+
+/* The left border is what actually reads as "tree" here - a spine the six
+   scenario leaves hang off, indented under their own group label. */
+.nb-docs-nav-group ul {
+  margin: 2px 0 0 10px;
+  padding-left: 12px;
+  border-left: 2px solid var(--nb-border-soft);
+}
+
+.nb-docs-nav-group .nb-docs-nav-link {
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .nb-docs-layout {
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px 0 60px;
+  }
+
+  .nb-docs-sidebar {
+    position: static;
+    flex: none;
+    width: 100%;
+  }
+}
+
+/* A bit wider than .nb-content's default 720px (prose reads more
+   comfortably at this width once tables/code blocks enter the picture),
+   reusing .nb-content for the same card/surface/shadow treatment every
+   other panel already has rather than inventing a second one. Flush left
+   (not .nb-content's own auto-centered margin) so it sits right next to
+   the sidebar instead of floating centered in the remaining space. */
+.nb-docs-content {
+  max-width: 840px;
+  margin: 0;
+}
+
+.nb-docs-content h1 {
+  margin-bottom: 12px;
+}
+
+.nb-docs-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--nb-border-soft);
+}
+
+.nb-docs-section h2 {
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+  color: var(--nb-fg);
+}
+
+.nb-docs-section p {
+  margin: 0 0 12px;
+  line-height: 1.7;
+  color: var(--nb-fg-muted);
+}
+
+.nb-docs-section p:last-child {
+  margin-bottom: 0;
+}
+
+.nb-docs-section ul {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.7;
+  color: var(--nb-fg-muted);
+}
+
+.nb-docs-section li + li {
+  margin-top: 4px;
+}
+
+.nb-docs-code-block {
+  margin: 16px 0;
+}
+
+.nb-docs-section p.nb-docs-code-label {
+  margin: 0 0 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--nb-fg-subtle);
+}
+
+.nb-docs-content pre {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--nb-border-soft);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.nb-docs-content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--nb-fg);
+  /* pre-wrap, not plain pre: keeps a multi-line snippet's own line breaks
+     (blank lines included) but lets a long single-line command (several of
+     these run well past 80 columns with env vars inline) wrap onto a
+     second visual line instead of needing horizontal scroll to read the
+     rest of it - this is prose to read, not code meant to be measured by
+     column width. */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.nb-docs-section p.nb-docs-note {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--nb-accent);
+  border-radius: 0 6px 6px 0;
+  background: var(--nb-border-soft);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.nb-docs-section table {
+  margin-top: 8px;
+}
+
+/* Wraps the diagram in its own bordered panel, distinct from the plain
+   prose around it - passed to DocsArticle as `extra`, so it renders
+   between the description and the first section regardless of page. */
+.nb-docs-diagram {
+  margin: 24px 0 8px;
+  padding: 16px;
+  background: var(--nb-surface);
+  border: 1px solid var(--nb-border-soft);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+/* Deliberately NOT max-width: 100% here - mermaid's own SVG carries
+   width="100%" plus an inline max-width matching its intrinsic viewBox
+   (confirmed via the rendered element: viewBox ~2414x590, style max-width
+   2414px), so a CSS max-width:100% on top of that shrinks the whole
+   diagram down to the 776px content column - at ten-node width, that
+   made every label unreadably small. width: auto (a real stylesheet rule
+   beats an SVG presentation attribute) renders it at that intrinsic size
+   instead, legible at 100%, with .nb-docs-diagram's own overflow-x: auto
+   handling the horizontal scroll that needs on anything narrower. */
+.nb-docs-diagram svg {
+  display: block;
+  width: auto;
+  height: auto;
+}
+
+/* Terminal-style transcript of a real, captured command run (see
+   TerminalOutput.tsx) - same window-chrome-dots idea as the landing page's
+   TerminalIllustration, generalized to wrapping multi-line text. Always
+   dark, regardless of the site's own light/dark theme - a real terminal
+   doesn't switch palettes with the page around it. */
+.nb-docs-terminal {
+  margin: 16px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0b1220;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.nb-docs-terminal-chrome {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.nb-docs-terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.nb-docs-terminal-body {
+  margin: 0;
+  padding: 4px 16px 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* auto-fit + minmax: a single image spans the full width (one column is
+   all that fits), several lay out as a responsive grid that collapses to
+   one column itself once the viewport gets too narrow for a 320px cell -
+   no separate mobile breakpoint needed. */
+.nb-docs-figure-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  margin: 16px 0;
+}
+
+/* A real screenshot of a GUI this scenario produces (Kong Manager,
+   Grafana, a report file, ...) - a plain bordered frame, no card shadow of
+   its own (it already sits inside the .nb-docs-content card). */
+.nb-docs-figure {
+  margin: 0;
+}
+
+.nb-docs-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--nb-border-soft);
+  border-radius: 10px;
+}
+
+.nb-docs-figure figcaption {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  color: var(--nb-fg-subtle);
+  text-align: center;
 }
 
 /* Read-only debug info, not a setting - but deliberately styled as a
@@ -756,7 +1054,10 @@ h1 {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 100;
+  /* Above .nb-header's sticky z-index: 1000 (globals.css) - a modal must
+     always sit on top of the header, not slide under it near the top of
+     the viewport, which is exactly where both happen to overlap. */
+  z-index: 1100;
   padding: 20px;
 }
 

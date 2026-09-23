@@ -19,14 +19,14 @@ afterEach(() => {
 });
 
 describe("api client", () => {
-  it("login posts employeeCode and returns the token", async () => {
-    mockFetchOnce({ token: "abc123", employeeCode: "E001" });
+  it("login posts username and returns the token", async () => {
+    mockFetchOnce({ token: "abc123", username: "E001" });
     const result = await login("E001");
     expect(result.token).toBe("abc123");
 
     const [url, options] = vi.mocked(fetch).mock.calls[0];
     expect(url).toContain("/auth/login");
-    expect(JSON.parse((options as RequestInit).body as string)).toEqual({ employeeCode: "E001" });
+    expect(JSON.parse((options as RequestInit).body as string)).toEqual({ username: "E001" });
   });
 
   it("listAccounts returns the parsed account list", async () => {

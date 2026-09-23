@@ -10,6 +10,7 @@ export interface Dictionary {
     loginButton: string;
     endpointsTitle: string;
     apiReferenceLabel: string;
+    docsLabel: string;
   };
   howItWorks: {
     title: string;
@@ -55,6 +56,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       loginButton: "Login",
       endpointsTitle: "Endpoints once running",
       apiReferenceLabel: "API Reference",
+      docsLabel: "Docs",
     },
     howItWorks: {
       title: "How It Works",
@@ -121,6 +123,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       loginButton: "ログイン",
       endpointsTitle: "起動後のエンドポイント",
       apiReferenceLabel: "APIリファレンス",
+      docsLabel: "ドキュメント",
     },
     howItWorks: {
       title: "使い方",

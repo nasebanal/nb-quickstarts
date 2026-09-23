@@ -10,15 +10,15 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
   const { t } = useLocale();
   const { setAuth } = useAuth();
   const router = useRouter();
-  const [employeeCodeInput, setEmployeeCodeInput] = useState("");
+  const [usernameInput, setUsernameInput] = useState("");
   const [error, setError] = useState("");
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     try {
-      const result = await login(employeeCodeInput);
-      setAuth(result.token, result.employeeCode);
+      const result = await login(usernameInput);
+      setAuth(result.token, result.username);
       onClose();
       router.push("/accounts");
     } catch (err) {
@@ -40,13 +40,13 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
         </button>
         <h2>{t.hero.loginButton}</h2>
         <form data-testid="login-form" onSubmit={onSubmit}>
-          <label htmlFor="employee-code">{t.hero.usernameLabel}</label>
+          <label htmlFor="username">{t.hero.usernameLabel}</label>
           <input
-            id="employee-code"
-            name="employeeCode"
-            data-testid="employee-code-input"
-            value={employeeCodeInput}
-            onChange={(event) => setEmployeeCodeInput(event.target.value)}
+            id="username"
+            name="username"
+            data-testid="username-input"
+            value={usernameInput}
+            onChange={(event) => setUsernameInput(event.target.value)}
             required
             autoFocus
           />
