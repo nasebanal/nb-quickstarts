@@ -10,7 +10,7 @@ import { useLocale } from "./LocaleProvider";
 // see Header.tsx's own note on why.
 export function UserMenu() {
   const { t } = useLocale();
-  const { employeeCode, logout } = useAuth();
+  const { username, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +54,7 @@ export function UserMenu() {
         <div className="nb-nav-dropdown" data-testid="user-menu-dropdown">
           <div className="nb-nav-dropdown-header">
             <div className="nb-nav-dropdown-name" data-testid="user-menu-name">
-              {employeeCode}
+              {username}
             </div>
           </div>
           <div className="nb-nav-dropdown-footer">

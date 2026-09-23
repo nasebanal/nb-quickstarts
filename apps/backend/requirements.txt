@@ -4,6 +4,9 @@ pyyaml>=6.0
 sqlalchemy>=2.0
 pymysql>=1.1
 cryptography>=42.0
+# Keycloak JWT validation (app/auth.py) - only exercised when
+# KEYCLOAK_ISSUER is set; a bare opaque token never reaches PyJWKClient.
+pyjwt>=2.9
 strawberry-graphql[fastapi]>=0.240
 fastapi-mcp>=0.4.0
 # fastapi-mcp 0.4.0 calls mcp's Server(name, description) positionally;

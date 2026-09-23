@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 .DEFAULT_GOAL := default
-.PHONY: apps pytest vitest playwright specmatic microcks kong kafka locust consul zap agentgateway observability all default
+.PHONY: apps pytest vitest playwright specmatic microcks kong kafka locust consul keycloak vault zap agentgateway observability all default
 
 # Load environment variables from .env file if it exists
 -include .env
@@ -11,6 +11,8 @@ include apps/Makefile
 include kong/Makefile
 include kafka/Makefile
 include consul/Makefile
+include keycloak/Makefile
+include vault/Makefile
 include vitest/Makefile
 include pytest/Makefile
 include playwright/Makefile
@@ -27,13 +29,17 @@ include observability/Makefile
 # kong/consul/microcks resolve its containers by name over apps-network.
 # consul:up alone does NOT register apps-backend/mysql with it -
 # run `make consul:register-apps` separately, same as any other module.
+# keycloak:up/vault:up alone do NOT make apps/backend trust them either -
+# they need KEYCLOAK_ISSUER/VAULT_ADDR/VAULT_TOKEN set (or, for Vault,
+# `make vault:verify-apps` to recreate backend with them) - same
+# opt-in-integration shape as consul:register-apps.
 # locust:up (which all:up calls) always starts in UI mode and does NOT run
 # a load test on its own - use `make locust:test` separately (headless,
 # LOCUST_RUN_TIME-bounded) to actually generate load against apps.
 
 all:
 	@echo "🚀 All"
-	@echo "Start/stop/test every long-running module together: apps, kong, kafka, consul, microcks, locust, agentgateway, observability."
+	@echo "Start/stop/test every long-running module together: apps, kong, kafka, consul, keycloak, vault, microcks, locust, agentgateway, observability."
 	@echo ""
 	@echo "  all:up      - Start them all (apps first)"
 	@echo "  all:down    - Stop them all (apps last)"
@@ -50,6 +56,8 @@ all-up:
 	@$(MAKE) kong-up
 	@$(MAKE) kafka-up
 	@$(MAKE) consul-up
+	@$(MAKE) keycloak-up
+	@$(MAKE) vault-up
 	@$(MAKE) microcks-up
 	@$(MAKE) locust-up
 	@$(MAKE) agentgateway-up
@@ -60,6 +68,8 @@ all-down:
 	@$(MAKE) agentgateway-down
 	@$(MAKE) locust-down
 	@$(MAKE) microcks-down
+	@$(MAKE) vault-down
+	@$(MAKE) keycloak-down
 	@$(MAKE) consul-down
 	@$(MAKE) kafka-down
 	@$(MAKE) kong-down
@@ -81,6 +91,12 @@ all-status:
 	@echo ""
 	@echo "=== consul ==="
 	@$(MAKE) consul-status
+	@echo ""
+	@echo "=== keycloak ==="
+	@$(MAKE) keycloak-status
+	@echo ""
+	@echo "=== vault ==="
+	@$(MAKE) vault-status
 	@echo ""
 	@echo "=== microcks ==="
 	@$(MAKE) microcks-status
@@ -112,9 +128,10 @@ all-test: apps-up
 # apps/kong/kafka/consul each have a named Docker volume worth wiping
 # (apps_apps-db-data, kong_kong-db-data, kafka_kafka-data,
 # consul_consul-data + consul_consul-config - see AGENTS.md "Anonymous
-# volumes"/module bullets) and get their own `reset`. microcks/locust hold
-# no persistent state at all, so a plain `restart` already leaves them as
-# fresh as a "reset" would.
+# volumes"/module bullets) and get their own `reset`. microcks/locust/
+# keycloak/vault hold no persistent state at all (keycloak re-imports its
+# fixed realm file, vault's dev server is in-memory only), so a plain
+# `restart` already leaves them as fresh as a "reset" would.
 all-reset:
 	@$(MAKE) apps-reset
 	@$(MAKE) kong-reset
@@ -123,6 +140,8 @@ all-reset:
 	@$(MAKE) observability-reset
 	@$(MAKE) microcks-restart
 	@$(MAKE) locust-restart
+	@$(MAKE) keycloak-restart
+	@$(MAKE) vault-restart
 
 #################### DEFAULT HELP ###################
 default:
@@ -135,6 +154,8 @@ default:
 	@echo "  kong         Show Kong API Gateway commands"
 	@echo "  kafka        Show Kafka-related commands"
 	@echo "  consul       Show Consul-related commands"
+	@echo "  keycloak     Show Keycloak (OIDC identity provider) commands"
+	@echo "  vault        Show Vault (secret storage) commands"
 	@echo "  vitest       Show Vitest (apps/frontend unit tests) commands"
 	@echo "  pytest       Show Pytest (apps/backend unit tests) commands"
 	@echo "  playwright   Show Playwright (E2E) commands"

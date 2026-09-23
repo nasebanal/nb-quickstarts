@@ -88,10 +88,10 @@ export async function checkKafkaBridge(): Promise<boolean> {
   }
 }
 
-export function login(employeeCode: string): Promise<{ token: string; employeeCode: string }> {
+export function login(username: string): Promise<{ token: string; username: string }> {
   return request("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ employeeCode }),
+    body: JSON.stringify({ username }),
   });
 }
 

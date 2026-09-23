@@ -18,6 +18,8 @@ Supported OSS, one module per technology:
 - **[Kong](https://konghq.com/products/kong-gateway)** — API gateway
 - **[Kafka](https://kafka.apache.org/)** — event streaming
 - **[Consul](https://www.consul.io/)** — service registry/discovery
+- **[Keycloak](https://www.keycloak.org/)** — OIDC identity provider, issuing real JWTs the real backend validates
+- **[Vault](https://www.vaultproject.io/)** — secret storage, holding the real MySQL credential the real backend connects with
 - **[Vitest](https://vitest.dev/)** — `apps/frontend` unit tests
 - **[pytest](https://docs.pytest.org/)** — `apps/backend` unit tests
 - **[Playwright](https://playwright.dev/)** — E2E browser tests
@@ -36,6 +38,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 |---|---|---|---|---|
 | apps | Frontend | http://localhost:5173 | `frontend:5173` | Next.js |
 | apps | API docs (Scalar) | http://localhost:5173/api-specs | `frontend:5173/api-specs` | Reads the backend's live OpenAPI schema |
+| apps | Docs | http://localhost:5173/docs | `frontend:5173/docs` | Architecture, data model, auth/secrets, tooling - same Header/Footer as `/`, opens in a new tab from the header's "Docs" link |
 | apps | Backend REST | http://localhost:8080 | `backend:8080` | FastAPI |
 | apps | Backend GraphQL | http://localhost:8080/graphql | `backend:8080/graphql` | Strawberry |
 | apps | MCP server | http://localhost:8080/mcp | `backend:8080/mcp` | Streamable HTTP |
@@ -51,6 +54,9 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Microcks | UI / mock API | http://localhost:9090 | `microcks:8080` | `MICROCKS_PORT` maps to a *different* in-network port (`8080`) - see `microcks/docker-compose.yml` |
 | Consul | HTTP API / UI | http://localhost:8500 | `consul:8500` | `CONSUL_HTTP_PORT` |
 | Consul | DNS | localhost:8600 | `consul:8600` | `CONSUL_DNS_PORT` |
+| Keycloak | Admin console | http://localhost:8180/admin | `keycloak:8080/admin` | `KEYCLOAK_PORT`; realm `nasebanal`, admin/admin by default |
+| Keycloak | Token endpoint (realm `nasebanal`) | http://localhost:8180/realms/nasebanal/... | `keycloak:8080/realms/nasebanal/...` | Client `apps-demo`, user `keycloak-demo` / `nasebanal-demo` - see [Keycloak: real OIDC tokens against the real backend](#keycloak-real-oidc-tokens-against-the-real-backend) |
+| Vault | UI / API | http://localhost:8200 | `vault:8200` | `VAULT_PORT`; dev-mode root token `VAULT_ROOT_TOKEN` |
 | Locust | Web UI | http://localhost:8089 | `locust-master:8089` | |
 | agentgateway | MCP (Streamable HTTP) | http://localhost:8010/mcp | `agentgateway:3000/mcp` | `AGENTGATEWAY_PORT`; needs `apps:up` (fetches `apps/backend`'s live OpenAPI schema) |
 | agentgateway | Dashboard UI | http://localhost:15000 | `agentgateway:15000` | `AGENTGATEWAY_ADMIN_PORT`; redirects to `/ui` |
@@ -108,6 +114,18 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
    make consul:register-apps
    make consul:verify-apps
    make consul:open
+
+   # Keycloak (real OIDC tokens against the real backend - needs apps:up,
+   # plus KEYCLOAK_ISSUER set + apps:restart to make the backend trust it)
+   make keycloak:up
+   make keycloak:login
+   make keycloak:verify-apps
+   make keycloak:open
+
+   # Vault (real backend fetches its MySQL credential from here - needs apps:up)
+   make vault:up
+   make vault:verify-apps
+   make vault:open
 
    # OWASP ZAP (vulnerability scanning against apps - needs apps:up)
    make zap:baseline
@@ -179,6 +197,50 @@ Microcks can't mock `POST /accounts` - it needs a real bearer token, which an Op
 Verified this way, not just described: every request during a real `make playwright:test` run against a Kong-routed frontend showed up in Kong's own access log going to `/api/*`, and pointing `apps_backend` at each mock in turn returned exactly the example values from `openapi.yaml`, confirmed via `curl` and Microcks'/Specmatic's own request logs.
 
 There's only ever one `apps_backend` service to edit — no separate service per backend/mock to flip between. (An earlier attempt registered three services, one per target, meant to be toggled by an "enabled" flag - that doesn't work: Kong's `Route` object has no `enabled` field, only `Service` does, and disabling a `Service` behind an already-matched `Route` doesn't fail over to another route.) If Kong Manager's edit doesn't seem to stick, or you just want a clean slate regardless of what got changed live, `make kong:reset` reloads everything straight from `kong/conf/declarative.yml`, which defaults `apps_backend` back to the real backend.
+
+### Keycloak: real OIDC tokens against the real backend
+
+`apps/backend`'s `POST /accounts` is protected by `app/auth.py`'s `get_current_username` — until now, only satisfiable with a mock token from `POST /auth/login` (a random string, no real identity provider behind it). Keycloak replaces that with a real OIDC login, and `get_current_username` accepts *either* kind of token on the exact same route, not a separate demo endpoint:
+
+```bash
+make apps:up
+make keycloak:up
+# .env: KEYCLOAK_ISSUER=http://keycloak:8080/realms/nasebanal
+make apps:restart          # backend needs recreating to pick up KEYCLOAK_ISSUER
+make keycloak:verify-apps  # gets a real token, POSTs it to the real /accounts
+```
+
+`keycloak:verify-apps` gets a token for the realm's demo user (`keycloak-demo` / `nasebanal-demo`, client `apps-demo`, imported from `keycloak/realm/nasebanal-realm.json` on every `keycloak:up`) and sends it as a normal `Authorization: Bearer` header to `POST /accounts` — the same call the frontend's own login flow makes, just with a token from a real identity provider instead of the mock one. A `201` back means `apps/backend` validated the token's signature against Keycloak's live JWKS and let the request through.
+
+`make keycloak:login` alone just prints a token, useful for trying it by hand:
+
+```bash
+make keycloak:login
+curl -X POST http://localhost:8080/accounts \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"name": "Keycloak Demo", "quantity": 1}'
+```
+
+Until `KEYCLOAK_ISSUER` is set and `apps:restart` has run, `keycloak:verify-apps` gets a real token but the backend still 401s it — that's expected, and the target says so. Setting `KEYCLOAK_ISSUER` back to empty and restarting again returns to mock-token-only, with no other change in behavior.
+
+### Vault: the real backend fetches its real MySQL credential from here
+
+`app/config.py` builds `apps/backend`'s database connection string from `MYSQL_USER`/`MYSQL_PASSWORD` — normally plain env vars from `.env`. With Vault, the backend fetches that same credential from Vault's KV v2 store (`secret/apps/mysql`) at startup instead:
+
+```bash
+make apps:up
+make vault:up
+make vault:verify-apps
+```
+
+`vault:verify-apps` writes apps' current MySQL credential into Vault, recreates the real `backend` container with `VAULT_ADDR`/`VAULT_TOKEN` pointed at it (just for that one recreate — `.env` itself is untouched), and then proves the credential actually came from Vault two ways: a `[vault] loaded MySQL credentials from http://vault:8200/...` line in `docker logs nb-backend`, and a real `GET /accounts/balances` query against the connection opened with it — an actual MySQL round-trip, not just "the container started."
+
+```bash
+make vault:get-mysql-secret   # read the stored credential back directly
+make apps:restart             # returns to reading MYSQL_PASSWORD from .env - VAULT_ADDR/VAULT_TOKEN aren't set there
+```
+
+Vault's dev server is in-memory only — everything written to it is gone on `vault:down`/`vault:restart`, by design (see `AGENTS.md`).
 
 ### agentgateway: exposing apps/backend as MCP tools
 
@@ -374,6 +436,8 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 |---|---|---|
 | `NEXT_PUBLIC_API_BASE` | `http://localhost:8080` | Where `apps/frontend` calls the backend - direct, or `http://localhost:8000/api` to route through Kong instead (needs `kong:up` + `apps:restart`) |
 | `NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL` | `http://localhost:8090` | Where the frontend checks kafka-bridge's health - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
+| `KEYCLOAK_ISSUER` | *(empty = off)* | Where `apps/backend` validates Keycloak JWTs - see [Keycloak](#keycloak) |
+| `VAULT_ADDR` / `VAULT_TOKEN` | *(both empty = off)* | Where `apps/backend` fetches its MySQL credential - see [Vault](#vault) |
 
 ### Kong
 
@@ -399,6 +463,22 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 |---|---|---|
 | `CONSUL_HTTP_PORT` | `8500` | HTTP API / UI |
 | `CONSUL_DNS_PORT` | `8600` | DNS interface |
+
+### Keycloak
+
+| Variable | Default | Description |
+|---|---|---|
+| `KEYCLOAK_PORT` | `8180` | Host-published admin console / realm port |
+| `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` | `admin` / `admin` | Admin console login |
+| `KEYCLOAK_ISSUER` (an `apps` variable - see [Apps](#apps) below) | *(empty = off)* | Where `apps/backend` validates Keycloak JWTs - `http://keycloak:8080/realms/nasebanal` (in-network hostname:port, not `KEYCLOAK_PORT`) to turn it on, plus `apps:restart` |
+
+### Vault
+
+| Variable | Default | Description |
+|---|---|---|
+| `VAULT_PORT` | `8200` | Host-published UI / API port |
+| `VAULT_ROOT_TOKEN` | `nb-vault-root-token` | Dev-mode root token |
+| `VAULT_ADDR` / `VAULT_TOKEN` (`apps` variables - see [Apps](#apps) below) | *(both empty = off)* | Where `apps/backend` fetches its MySQL credential from - set by `make vault:verify-apps` for one recreate, not meant to be hand-edited in `.env` |
 
 ### Specmatic, Microcks & Playwright
 

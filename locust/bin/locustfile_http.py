@@ -16,5 +16,5 @@ class WebsiteUser(HttpUser):
     @tag('http-login')
     def test_login(self):
         self.client.post("/auth/login", json={
-            "employeeCode": "E001"
+            "username": "E001"
         })

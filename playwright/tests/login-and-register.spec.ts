@@ -10,7 +10,7 @@ test("login and register an account", async ({ page }) => {
   await page.getByTestId("login-open").click();
   await expect(page.getByTestId("login-modal")).toBeVisible();
 
-  await page.getByTestId("employee-code-input").fill("E001");
+  await page.getByTestId("username-input").fill("E001");
   await page.getByTestId("login-submit").click();
 
   // Successful login navigates to a real route, /accounts.
@@ -63,7 +63,7 @@ test("header login/logout link", async ({ page }) => {
   await page.getByTestId("header-login-link").click();
   await expect(page.getByTestId("login-modal")).toBeVisible();
 
-  await page.getByTestId("employee-code-input").fill("E002");
+  await page.getByTestId("username-input").fill("E002");
   await page.getByTestId("login-submit").click();
   await page.waitForURL("**/accounts");
 
@@ -81,7 +81,7 @@ test("header login/logout link", async ({ page }) => {
 test("logo click from /accounts reloads in place and keeps the session", async ({ page }) => {
   await page.goto("/");
   await page.getByTestId("login-open").click();
-  await page.getByTestId("employee-code-input").fill("E003");
+  await page.getByTestId("username-input").fill("E003");
   await page.getByTestId("login-submit").click();
   await page.waitForURL("**/accounts");
 

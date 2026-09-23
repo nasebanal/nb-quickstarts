@@ -1,0 +1,44 @@
+services:
+  keycloak:
+    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak}:${KEYCLOAK_VERSION:-26.0}
+    container_name: nb-keycloak
+    # --import-realm loads keycloak/realm/*.json on every start. No named
+    # volume is declared on purpose (see AGENTS.md "Persistent state and
+    # `reset` targets") - the realm file is the source of truth, not data
+    # accumulated in Keycloak's own embedded dev database, so every
+    # `keycloak:up` starts from the same known-good realm/client/user.
+    command: start-dev --import-realm
+    environment:
+      # KEYCLOAK_ADMIN/KEYCLOAK_ADMIN_PASSWORD still work but log a
+      # deprecation warning on every start - these are their replacements.
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    ports:
+      - "${KEYCLOAK_PORT:-8180}:8080"
+    volumes:
+      - ./realm:/opt/keycloak/data/import
+    networks:
+      - keycloak-net
+      # So apps/backend (see app/auth.py) can resolve `keycloak` by name to
+      # fetch this realm's JWKS, and so keycloak:login/verify-apps can issue
+      # tokens from *inside* this network - both against the exact same
+      # http://keycloak:8080 origin, avoiding a token `iss` mismatch against
+      # the host-published localhost:8180 origin (Keycloak's issuer claim
+      # reflects whichever Host header the token request actually used).
+      - apps-network
+    healthcheck:
+      # The Keycloak image doesn't ship curl - a plain TCP probe via bash's
+      # /dev/tcp (always available in the image) is enough to know the HTTP
+      # listener is up, matching this repo's other CLI-less healthchecks.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+networks:
+  keycloak-net:
+    name: keycloak-net
+  apps-network:
+    name: apps-network
+    external: true

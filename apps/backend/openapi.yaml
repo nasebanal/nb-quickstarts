@@ -62,9 +62,9 @@ paths:
               # request/response examples by matching key, not by content
               # (see AGENTS.md's Microcks section).
               e001_login:
-                summary: Log in as employee E001
+                summary: Log in as username E001
                 value:
-                  employeeCode: E001
+                  username: E001
       responses:
         "200":
           description: Successful Response
@@ -76,7 +76,7 @@ paths:
                 e001_login:
                   value:
                     token: example-token-abc123
-                    employeeCode: E001
+                    username: E001
         "422":
           description: Validation Error
           content:
@@ -302,22 +302,22 @@ components:
     LoginRequest:
       type: object
       title: LoginRequest
-      required: [employeeCode]
+      required: [username]
       properties:
-        employeeCode:
+        username:
           type: string
-          title: Employeecode
+          title: Username
     LoginResponse:
       type: object
       title: LoginResponse
-      required: [token, employeeCode]
+      required: [token, username]
       properties:
         token:
           type: string
           title: Token
-        employeeCode:
+        username:
           type: string
-          title: Employeecode
+          title: Username
     HTTPError:
       type: object
       title: HTTPError

@@ -4,13 +4,13 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 interface AuthContextValue {
   token: string | null;
-  employeeCode: string | null;
+  username: string | null;
   // True until the sessionStorage restore below has run once. Consumers
   // (e.g. the /accounts guard) must not redirect on a missing token while this
   // is true, or a plain page reload would bounce a logged-in viewer home
   // before the restore has a chance to run.
   initializing: boolean;
-  setAuth: (token: string, employeeCode: string) => void;
+  setAuth: (token: string, username: string) => void;
   logout: () => void;
 }
 
@@ -26,16 +26,16 @@ const STORAGE_KEY = "nb-quickstarts-auth";
 // mismatch would break hydration.
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
-  const [employeeCode, setEmployeeCode] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const restored = JSON.parse(raw) as { token: string; employeeCode: string };
+        const restored = JSON.parse(raw) as { token: string; username: string };
         setToken(restored.token);
-        setEmployeeCode(restored.employeeCode);
+        setUsername(restored.username);
       }
     } catch {
       // Private browsing / storage disabled — fall back to in-memory only.
@@ -43,11 +43,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setInitializing(false);
   }, []);
 
-  const setAuth = (nextToken: string, nextEmployeeCode: string) => {
+  const setAuth = (nextToken: string, nextUsername: string) => {
     setToken(nextToken);
-    setEmployeeCode(nextEmployeeCode);
+    setUsername(nextUsername);
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ token: nextToken, employeeCode: nextEmployeeCode }));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ token: nextToken, username: nextUsername }));
     } catch {
       // Ignore — the session just won't survive a reload.
     }
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setToken(null);
-    setEmployeeCode(null);
+    setUsername(null);
     try {
       sessionStorage.removeItem(STORAGE_KEY);
     } catch {
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, employeeCode, initializing, setAuth, logout }}>
+    <AuthContext.Provider value={{ token, username, initializing, setAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );
