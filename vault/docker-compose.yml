@@ -1,0 +1,39 @@
+services:
+  vault:
+    image: ${VAULT_IMAGE:-hashicorp/vault}:${VAULT_VERSION:-1.18}
+    container_name: nb-vault
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN:-nb-vault-root-token}
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    ports:
+      - "${VAULT_PORT:-8200}:8200"
+    networks:
+      - vault-net
+      # So apps/backend (see app/config.py) can resolve `vault` by name to
+      # fetch the real MySQL credential it connects with at startup.
+      - apps-network
+    healthcheck:
+      # Vault dev mode auto-unseals and mounts its KV v2 engine at secret/,
+      # so "sys/health" answering 200 (standbyok - there's no HA/standby to
+      # worry about here) is the whole readiness story.
+      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1:8200/v1/sys/health?standbyok=true"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+
+networks:
+  vault-net:
+    name: vault-net
+  apps-network:
+    name: apps-network
+    external: true
+
+# No named volume declared on purpose: Vault's dev server (-dev, the
+# implicit mode from VAULT_DEV_ROOT_TOKEN_ID) stores everything in-memory
+# and starts pre-unsealed with a fixed root token - restarting always means
+# starting empty, so there's nothing to persist (see AGENTS.md "Persistent
+# state and `reset` targets" - vault, like microcks/locust, has no reset
+# target beyond a plain restart).

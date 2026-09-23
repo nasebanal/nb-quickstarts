@@ -32,7 +32,7 @@ def test_create_account_requires_auth(client):
 
 
 def test_login_and_create_account(client):
-    login_response = client.post("/auth/login", json={"employeeCode": "E001"})
+    login_response = client.post("/auth/login", json={"username": "E001"})
     assert login_response.status_code == 200
     token = login_response.json()["token"]
 

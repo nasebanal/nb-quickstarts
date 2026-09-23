@@ -42,6 +42,20 @@ services:
       # observability:up, and apps:restart to pick it up).
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_SERVICE_NAME: nb-backend
+      # Keycloak JWT validation (app/auth.py) - empty (the default) leaves
+      # it off, only the mock /auth/login token is accepted. Set to
+      # http://keycloak:8080/realms/nasebanal in .env (needs `make
+      # keycloak:up` + `apps:restart`) to also accept real Keycloak tokens
+      # on the same protected routes - see `make keycloak:verify-apps`.
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
+      # Vault-sourced MySQL credential (app/config.py) - empty (the
+      # default) leaves it off, MYSQL_USER/MYSQL_PASSWORD above are used
+      # as-is. Set both (needs `make vault:up`) to have the real backend
+      # fetch secret/apps/mysql from Vault at startup instead - see `make
+      # vault:verify-apps`, which sets these for one recreate without
+      # touching .env.
+      VAULT_ADDR: ${VAULT_ADDR:-}
+      VAULT_TOKEN: ${VAULT_TOKEN:-}
     depends_on:
       - mysql-server
     networks:

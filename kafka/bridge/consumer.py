@@ -39,7 +39,7 @@ BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "kafka:29092")
 TOPIC = os.environ.get("KAFKA_TOPIC", "quickstart-events")
 GROUP_ID = os.environ.get("KAFKA_CONSUMER_GROUP", "nb-quickstarts-bridge")
 TARGET_URL = os.environ.get("KAFKA_BRIDGE_TARGET_URL", "http://backend:8080")
-EMPLOYEE_CODE = os.environ.get("KAFKA_BRIDGE_EMPLOYEE_CODE", "kafka-bridge")
+BRIDGE_USERNAME = os.environ.get("KAFKA_BRIDGE_USERNAME", "kafka-bridge")
 RETRY_SECONDS = float(os.environ.get("KAFKA_BRIDGE_RETRY_SECONDS", "3"))
 HEALTH_PORT = int(os.environ.get("KAFKA_BRIDGE_HEALTH_PORT", "8090"))
 
@@ -60,12 +60,12 @@ def _login() -> str:
     while True:
         try:
             response = requests.post(
-                f"{TARGET_URL}/auth/login", json={"employeeCode": EMPLOYEE_CODE}, timeout=5
+                f"{TARGET_URL}/auth/login", json={"username": BRIDGE_USERNAME}, timeout=5
             )
             response.raise_for_status()
             _token = response.json()["token"]
             _status["backend_reachable"] = True
-            log.info("Logged in to %s as %s", TARGET_URL, EMPLOYEE_CODE)
+            log.info("Logged in to %s as %s", TARGET_URL, BRIDGE_USERNAME)
             return _token
         except requests.RequestException as exc:
             _status["backend_reachable"] = False

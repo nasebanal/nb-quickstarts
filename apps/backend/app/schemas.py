@@ -41,12 +41,12 @@ class AccountBalance(CamelModel):
 
 
 class LoginRequest(CamelModel):
-    employee_code: str
+    username: str
 
 
 class LoginResponse(CamelModel):
     token: str
-    employee_code: str
+    username: str
 
 
 class HealthResponse(CamelModel):

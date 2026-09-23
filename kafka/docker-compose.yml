@@ -81,7 +81,7 @@ services:
       KAFKA_TOPIC: ${KAFKA_TOPIC_NAME:-quickstart-events}
       KAFKA_CONSUMER_GROUP: nb-quickstarts-bridge
       KAFKA_BRIDGE_TARGET_URL: ${KAFKA_BRIDGE_TARGET_URL:-http://backend:8080}
-      KAFKA_BRIDGE_EMPLOYEE_CODE: kafka-bridge
+      KAFKA_BRIDGE_USERNAME: kafka-bridge
       KAFKA_BRIDGE_HEALTH_PORT: 8090
     ports:
       # GET /health, so apps/frontend's browser JS can show "is kafka-bridge

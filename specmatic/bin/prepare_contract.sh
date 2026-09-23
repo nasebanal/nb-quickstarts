@@ -21,7 +21,7 @@ mkdir -p examples
 curl -sf http://backend:8080/openapi.json > openapi.json
 
 TOKEN=$(curl -sf -X POST http://backend:8080/auth/login \
-  -H "Content-Type: application/json" -d '{"employeeCode": "specmatic"}' | jq -r .token)
+  -H "Content-Type: application/json" -d '{"username": "specmatic"}' | jq -r .token)
 
 jq -n --arg token "$TOKEN" \
   '{"http-request": {"method": "POST", "path": "/accounts", "headers": {"Authorization": ("Bearer " + $token)}, "body": {"name": "Specmatic Test Account", "quantity": 1}}, "http-response": {"status": 201, "body": {"id": 1, "name": "Specmatic Test Account", "quantity": 1, "source": "api", "createdAt": "2024-01-01T00:00:00"}}}' \

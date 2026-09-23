@@ -21,7 +21,7 @@ class OverloadUser(HttpUser):
     host = os.getenv("HTTP_HOST", "http://localhost:8080")
 
     def on_start(self):
-        response = self.client.post("/auth/login", json={"employeeCode": "overload-test"})
+        response = self.client.post("/auth/login", json={"username": "overload-test"})
         self.token = response.json()["token"]
 
     @task

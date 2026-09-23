@@ -1,0 +1,36 @@
+{
+  "realm": "nasebanal",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "apps-demo",
+      "name": "nb-quickstarts apps demo client",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "keycloak-demo",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "keycloak-demo@example.com",
+      "firstName": "Keycloak",
+      "lastName": "Demo",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "nasebanal-demo",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

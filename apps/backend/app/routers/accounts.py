@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_employee_code
+from app.auth import get_current_username
 from app.db import get_db
 from app.schemas import AccountBalance, AccountCreate, AccountOut
 from app.services import account_service
@@ -42,7 +42,7 @@ def get_account(
 def create_account(
     payload: AccountCreate,
     db: Session = Depends(get_db),
-    employee_code: str = Depends(get_current_employee_code),
+    username: str = Depends(get_current_username),
 ) -> AccountOut:
     account = account_service.register_account(db, payload, source="api")
     return AccountOut.model_validate(account)
