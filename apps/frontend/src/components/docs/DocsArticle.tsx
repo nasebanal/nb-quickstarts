@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 import type { DocsPageContent } from "@/lib/docs/types";
 import { TerminalOutput } from "./TerminalOutput";
+import { ZoomableImage } from "./ZoomableImage";
 
-// Plain <img>, not next/image - these are locally captured docs
-// screenshots of varying, not-known-ahead-of-time aspect ratios (Kong
-// Manager, Grafana, agentgateway's dashboard), so a fixed width/height
-// (next/image's normal requirement) would mean hardcoding a different
-// number per screenshot for no real benefit - they're already reasonably
-// sized PNGs served from public/, not something that needs on-the-fly
-// resizing/format negotiation.
+// Plain <img> inside ZoomableImage, not next/image - these are locally
+// captured docs screenshots of varying, not-known-ahead-of-time aspect
+// ratios (Kong Manager, Grafana, agentgateway's dashboard), so a fixed
+// width/height (next/image's normal requirement) would mean hardcoding a
+// different number per screenshot for no real benefit - they're already
+// reasonably sized PNGs served from public/, not something that needs
+// on-the-fly resizing/format negotiation.
 
 // One renderer for every /docs page (Overview + Getting Started + all six
 // scenarios) - each page component only supplies its own DocsPageContent
@@ -67,8 +68,7 @@ export function DocsArticle({ content, extra }: { content: DocsPageContent; extr
             <div className="nb-docs-figure-grid">
               {section.images.map((image) => (
                 <figure key={image.src} className="nb-docs-figure">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={image.src} alt={image.alt} loading="lazy" />
+                  <ZoomableImage src={image.src} alt={image.alt} />
                   {image.caption && <figcaption>{image.caption}</figcaption>}
                 </figure>
               ))}

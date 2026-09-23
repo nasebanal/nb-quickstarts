@@ -11,6 +11,7 @@ export interface Dictionary {
     endpointsTitle: string;
     apiReferenceLabel: string;
     docsLabel: string;
+    opensInNewWindow: string;
   };
   howItWorks: {
     title: string;
@@ -57,6 +58,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       endpointsTitle: "Endpoints once running",
       apiReferenceLabel: "API Reference",
       docsLabel: "Docs",
+      opensInNewWindow: "opens in a new window",
     },
     howItWorks: {
       title: "How It Works",
@@ -124,6 +126,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       endpointsTitle: "起動後のエンドポイント",
       apiReferenceLabel: "APIリファレンス",
       docsLabel: "ドキュメント",
+      opensInNewWindow: "別ウィンドウで開きます",
     },
     howItWorks: {
       title: "使い方",

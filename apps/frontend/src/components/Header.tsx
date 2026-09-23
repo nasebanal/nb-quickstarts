@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "./AuthProvider";
+import { ExternalLinkIcon } from "./icons";
 import { LanguageToggle } from "./LanguageToggle";
 import { useLocale } from "./LocaleProvider";
 import { LoginModal } from "./LoginModal";
@@ -63,22 +64,30 @@ export function Header() {
             rel="noopener noreferrer"
             className="nb-header-nav-link"
             data-testid="api-docs-link"
+            title={t.hero.opensInNewWindow}
           >
             {t.hero.apiReferenceLabel}
+            <ExternalLinkIcon />
+            <span className="nb-sr-only"> ({t.hero.opensInNewWindow})</span>
           </Link>
           {/* Same treatment as API Reference above - opens in a separate
               window/tab rather than navigating away, since /docs shares this
               same Header/Footer chrome (AppChrome only opts /api-specs out of
               it) and losing your place on whatever page you're on to read
-              docs would be an unwelcome navigation. */}
+              docs would be an unwelcome navigation. The icon/title/sr-only
+              text (both here and above) make that explicit up front, rather
+              than only being obvious after clicking. */}
           <Link
             href="/docs"
             target="_blank"
             rel="noopener noreferrer"
             className="nb-header-nav-link"
             data-testid="docs-link"
+            title={t.hero.opensInNewWindow}
           >
             {t.hero.docsLabel}
+            <ExternalLinkIcon />
+            <span className="nb-sr-only"> ({t.hero.opensInNewWindow})</span>
           </Link>
           <LanguageToggle />
           <ThemeToggle />
