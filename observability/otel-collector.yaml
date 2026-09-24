@@ -1,8 +1,9 @@
-# OTLP in, two pipelines out:
+# OTLP in, three pipelines out:
 #   traces  -> Tempo (OTLP/gRPC)
 #   metrics -> Prometheus exposition format on :8889, scraped by Prometheus
 #              (see prometheus.yml). Scrape rather than remote-write keeps
 #              Prometheus's own config the single place scrape targets live.
+#   logs    -> Loki's native OTLP endpoint (/otlp).
 receivers:
   otlp:
     protocols:
@@ -19,6 +20,8 @@ exporters:
     endpoint: tempo:4317
     tls:
       insecure: true
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
   prometheus:
     endpoint: 0.0.0.0:8889
     # Copy OTel resource attributes (service.name, ...) onto every series as
@@ -36,3 +39,7 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/loki]

@@ -61,10 +61,11 @@ paths:
               # Named to match the response example below - Microcks pairs
               # request/response examples by matching key, not by content
               # (see AGENTS.md's Microcks section).
-              e001_login:
-                summary: Log in as username E001
+              demo_login:
+                summary: Log in as the seeded demo user
                 value:
-                  username: E001
+                  username: demo
+                  password: demo
       responses:
         "200":
           description: Successful Response
@@ -73,10 +74,87 @@ paths:
               schema:
                 $ref: "#/components/schemas/LoginResponse"
               examples:
-                e001_login:
+                demo_login:
                   value:
                     token: example-token-abc123
-                    username: E001
+                    username: demo
+        "401":
+          description: Unknown username or wrong password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
+              examples:
+                bad_credentials:
+                  value:
+                    detail: invalid username or password
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+  /me:
+    get:
+      tags: [me]
+      summary: Get Me
+      operationId: get_me_me_get
+      # Like POST /accounts: needs a bearer token, which an OpenAPI example
+      # can't carry - so no inline examples (Microcks can't mock it);
+      # specmatic:test covers it with externalized examples that send a real
+      # token (see specmatic/bin/prepare_contract.sh).
+      security:
+        - HTTPBearer: []
+      responses:
+        "200":
+          description: The current user's profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
+              examples:
+                unauthorized:
+                  value:
+                    detail: invalid or missing token
+  /me/profile:
+    put:
+      tags: [me]
+      summary: Update Profile
+      operationId: update_profile_me_profile_put
+      description: >-
+        Changes the display name and/or language; fields left out stay as
+        they are. The email is recorded but not editable here.
+      security:
+        - HTTPBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: The updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
+              examples:
+                unauthorized:
+                  value:
+                    detail: invalid or missing token
         "422":
           description: Validation Error
           content:
@@ -302,11 +380,56 @@ components:
     LoginRequest:
       type: object
       title: LoginRequest
-      required: [username]
+      required: [username, password]
       properties:
         username:
           type: string
           title: Username
+        password:
+          type: string
+          title: Password
+    Profile:
+      type: object
+      title: Profile
+      description: >-
+        The current user's profile (`GET /me`). `email` is recorded but not
+        editable here: for a Keycloak user it is mirrored from the token, for
+        a demo user it comes from the seed data.
+      required: [username, language, provider]
+      properties:
+        username:
+          type: string
+          title: Username
+        email:
+          type: string
+          nullable: true
+          title: Email
+        displayName:
+          type: string
+          nullable: true
+          title: Displayname
+        language:
+          type: string
+          enum: [ja, en]
+          title: Language
+        provider:
+          type: string
+          enum: [demo, keycloak]
+          title: Provider
+    ProfileUpdate:
+      type: object
+      title: ProfileUpdate
+      description: "`PUT /me/profile` - only what the user may change."
+      properties:
+        displayName:
+          type: string
+          nullable: true
+          maxLength: 64
+          title: Displayname
+        language:
+          type: string
+          enum: [ja, en]
+          title: Language
     LoginResponse:
       type: object
       title: LoginResponse

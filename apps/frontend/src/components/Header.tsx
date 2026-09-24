@@ -17,7 +17,7 @@ import { UserMenu } from "./UserMenu";
 // nb-dentiscope's navbar ("NASEBANAL" in --nb-logo-fg, "Demo" in the shared
 // .nb-nav-brand-demo lime) without depending on @nasebanal/shared-navigation.
 export function Header() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { token } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -89,6 +89,21 @@ export function Header() {
             <ExternalLinkIcon />
             <span className="nb-sr-only"> ({t.hero.opensInNewWindow})</span>
           </Link>
+          {/* nasebanal.com's own contact form (its landing page has one section per
+              language: /ja#contact, /en#contact) - an external link, so same
+              treatment as API Reference / Docs above: new tab, icon, sr-only note. */}
+          <a
+            href={`https://www.nasebanal.com/${locale}#contact`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nb-header-nav-link"
+            data-testid="contact-link"
+            title={t.hero.opensInNewWindow}
+          >
+            {t.hero.contactLabel}
+            <ExternalLinkIcon />
+            <span className="nb-sr-only"> ({t.hero.opensInNewWindow})</span>
+          </a>
           <LanguageToggle />
           <ThemeToggle />
           {token ? (

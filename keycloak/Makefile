@@ -29,14 +29,14 @@ keycloak:
 	@echo "  KEYCLOAK_PORT=8180"
 	@echo "  KEYCLOAK_ADMIN=admin"
 	@echo "  KEYCLOAK_ADMIN_PASSWORD=admin"
-	@echo "  KEYCLOAK_ISSUER=      (apps/backend's env var, empty = off - see .env.example)"
+	@echo "  KEYCLOAK_ISSUER=      (empty = off; http://localhost:8180/realms/nasebanal turns Keycloak on for the backend AND the login page - see .env.example)"
 	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  Admin console: http://localhost:$${KEYCLOAK_PORT:-8180}/admin (admin / admin by default)"
 	@echo "  Realm:         nasebanal (client apps-demo, user keycloak-demo / nasebanal-demo)"
 	@echo ""
 	@echo "Note: keycloak:verify-apps only succeeds once apps/backend actually trusts this realm -"
-	@echo "      set KEYCLOAK_ISSUER=http://keycloak:8080/realms/nasebanal in .env, then 'make apps:restart'."
+	@echo "      set KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal in .env, then 'make apps:restart'."
 
 keycloak\:%:
 	@$(MAKE) keycloak-$(subst keycloak:,,$@)
@@ -72,15 +72,13 @@ keycloak-open:
 	@bin/open_browser.sh http://localhost:$${KEYCLOAK_PORT:-8180}/admin
 
 #################### KEYCLOAK <-> APPS INTEGRATION ###################
-# Both commands request the token from *inside* apps-network (a throwaway
-# curlimages/curl container, same technique as consul-verify-apps) rather
-# than from the host at localhost:$KEYCLOAK_PORT. That's deliberate, not
-# just a convenience: Keycloak's issued `iss` claim reflects whatever Host
-# header the token request actually used, and apps/backend (also on
-# apps-network) validates tokens against KEYCLOAK_ISSUER's in-network
-# origin (http://keycloak:8080/realms/nasebanal) - issuing from the host
-# would mint tokens with a localhost:$KEYCLOAK_PORT issuer that the
-# backend would then correctly reject as untrusted.
+# Both commands request a token with the password grant (the realm's
+# apps-demo client allows it, alongside the browser's authorization-code
+# flow) from a throwaway container on apps-network, so `make` needs nothing
+# installed on the host. keycloak/docker-compose.yml pins every token's `iss`
+# to http://localhost:$KEYCLOAK_PORT (KC_HOSTNAME), so it doesn't matter
+# which address the request came in on - the backend's KEYCLOAK_ISSUER check
+# passes either way.
 
 keycloak-login:
 	@echo "Requesting a token for keycloak-demo from inside apps-network..."
@@ -117,5 +115,5 @@ keycloak-verify-apps:
 	else \
 		echo ""; \
 		echo "   Not accepted (expected on a fresh checkout). apps/backend only trusts this realm once"; \
-		echo "   KEYCLOAK_ISSUER=http://keycloak:8080/realms/nasebanal is set in .env and 'make apps:restart' has run."; \
+		echo "   KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal is set in .env and 'make apps:restart' has run."; \
 	fi

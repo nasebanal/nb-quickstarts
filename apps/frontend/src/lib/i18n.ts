@@ -7,17 +7,65 @@ export interface Dictionary {
     title: string;
     description: string;
     usernameLabel: string;
+    passwordLabel: string;
     loginButton: string;
     endpointsTitle: string;
     apiReferenceLabel: string;
     docsLabel: string;
+    contactLabel: string;
     opensInNewWindow: string;
+  };
+  login: {
+    modeMock: string;
+    modeKeycloak: string;
+    mockHint: string;
+    demoCredentialsHint: string;
+    keycloakDescription: string;
+    keycloakButton: string;
+    signupButton: string;
+    demoUserHint: string;
+    keycloakBadge: string;
+    callbackWorking: string;
+    callbackError: string;
+    backToHome: string;
+  };
+  profile: {
+    title: string;
+    menuLabel: string;
+    username: string;
+    email: string;
+    emailDescription: string;
+    displayName: string;
+    displayNamePlaceholder: string;
+    language: string;
+    languageJa: string;
+    languageEn: string;
+    signedInVia: string;
+    providerDemo: string;
+    providerKeycloak: string;
+    save: string;
+    updateSuccess: string;
+    updateFailed: string;
+    loading: string;
+  };
+  routing: {
+    servedBy: string;
+    resolvedBy: string;
+    direct: string;
+    consul: string;
+    fixedAddress: string;
+    consulSays: string;
+    noneHealthy: string;
+    consulUnreachable: string;
   };
   howItWorks: {
     title: string;
     steps: { title: string; description: string }[];
-    readmeNote: string;
-    readmeLinkLabel: string;
+    // One sentence in three parts, so the link can sit on the word "GitHub"
+    // itself in either language's word order.
+    sourceNote: string;
+    sourceLinkLabel: string;
+    sourceNoteAfter: string;
   };
   app: {
     conceptDescription: string;
@@ -54,11 +102,58 @@ export const dictionaries: Record<Locale, Dictionary> = {
         "Playwright, Specmatic, Microcks, Locust, ...). Log in to post transactions against " +
         "an accounting ledger.",
       usernameLabel: "Username",
+      passwordLabel: "Password",
       loginButton: "Login",
       endpointsTitle: "Endpoints once running",
       apiReferenceLabel: "API Reference",
       docsLabel: "Docs",
+      contactLabel: "Contact",
       opensInNewWindow: "opens in a new window",
+    },
+    login: {
+      modeMock: "Demo login",
+      modeKeycloak: "Keycloak",
+      mockHint: "The built-in demo login, checked against the users table in MySQL.",
+      demoCredentialsHint: "Demo user: demo / demo.",
+      keycloakDescription:
+        "You'll be sent to Keycloak to sign in - this app never sees your password - and sent back " +
+        "with a token the backend verifies against Keycloak's public keys.",
+      keycloakButton: "Log in with Keycloak",
+      signupButton: "Sign up",
+      demoUserHint: "Demo user: keycloak-demo / nasebanal-demo - or sign up for a new one.",
+      keycloakBadge: "Keycloak",
+      callbackWorking: "Completing login...",
+      callbackError: "Login failed",
+      backToHome: "Back",
+    },
+    profile: {
+      title: "Profile",
+      menuLabel: "Profile",
+      username: "Username",
+      email: "Email Address",
+      emailDescription: "Cannot be changed",
+      displayName: "Display Name",
+      displayNamePlaceholder: "Enter display name",
+      language: "Language",
+      languageJa: "日本語",
+      languageEn: "English",
+      signedInVia: "Signed in via",
+      providerDemo: "Demo login",
+      providerKeycloak: "Keycloak",
+      save: "Save",
+      updateSuccess: "Profile updated successfully",
+      updateFailed: "Failed to update profile",
+      loading: "Loading...",
+    },
+    routing: {
+      servedBy: "Served by",
+      resolvedBy: "Backend found via",
+      direct: "Fixed address",
+      consul: "Consul",
+      fixedAddress: "always",
+      consulSays: "healthy now",
+      noneHealthy: "none",
+      consulUnreachable: "Consul unreachable",
     },
     howItWorks: {
       title: "How It Works",
@@ -83,8 +178,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
             "anytime to start fresh.",
         },
       ],
-      readmeNote: "Full command reference, env vars, and per-module details:",
-      readmeLinkLabel: "README",
+      sourceNote: "The source code for this demo application and each module is published on",
+      sourceLinkLabel: "GitHub",
+      sourceNoteAfter: ".",
     },
     app: {
       conceptDescription:
@@ -104,7 +200,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       logoutButton: "Logout",
       userMenuLabel: "User menu",
       sessionExpiredError: "Your session has expired (the backend restarted since you logged in) — logging you out.",
-      apiBaseLabel: "Connected backend",
+      apiBaseLabel: "API endpoint",
       viaKongLabel: "Via Kong",
       kafkaBridgeLabel: "Kafka Bridge",
     },
@@ -122,11 +218,58 @@ export const dictionaries: Record<Locale, Dictionary> = {
         "nb-quickstartsがNASEBANAL Stack(vitest・pytest・Playwright・Specmatic・Microcks・Locustなど)を" +
         "検証するためのテスト対象です。ログインすると会計台帳に取引を記帳できます。",
       usernameLabel: "ユーザー名",
+      passwordLabel: "パスワード",
       loginButton: "ログイン",
       endpointsTitle: "起動後のエンドポイント",
       apiReferenceLabel: "APIリファレンス",
       docsLabel: "ドキュメント",
+      contactLabel: "お問い合わせ",
       opensInNewWindow: "別ウィンドウで開きます",
+    },
+    login: {
+      modeMock: "デモログイン",
+      modeKeycloak: "Keycloak",
+      mockHint: "組み込みのデモログインです。MySQLのusersテーブルと照合します。",
+      demoCredentialsHint: "デモユーザー: demo / demo",
+      keycloakDescription:
+        "Keycloakのログイン画面に移動してサインインします(このアプリがパスワードを目にすることはありません)。" +
+        "戻ってくると、backendがKeycloakの公開鍵で検証するトークンを持った状態になります。",
+      keycloakButton: "Keycloakでログイン",
+      signupButton: "サインアップ",
+      demoUserHint: "デモユーザー: keycloak-demo / nasebanal-demo — またはサインアップで新規作成できます。",
+      keycloakBadge: "Keycloak",
+      callbackWorking: "ログインを完了しています...",
+      callbackError: "ログインに失敗しました",
+      backToHome: "戻る",
+    },
+    profile: {
+      title: "プロフィール",
+      menuLabel: "プロフィール",
+      username: "ユーザー名",
+      email: "メールアドレス",
+      emailDescription: "変更できません",
+      displayName: "表示名",
+      displayNamePlaceholder: "表示名を入力",
+      language: "言語",
+      languageJa: "日本語",
+      languageEn: "English",
+      signedInVia: "ログイン方法",
+      providerDemo: "デモログイン",
+      providerKeycloak: "Keycloak",
+      save: "保存",
+      updateSuccess: "プロフィールを更新しました",
+      updateFailed: "プロフィールの更新に失敗しました",
+      loading: "読み込み中...",
+    },
+    routing: {
+      servedBy: "応答したインスタンス",
+      resolvedBy: "backendの見つけ方",
+      direct: "固定アドレス",
+      consul: "Consul",
+      fixedAddress: "常に",
+      consulSays: "今健全なもの",
+      noneHealthy: "なし",
+      consulUnreachable: "Consulに接続できません",
     },
     howItWorks: {
       title: "使い方",
@@ -150,8 +293,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
             "make apps:down — コンテナをきれいに停止・削除します。またapps:upすればいつでも再開できます。",
         },
       ],
-      readmeNote: "コマンド一覧・環境変数・各モジュールの詳細は:",
-      readmeLinkLabel: "README",
+      sourceNote: "このデモ用アプリケーションと各モジュールのソースコードは",
+      sourceLinkLabel: "GitHub",
+      sourceNoteAfter: "で公開されています。",
     },
     app: {
       conceptDescription:
@@ -170,7 +314,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       logoutButton: "ログアウト",
       userMenuLabel: "ユーザーメニュー",
       sessionExpiredError: "セッションの有効期限が切れました(ログイン後にbackendが再起動されました) — ログアウトします。",
-      apiBaseLabel: "接続先Backend",
+      apiBaseLabel: "呼び出し先API",
       viaKongLabel: "Kong経由",
       kafkaBridgeLabel: "Kafka Bridge",
     },

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { BackendRouting } from "@/components/BackendRouting";
 import { useLocale } from "@/components/LocaleProvider";
 import { API_BASE, checkKafkaBridge, checkViaKong, createAccount, UnauthorizedError } from "@/lib/api";
 import { useBalances } from "@/lib/useBalances";
@@ -119,6 +120,8 @@ export default function AccountsPage() {
             <input id="kafka-bridge-input" type="checkbox" checked={kafkaBridge ?? false} disabled readOnly />
           </span>
         </div>
+
+        <BackendRouting />
 
         <section>
           <div className="nb-section-heading-row">

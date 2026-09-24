@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import type { DocsPageContent } from "@/lib/docs/types";
+import { SequenceDiagram } from "./SequenceDiagram";
 import { TerminalOutput } from "./TerminalOutput";
+import { TimeSeriesChart } from "./TimeSeriesChart";
 import { ZoomableImage } from "./ZoomableImage";
 
 // Plain <img> inside ZoomableImage, not next/image - these are locally
@@ -10,6 +12,14 @@ import { ZoomableImage } from "./ZoomableImage";
 // different number per screenshot for no real benefit - they're already
 // reasonably sized PNGs served from public/, not something that needs
 // on-the-fly resizing/format negotiation.
+
+// `code` spans inside prose (a note's text, ...) become code chips, like the
+// blog's inline code. Plain text without backticks passes through untouched.
+function inlineCode(text: string): ReactNode {
+  return text.split(/(`[^`]+`)/g).map((part, i) =>
+    part.startsWith("`") && part.endsWith("`") && part.length > 2 ? <code key={i}>{part.slice(1, -1)}</code> : part,
+  );
+}
 
 // One renderer for every /docs page (Overview + Getting Started + all six
 // scenarios) - each page component only supplies its own DocsPageContent
@@ -63,7 +73,15 @@ export function DocsArticle({ content, extra }: { content: DocsPageContent; extr
               </tbody>
             </table>
           )}
+          {section.sequence && <SequenceDiagram sequence={section.sequence} />}
           {section.terminal && <TerminalOutput terminal={section.terminal} />}
+          {section.charts && section.charts.length > 0 && (
+            <div className="nb-docs-chart-grid">
+              {section.charts.map((chart) => (
+                <TimeSeriesChart key={chart.title} chart={chart} />
+              ))}
+            </div>
+          )}
           {section.images && section.images.length > 0 && (
             <div className="nb-docs-figure-grid">
               {section.images.map((image) => (
@@ -74,7 +92,22 @@ export function DocsArticle({ content, extra }: { content: DocsPageContent; extr
               ))}
             </div>
           )}
-          {section.note && <p className="nb-docs-note">{section.note}</p>}
+          {section.note && (
+            <aside className="nb-docs-note" data-testid="docs-note">
+              {section.noteTitle && (
+                <p className="nb-docs-note-title">
+                  {section.noteHref ? (
+                    <a href={section.noteHref} target="_blank" rel="noopener noreferrer">
+                      {section.noteTitle}
+                    </a>
+                  ) : (
+                    section.noteTitle
+                  )}
+                </p>
+              )}
+              <p>{inlineCode(section.note)}</p>
+            </aside>
+          )}
         </section>
       ))}
     </article>

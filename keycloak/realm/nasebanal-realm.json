@@ -2,7 +2,7 @@
   "realm": "nasebanal",
   "enabled": true,
   "sslRequired": "none",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
   "clients": [
     {
       "clientId": "apps-demo",
@@ -10,9 +10,19 @@
       "enabled": true,
       "publicClient": true,
       "protocol": "openid-connect",
-      "standardFlowEnabled": false,
+      "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": false
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      }
     }
   ],
   "users": [
@@ -32,5 +42,9 @@
         }
       ]
     }
-  ]
+  ],
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "accessTokenLifespan": 1800,
+  "ssoSessionIdleTimeout": 3600
 }

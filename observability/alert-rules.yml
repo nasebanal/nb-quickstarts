@@ -1,0 +1,42 @@
+# Alert rules evaluated by Prometheus; firing alerts go to Alertmanager
+# (see alertmanager.yml). They watch the same signals the Grafana dashboard
+# graphs - the point of scenario 4's overload run is that the direct-REST
+# step trips these and the Kafka step doesn't.
+#
+# `for: 30s` (three 10s scrapes) keeps a single noisy sample from firing.
+groups:
+  - name: apps-backend
+    rules:
+      - alert: BackendHighErrorRatio
+        expr: |
+          sum(rate(http_server_duration_milliseconds_count{service_name="nb-backend",http_status_code=~"5.."}[1m]))
+            / sum(rate(http_server_duration_milliseconds_count{service_name="nb-backend"}[1m])) > 0.05
+        for: 30s
+        labels:
+          severity: critical
+          service: nb-backend
+        annotations:
+          summary: "nb-backend: more than 5% of requests are failing with 5xx"
+          description: "5xx ratio is {{ $value | humanizePercentage }} over the last minute."
+
+      - alert: BackendHighLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(http_server_duration_milliseconds_bucket{service_name="nb-backend"}[1m]))) > 1000
+        for: 30s
+        labels:
+          severity: warning
+          service: nb-backend
+        annotations:
+          summary: "nb-backend: p95 latency is above 1s"
+          description: "p95 latency is {{ $value | humanizeDuration }} (value in ms: {{ $value }})."
+
+      - alert: BackendDbPoolSaturated
+        # SQLAlchemy's default pool is 5 connections + 10 overflow.
+        expr: sum(db_client_connections_usage{service_name="nb-backend",state="used"}) >= 15
+        for: 30s
+        labels:
+          severity: warning
+          service: nb-backend
+        annotations:
+          summary: "nb-backend: DB connection pool is exhausted"
+          description: "{{ $value }} connections in use - new requests queue until the 30s pool timeout."

@@ -1,17 +1,21 @@
 services:
   mysql-server:
-    image: mysql:${LOCUST_MYSQL_VERSION:-8.4.7}
+    image: mysql:${APPS_MYSQL_VERSION:-8.4.7}
     container_name: nb-mysql-server
     ports:
-      - "${LOCUST_MYSQL_PORT:-3306}:3306"
+      - "${APPS_MYSQL_PORT:-3306}:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: ${LOCUST_MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: testdb
-      MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
-      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
+      MYSQL_ROOT_PASSWORD: ${APPS_MYSQL_ROOT_PASSWORD:-rootpassword}
+      # The database and the application login the container creates on first
+      # start (an existing data volume keeps whatever it was created with - see
+      # `make apps:reset`). Locust's MySQL scenario and the Vault module use the
+      # same APPS_MYSQL_* values.
+      MYSQL_DATABASE: ${APPS_MYSQL_DATABASE:-demo}
+      MYSQL_USER: ${APPS_MYSQL_USER:-demo}
+      MYSQL_PASSWORD: ${APPS_MYSQL_PASSWORD:-demo}
     healthcheck:
       # TCP(127.0.0.1) で mysqld が接続を受け付けられるまでを ready とみなす
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${LOCUST_MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${APPS_MYSQL_ROOT_PASSWORD:-rootpassword}"]
       interval: 3s
       timeout: 5s
       retries: 30
@@ -20,6 +24,26 @@ services:
       - apps-network
     volumes:
       - apps-db-data:/var/lib/mysql
+
+  # A SQL client, already logged in to the database: open
+  # http://localhost:8081 and the tables (accounts, users) are right there.
+  # phpMyAdmin skips its login screen when PMA_USER/PMA_PASSWORD are set. It
+  # connects as root on purpose - so it can also show `mysql.user`, where the
+  # users Vault creates in the Vault scenario appear. Local demo only: a root
+  # login with no prompt is exactly what you would never expose anywhere else.
+  sql-client:
+    image: phpmyadmin:${PHPMYADMIN_VERSION:-5.2}
+    container_name: nb-sql-client
+    ports:
+      - "${SQL_CLIENT_PORT:-8081}:80"
+    environment:
+      PMA_HOST: mysql-server
+      PMA_USER: root
+      PMA_PASSWORD: ${APPS_MYSQL_ROOT_PASSWORD:-rootpassword}
+    depends_on:
+      - mysql-server
+    networks:
+      - apps-network
 
   backend:
     build: ./backend
@@ -32,9 +56,16 @@ services:
     environment:
       MYSQL_HOST: mysql-server
       MYSQL_PORT: 3306
-      MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
-      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
-      MYSQL_DATABASE: testdb
+      # The backend's own MySQL login. Defaults to the same credential the
+      # mysql-server container is created with (APPS_MYSQL_*), but has its own override
+      # (BACKEND_MYSQL_*) so the Vault scenario can take the password out of
+      # the backend's config entirely: `BACKEND_MYSQL_PASSWORD=` (set but
+      # empty - note `-`, not `:-`, so empty is kept rather than replaced
+      # by the default) leaves the backend unable to log in on its own, and
+      # only a credential issued by Vault gets it in.
+      MYSQL_USER: ${BACKEND_MYSQL_USER-${APPS_MYSQL_USER:-demo}}
+      MYSQL_PASSWORD: ${BACKEND_MYSQL_PASSWORD-${APPS_MYSQL_PASSWORD:-demo}}
+      MYSQL_DATABASE: ${APPS_MYSQL_DATABASE:-demo}
       PYTHONUNBUFFERED: 1
       # OpenTelemetry export - empty (the default) leaves it off. Set
       # OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 in .env to
@@ -42,12 +73,20 @@ services:
       # observability:up, and apps:restart to pick it up).
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_SERVICE_NAME: nb-backend
+      # Reported in every response's X-Served-By header - what tells the
+      # instances apart when the Consul module starts more of them.
+      INSTANCE_ID: backend-1
       # Keycloak JWT validation (app/auth.py) - empty (the default) leaves
       # it off, only the mock /auth/login token is accepted. Set to
-      # http://keycloak:8080/realms/nasebanal in .env (needs `make
+      # http://localhost:8180/realms/nasebanal in .env (needs `make
       # keycloak:up` + `apps:restart`) to also accept real Keycloak tokens
-      # on the same protected routes - see `make keycloak:verify-apps`.
+      # on the same protected routes - and the login page then offers a
+      # "Keycloak" login (the frontend below reads the same variable). See
+      # `make keycloak:verify-apps`. The issuer is the address the browser
+      # logs in at; the backend fetches the signing keys from the
+      # in-network address below instead.
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
+      KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-http://keycloak:8080/realms/nasebanal/protocol/openid-connect/certs}
       # Vault-sourced MySQL credential (app/config.py) - empty (the
       # default) leaves it off, MYSQL_USER/MYSQL_PASSWORD above are used
       # as-is. Set both (needs `make vault:up`) to have the real backend
@@ -88,6 +127,20 @@ services:
       # standalone container with its own host-published port, not
       # proxied through backend or Kong.
       NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL: ${NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL:-http://localhost:8090}
+      # Keycloak login (LoginModal.tsx): the same KEYCLOAK_ISSUER the backend
+      # validates against, and the browser talks to it directly - so it must
+      # be the host-published address (http://localhost:8180/realms/...).
+      # Empty (the default) hides the Keycloak option entirely.
+      # The frontend *server*'s way to the backend, used when the browser goes
+      # through it (NEXT_PUBLIC_API_BASE=/api/backend, see app/api/backend/): a
+      # fixed address, or ask Consul for the healthy instances - switchable at
+      # runtime from the accounts page. BACKEND_RESOLVER is the mode a fresh
+      # server starts in.
+      BACKEND_RESOLVER: ${BACKEND_RESOLVER:-direct}
+      BACKEND_DIRECT_URL: ${BACKEND_DIRECT_URL:-http://backend:8080}
+      CONSUL_HTTP_ADDR: ${CONSUL_HTTP_ADDR:-http://consul:8500}
+      NEXT_PUBLIC_KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
+      NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-apps-demo}
     depends_on:
       - backend
     networks:

@@ -17,9 +17,9 @@ Supported OSS, one module per technology:
 - **[apps](#apps)** — the test-target stack itself: [FastAPI](https://fastapi.tiangolo.com/) (REST + GraphQL via [Strawberry](https://strawberry.rocks/) + an [MCP](https://modelcontextprotocol.io/) server via [fastapi-mcp](https://github.com/tadata-org/fastapi_mcp)), [Next.js](https://nextjs.org/), [MySQL](https://www.mysql.com/)
 - **[Kong](https://konghq.com/products/kong-gateway)** — API gateway
 - **[Kafka](https://kafka.apache.org/)** — event streaming
-- **[Consul](https://www.consul.io/)** — service registry/discovery
-- **[Keycloak](https://www.keycloak.org/)** — OIDC identity provider, issuing real JWTs the real backend validates
-- **[Vault](https://www.vaultproject.io/)** — secret storage, holding the real MySQL credential the real backend connects with
+- **[Consul](https://www.consul.io/)** — service registry/discovery: three backend instances, health checks, and a client that finds the healthy ones
+- **[Keycloak](https://www.keycloak.org/)** — OIDC identity provider: a real login (with sign-up) on the login page, issuing JWTs the real backend validates
+- **[Vault](https://www.vaultproject.io/)** — issues the real backend a fresh, short-lived MySQL user on demand, so it has no database password of its own
 - **[Vitest](https://vitest.dev/)** — `apps/frontend` unit tests
 - **[pytest](https://docs.pytest.org/)** — `apps/backend` unit tests
 - **[Playwright](https://playwright.dev/)** — E2E browser tests
@@ -28,7 +28,7 @@ Supported OSS, one module per technology:
 - **[Locust](https://locust.io/)** — load testing
 - **[OWASP ZAP](https://www.zaproxy.org/)** — web app vulnerability scanning (DAST)
 - **[agentgateway](https://agentgateway.dev/)** — MCP/A2A gateway for AI agent connectivity
-- **[Observability](#observability-opentelemetry-prometheus-tempo-and-grafana)** — [OpenTelemetry](https://opentelemetry.io/) Collector + [Prometheus](https://prometheus.io/) + [Tempo](https://grafana.com/oss/tempo/) + [Grafana](https://grafana.com/oss/grafana/), receiving OTLP from `apps/backend`
+- **[Observability](#observability-opentelemetry-prometheus-tempo-and-grafana)** — [OpenTelemetry](https://opentelemetry.io/) Collector + [Prometheus](https://prometheus.io/) + [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) + [Tempo](https://grafana.com/oss/tempo/) + [Loki](https://grafana.com/oss/loki/) + [Grafana](https://grafana.com/oss/grafana/), receiving OTLP from `apps/backend`
 
 ### Endpoints
 
@@ -42,7 +42,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | apps | Backend REST | http://localhost:8080 | `backend:8080` | FastAPI |
 | apps | Backend GraphQL | http://localhost:8080/graphql | `backend:8080/graphql` | Strawberry |
 | apps | MCP server | http://localhost:8080/mcp | `backend:8080/mcp` | Streamable HTTP |
-| apps | MySQL | localhost:3306 | `mysql-server:3306` | database `testdb` |
+| apps | MySQL | localhost:3306 | `mysql-server:3306` | database `demo` |
 | Kong | Proxy | http://localhost:8000 | `kong:8000` | HTTPS: 8443 (host), `kong:8443` (in-network) |
 | Kong | Proxy `/api/*` | http://localhost:8000/api/accounts | `kong:8000/api/accounts` | -> `apps_backend` (real backend by default - see [Kong: routing...](#kong-routing-to-the-real-backend-or-to-a-contract-mock-instead)), needs `apps:up` |
 | Kong | Proxy `/mock`, `/echo/get` | http://localhost:8000/mock, http://localhost:8000/echo/get | `kong:8000/mock`, `kong:8000/echo/get` | httpbin-backed demo routes, no dependency on `apps` |
@@ -55,7 +55,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Consul | HTTP API / UI | http://localhost:8500 | `consul:8500` | `CONSUL_HTTP_PORT` |
 | Consul | DNS | localhost:8600 | `consul:8600` | `CONSUL_DNS_PORT` |
 | Keycloak | Admin console | http://localhost:8180/admin | `keycloak:8080/admin` | `KEYCLOAK_PORT`; realm `nasebanal`, admin/admin by default |
-| Keycloak | Token endpoint (realm `nasebanal`) | http://localhost:8180/realms/nasebanal/... | `keycloak:8080/realms/nasebanal/...` | Client `apps-demo`, user `keycloak-demo` / `nasebanal-demo` - see [Keycloak: real OIDC tokens against the real backend](#keycloak-real-oidc-tokens-against-the-real-backend) |
+| Keycloak | Token endpoint (realm `nasebanal`) | http://localhost:8180/realms/nasebanal/... | `keycloak:8080/realms/nasebanal/...` | Client `apps-demo`, user `keycloak-demo` / `nasebanal-demo` - see [Keycloak: a real login, and a real token the backend verifies](#keycloak-a-real-login-and-a-real-token-the-backend-verifies) |
 | Vault | UI / API | http://localhost:8200 | `vault:8200` | `VAULT_PORT`; dev-mode root token `VAULT_ROOT_TOKEN` |
 | Locust | Web UI | http://localhost:8089 | `locust-master:8089` | |
 | agentgateway | MCP (Streamable HTTP) | http://localhost:8010/mcp | `agentgateway:3000/mcp` | `AGENTGATEWAY_PORT`; needs `apps:up` (fetches `apps/backend`'s live OpenAPI schema) |
@@ -111,19 +111,22 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 
    # Consul (register apps' backend/mysql - needs apps:up)
    make consul:up
-   make consul:register-apps
+   make consul:register-apps   # every running backend instance + MySQL, each with a health check
    make consul:verify-apps
+   # several backends: APPS_BACKEND_INSTANCES=3 make apps:up, then register again
+   make consul:lb-demo         # a client that finds the healthy ones through Consul
    make consul:open
 
-   # Keycloak (real OIDC tokens against the real backend - needs apps:up,
-   # plus KEYCLOAK_ISSUER set + apps:restart to make the backend trust it)
+   # Keycloak (a real login with sign-up, and JWTs the real backend verifies -
+   # needs apps:up, plus KEYCLOAK_ISSUER set + apps:restart to turn it on)
    make keycloak:up
    make keycloak:login
    make keycloak:verify-apps
    make keycloak:open
 
-   # Vault (real backend fetches its MySQL credential from here - needs apps:up)
+   # Vault (issues the real backend a fresh MySQL user - needs apps:up)
    make vault:up
+   make vault:setup-mysql
    make vault:verify-apps
    make vault:open
 
@@ -146,6 +149,18 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 ## 🧪 Sample Scenarios
 
 Hands-on, scenario-based walkthroughs for each tool - what to run, in what order, and what you should see happen. For quick flag/env-var reference instead, see [Configuration](#configuration) below.
+
+### Login, profile and the database
+
+The login takes a username and password, checked against the `users` table in MySQL: one user is seeded (`apps/backend/app/seed.py`): `demo`, password `demo`, `demo@nasebanal.com`. After logging in, the header's user menu leads to a **Profile** page — the email is shown (recorded, not editable), the display name and language can be changed and are saved with `PUT /me/profile`. The database is easy to look at:
+
+```bash
+make apps:sql                                   # phpMyAdmin at http://localhost:8081, already logged in to demo
+make apps:mysql                                 # a mysql shell
+make apps:mysql SQL="SELECT username, email, display_name, language, provider FROM users"
+```
+
+The docs' Overview page has an ER diagram of the two tables (`accounts`, `users`).
 
 ### Specmatic: contract testing (Provider and Consumer)
 
@@ -198,49 +213,38 @@ Verified this way, not just described: every request during a real `make playwri
 
 There's only ever one `apps_backend` service to edit — no separate service per backend/mock to flip between. (An earlier attempt registered three services, one per target, meant to be toggled by an "enabled" flag - that doesn't work: Kong's `Route` object has no `enabled` field, only `Service` does, and disabling a `Service` behind an already-matched `Route` doesn't fail over to another route.) If Kong Manager's edit doesn't seem to stick, or you just want a clean slate regardless of what got changed live, `make kong:reset` reloads everything straight from `kong/conf/declarative.yml`, which defaults `apps_backend` back to the real backend.
 
-### Keycloak: real OIDC tokens against the real backend
+### Keycloak: a real login, and a real token the backend verifies
 
-`apps/backend`'s `POST /accounts` is protected by `app/auth.py`'s `get_current_username` — until now, only satisfiable with a mock token from `POST /auth/login` (a random string, no real identity provider behind it). Keycloak replaces that with a real OIDC login, and `get_current_username` accepts *either* kind of token on the exact same route, not a separate demo endpoint:
+`apps/backend`'s `POST /accounts` is protected by `app/auth.py`'s `get_current_username` — until now, only satisfiable with a mock token from `POST /auth/login` (a username, no password). Keycloak adds a real OIDC login: the login page gets a **Demo login / Keycloak** toggle (with **Sign up**), you authenticate at Keycloak like you would with "Sign in with Google", and the backend accepts the JWT Keycloak issued on the exact same route. One variable turns on both the backend and the login page:
 
 ```bash
 make apps:up
 make keycloak:up
-# .env: KEYCLOAK_ISSUER=http://keycloak:8080/realms/nasebanal
-make apps:restart          # backend needs recreating to pick up KEYCLOAK_ISSUER
-make keycloak:verify-apps  # gets a real token, POSTs it to the real /accounts
+# .env: KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal
+make apps:restart          # backend and frontend need recreating to pick it up
 ```
 
-`keycloak:verify-apps` gets a token for the realm's demo user (`keycloak-demo` / `nasebanal-demo`, client `apps-demo`, imported from `keycloak/realm/nasebanal-realm.json` on every `keycloak:up`) and sends it as a normal `Authorization: Bearer` header to `POST /accounts` — the same call the frontend's own login flow makes, just with a token from a real identity provider instead of the mock one. A `201` back means `apps/backend` validated the token's signature against Keycloak's live JWKS and let the request through.
+Then open http://localhost:5173, click Login, pick **Keycloak**, and sign in as `keycloak-demo` / `nasebanal-demo` (or **Sign up** for a new user — the form is Keycloak's own; `make keycloak:open` shows the user in the admin console). The user menu shows a Keycloak badge, and recording a transaction succeeds because the backend verified the token's signature against Keycloak's public keys.
 
-`make keycloak:login` alone just prints a token, useful for trying it by hand:
+Without a browser: `make keycloak:verify-apps` gets a token for the demo user (password grant) and sends it as `Authorization: Bearer` to `POST /accounts`; `make keycloak:login` just prints one, for trying by hand with curl. A token without a valid signature, or no token at all, gets a `401`. `KEYCLOAK_ISSUER` is the address the *browser* logs in at (and the `iss` every token carries); the backend fetches the signing keys from `KEYCLOAK_JWKS_URL` (default `http://keycloak:8080/...`, the in-network address). Setting `KEYCLOAK_ISSUER` back to empty and restarting returns to mock-token-only.
 
-```bash
-make keycloak:login
-curl -X POST http://localhost:8080/accounts \
-  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-  -d '{"name": "Keycloak Demo", "quantity": 1}'
-```
+### Vault: the backend has no MySQL password - Vault creates a user for it
 
-Until `KEYCLOAK_ISSUER` is set and `apps:restart` has run, `keycloak:verify-apps` gets a real token but the backend still 401s it — that's expected, and the target says so. Setting `KEYCLOAK_ISSUER` back to empty and restarting again returns to mock-token-only, with no other change in behavior.
-
-### Vault: the real backend fetches its real MySQL credential from here
-
-`app/config.py` builds `apps/backend`'s database connection string from `MYSQL_USER`/`MYSQL_PASSWORD` — normally plain env vars from `.env`. With Vault, the backend fetches that same credential from Vault's KV v2 store (`secret/apps/mysql`) at startup instead:
+The backend normally logs in to MySQL with `APPS_MYSQL_PASSWORD` from `.env` (default `demo`). With Vault it doesn't have one at all: it asks Vault's **database secrets engine** for a credential at startup, and Vault creates a brand-new, short-lived MySQL user (`v-token-apps-backe-...`, random password, limited to `demo`) with a lease — and drops it again when the lease ends.
 
 ```bash
 make apps:up
 make vault:up
-make vault:verify-apps
+make vault:setup-mysql        # enable the engine + the apps-backend role (idempotent)
+make vault:prove-needs-vault  # backend with NO password and NO Vault: "Access denied ... (using password: NO)"
+make vault:verify-apps        # NO password but WITH Vault: logs in on a Vault-issued user
+make vault:db-users           # the v-token-... users in MySQL itself
+make vault:leases             # Vault's live leases for them
 ```
 
-`vault:verify-apps` writes apps' current MySQL credential into Vault, recreates the real `backend` container with `VAULT_ADDR`/`VAULT_TOKEN` pointed at it (just for that one recreate — `.env` itself is untouched), and then proves the credential actually came from Vault two ways: a `[vault] loaded MySQL credentials from http://vault:8200/...` line in `docker logs nb-backend`, and a real `GET /accounts/balances` query against the connection opened with it — an actual MySQL round-trip, not just "the container started."
+Both prove targets recreate the backend once with `BACKEND_MYSQL_PASSWORD` set but empty (and, for the second, `VAULT_ADDR`/`VAULT_TOKEN`) — `.env` is untouched. To do it by hand instead, set `BACKEND_MYSQL_PASSWORD=` (empty) in `.env` and `apps:restart` to watch the backend fail, then add `VAULT_ADDR=http://vault:8200` and `VAULT_TOKEN=nb-vault-root-token` and `apps:restart` again; each backend start gets a different Vault-issued user. `make apps:restart` after removing those lines returns to the normal configuration. The older static path still works as a fallback (`make vault:put-mysql-secret` writes a fixed credential to `secret/apps/mysql`).
 
-```bash
-make vault:get-mysql-secret   # read the stored credential back directly
-make apps:restart             # returns to reading MYSQL_PASSWORD from .env - VAULT_ADDR/VAULT_TOKEN aren't set there
-```
-
-Vault's dev server is in-memory only — everything written to it is gone on `vault:down`/`vault:restart`, by design (see `AGENTS.md`).
+Vault's dev server is in-memory only — everything written to it is gone on `vault:down`/`vault:restart`, by design (see `AGENTS.md`); users it already created stay in MySQL until `make apps:reset`.
 
 ### agentgateway: exposing apps/backend as MCP tools
 
@@ -268,7 +272,7 @@ agentgateway fetches `apps/backend`'s OpenAPI schema once, at its own startup - 
 
 ### Observability: OpenTelemetry, Prometheus, Tempo and Grafana
 
-`apps/backend` can export OpenTelemetry traces (FastAPI requests + SQLAlchemy queries) and HTTP server metrics over OTLP. It's **off by default** - `apps:up` behaves exactly as before unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. The `observability` module is the local place to send it: an OTel Collector receives OTLP, forwards traces to Tempo and exposes metrics for Prometheus, and Grafana ships with the data sources and one dashboard already provisioned.
+`apps/backend` can export OpenTelemetry traces (FastAPI requests + SQLAlchemy queries), HTTP server metrics and application logs over OTLP. It's **off by default** - `apps:up` behaves exactly as before unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. The `observability` module is the local place to send it: an OTel Collector receives OTLP, forwards traces to Tempo and logs to Loki and exposes metrics for Prometheus, and Grafana ships with the data sources and one dashboard already provisioned. Prometheus also evaluates alert rules (`observability/alert-rules.yml`) and sends firing alerts to Alertmanager, which routes them to a webhook sink that stands in for Slack/email - `make observability:alerts` shows the result.
 
 ```bash
 # .env
@@ -286,6 +290,25 @@ The dashboard shows request rate per path, 5xx ratio, p50/p95/p99 latency, activ
 The instrumentation is standard OTel SDK code (`apps/backend/app/telemetry.py`) that honors the usual `OTEL_*` env vars, so pointing `OTEL_EXPORTER_OTLP_ENDPOINT` (plus `OTEL_EXPORTER_OTLP_HEADERS`) at another OTLP backend such as NewRelic - which the real NASEBANAL apps use - works without code changes. Only the Collector's config (`observability/otel-collector.yaml`) is specific to the local stack.
 
 Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't export to Destinations, and Cloudflare can't reach a `localhost` collector), and Kong/Consul/agentgateway/Kafka metrics (each has its own Prometheus/OTel integration that could be added to `observability/prometheus.yml` / their own config).
+
+### Consul: several backends, health checks, and a client that finds them
+
+With one backend, a name in a config file (`backend:8080`) is enough. With several it isn't: who lists them, who notices one died, who spreads the calls? How many backends run is an **apps** setting, `APPS_BACKEND_INSTANCES` (default 1; `.env` or the command line): apps' own `backend` is instance 1 and `backend-2`, `backend-3`, ... come from a compose file that `apps/bin/compose.sh` generates (`apps/.backends.generated.yml`) by extending apps' own service. `consul:register-apps` registers whatever is running under one service name, `apps-backend`, each with its own 2s health check (and deregisters instances that no longer run). Consul's agent runs the checks; a client asks Consul who is healthy.
+
+```bash
+make consul:up
+APPS_BACKEND_INSTANCES=3 make apps:up
+make consul:register-apps
+make consul:instances     # what Consul sees, and each one's health
+make consul:lb-demo       # a client: per request, ask Consul for the healthy ones, call one in turn
+docker stop nb-backend-2  # ...and watch it drop out of the client's list within ~2s, no request failing
+docker start nb-backend-2 # ...and come back by itself
+APPS_BACKEND_INSTANCES=1 make apps:up && make consul:deregister-apps   # back to one
+```
+
+`consul/bin/lb_demo.py` holds no backend address at all - only "ask Consul for `apps-backend`" - and reports who really answered from the `X-Served-By` header every backend response carries (`INSTANCE_ID`). For several instances to coexist, the mock login's token is signed and self-contained (an HMAC over the username, secret shared by every instance - `TOKEN_SECRET`, with a demo default), so any instance can verify a token another one issued.
+
+**The frontend can use Consul too**, through its own server: with `NEXT_PUBLIC_API_BASE=/api/backend` the browser calls the Next.js route handler `app/api/backend`, which forwards to the backend it resolves either from a **fixed address** (`BACKEND_DIRECT_URL`, default `http://backend:8080`) or from **Consul** (`CONSUL_HTTP_ADDR`, healthy `apps-backend` instances in turn, the next one if one does not answer). The mode is switched at runtime on the accounts page (or `PUT /api/resolver` with `{"mode": "direct"|"consul"}`; `BACKEND_RESOLVER` sets the starting mode), and the page shows which instance answered. Responses carry `x-resolved-via` and `x-upstream`. `make locust:test LOCUST_FILE=locustfile_http_overload_consul.py` spreads the overload scenario over every healthy instance. Not done: balancing MySQL, or a gateway (Kong) resolving its upstream through Consul.
 
 ### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
 
@@ -434,10 +457,13 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 
 | Variable | Default | Description |
 |---|---|---|
+| `APPS_MYSQL_USER` / `APPS_MYSQL_PASSWORD` | `demo` / `demo` | The application's MySQL login. Used by `apps/backend`, the SQL client, the Vault module and Locust's MySQL scenario. Created when the data volume is first initialised - changing them later needs `make apps:reset`. A blank value falls back to the default; it does **not** mean "no password" |
+| `APPS_MYSQL_DATABASE` / `APPS_MYSQL_ROOT_PASSWORD` | `demo` / `rootpassword` | The database name, and the root password (used by the SQL client and `make apps:mysql`) |
+| `APPS_MYSQL_PORT` / `APPS_MYSQL_VERSION` | `3306` / `8.4.7` | Host-published MySQL port, and the image version |
 | `NEXT_PUBLIC_API_BASE` | `http://localhost:8080` | Where `apps/frontend` calls the backend - direct, or `http://localhost:8000/api` to route through Kong instead (needs `kong:up` + `apps:restart`) |
 | `NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL` | `http://localhost:8090` | Where the frontend checks kafka-bridge's health - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
-| `KEYCLOAK_ISSUER` | *(empty = off)* | Where `apps/backend` validates Keycloak JWTs - see [Keycloak](#keycloak) |
-| `VAULT_ADDR` / `VAULT_TOKEN` | *(both empty = off)* | Where `apps/backend` fetches its MySQL credential - see [Vault](#vault) |
+| `KEYCLOAK_ISSUER` | *(empty = off)* | Turns on Keycloak for `apps/backend` and the login page: `http://localhost:8180/realms/nasebanal` - see [Keycloak](#keycloak) |
+| `VAULT_ADDR` / `VAULT_TOKEN` | *(both empty = off)* | Where `apps/backend` asks for a Vault-issued MySQL credential - see [Vault](#vault) |
 
 ### Kong
 
@@ -470,7 +496,7 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 |---|---|---|
 | `KEYCLOAK_PORT` | `8180` | Host-published admin console / realm port |
 | `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` | `admin` / `admin` | Admin console login |
-| `KEYCLOAK_ISSUER` (an `apps` variable - see [Apps](#apps) below) | *(empty = off)* | Where `apps/backend` validates Keycloak JWTs - `http://keycloak:8080/realms/nasebanal` (in-network hostname:port, not `KEYCLOAK_PORT`) to turn it on, plus `apps:restart` |
+| `KEYCLOAK_ISSUER` (an `apps` variable - see [Apps](#apps) below) | *(empty = off)* | Turns on Keycloak for `apps/backend` and the login page - `http://localhost:8180/realms/nasebanal` (the address the browser logs in at; match `KEYCLOAK_PORT`), plus `apps:restart` |
 
 ### Vault
 
@@ -478,7 +504,7 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 |---|---|---|
 | `VAULT_PORT` | `8200` | Host-published UI / API port |
 | `VAULT_ROOT_TOKEN` | `nb-vault-root-token` | Dev-mode root token |
-| `VAULT_ADDR` / `VAULT_TOKEN` (`apps` variables - see [Apps](#apps) below) | *(both empty = off)* | Where `apps/backend` fetches its MySQL credential from - set by `make vault:verify-apps` for one recreate, not meant to be hand-edited in `.env` |
+| `VAULT_ADDR` / `VAULT_TOKEN` (`apps` variables - see [Apps](#apps) below) | *(both empty = off)* | Where `apps/backend` asks for a Vault-issued MySQL credential - `http://vault:8200` / `nb-vault-root-token` to turn it on (plus `apps:restart`); `make vault:verify-apps` sets them for one recreate instead |
 
 ### Specmatic, Microcks & Playwright
 
@@ -569,11 +595,11 @@ persistent state to begin with):
 
 | Module | What persists | Docker volume | Reset command |
 | --- | --- | --- | --- |
-| `apps` | MySQL data (`testdb`) | `apps_apps-db-data` | `make apps:reset` |
+| `apps` | MySQL data (`demo`) | `apps_apps-db-data` | `make apps:reset` |
 | `kong` | Gateway services/routes (`KONG_DB=postgres` mode only) | `kong_kong-db-data` | `make kong:reset` |
 | `kafka` | Topics and their messages | `kafka_kafka-data` | `make kafka:reset` |
 | `consul` | Service catalog/registrations | `consul_consul-data`, `consul_consul-config` | `make consul:reset` |
-| `observability` | Prometheus metrics, Tempo traces, Grafana state | `observability_prometheus-data`, `observability_tempo-data`, `observability_grafana-data` | `make observability:reset` |
+| `observability` | Prometheus metrics, Tempo traces, Loki logs, Alertmanager state, Grafana state | `observability_prometheus-data`, `observability_tempo-data`, `observability_loki-data`, `observability_alertmanager-data`, `observability_grafana-data` | `make observability:reset` |
 
 These are Docker-managed volumes, not host directories — there's no
 `./data/...` folder in this repo to go look at. Inspect one with

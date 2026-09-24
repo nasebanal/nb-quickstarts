@@ -22,4 +22,4 @@ if ! docker ps --format '{{.Names}}' | grep -q "^${MYSQL_CONTAINER}$"; then
 fi
 
 # Access MySQL container using credentials from .env
-docker exec -it ${MYSQL_CONTAINER} mysql -u ${LOCUST_MYSQL_USER} -p${LOCUST_MYSQL_PASSWORD} ${LOCUST_MYSQL_DATABASE}
+docker exec -it ${MYSQL_CONTAINER} mysql -u ${APPS_MYSQL_USER:-demo} -p${APPS_MYSQL_PASSWORD:-demo} ${APPS_MYSQL_DATABASE:-demo}

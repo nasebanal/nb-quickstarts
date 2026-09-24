@@ -13,6 +13,14 @@ services:
       # deprecation warning on every start - these are their replacements.
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # Pin the public address, so every token's `iss` is
+      # http://localhost:<KEYCLOAK_PORT>/realms/nasebanal no matter which
+      # hostname the token request came in on - the browser's login
+      # (localhost:8180) and an in-network request (keycloak:8080) then
+      # produce tokens the backend validates against the same issuer.
+      # BACKCHANNEL_DYNAMIC lets those in-network requests keep working.
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8180}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "${KEYCLOAK_PORT:-8180}:8080"
     volumes:
@@ -21,10 +29,7 @@ services:
       - keycloak-net
       # So apps/backend (see app/auth.py) can resolve `keycloak` by name to
       # fetch this realm's JWKS, and so keycloak:login/verify-apps can issue
-      # tokens from *inside* this network - both against the exact same
-      # http://keycloak:8080 origin, avoiding a token `iss` mismatch against
-      # the host-published localhost:8180 origin (Keycloak's issuer claim
-      # reflects whichever Host header the token request actually used).
+      # tokens from *inside* this network.
       - apps-network
     healthcheck:
       # The Keycloak image doesn't ship curl - a plain TCP probe via bash's

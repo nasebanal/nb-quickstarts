@@ -1,7 +1,8 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Account
+from app.models import Account, User
+from app.passwords import hash_password
 
 # A tiny, coherent chart of accounts (not arbitrary "Item A/B/C" labels),
 # matching the app's accounting-ledger framing: opened Cash with a deposit,
@@ -21,10 +22,26 @@ _SAMPLE_EVENTS = [
 ]
 
 
+# The initial user - the one the demo login accepts, and the one every test
+# tool logs in as (Playwright, Locust, kafka-bridge, Specmatic). Deliberately
+# obvious - demo / demo - because this is seed data for a local demo, not a
+# credential to protect. The hash is stored, never the password itself.
+DEMO_PASSWORD = "demo"
+_SEED_USERS = [
+    {"username": "demo", "email": "demo@nasebanal.com", "display_name": "Demo User", "language": "ja"},
+]
+
+
 def seed_if_empty(db: Session) -> None:
-    count = db.scalar(select(func.count()).select_from(Account))
-    if count:
-        return
-    for data in _SAMPLE_EVENTS:
-        db.add(Account(source="seed", **data))
+    if not db.scalar(select(func.count()).select_from(Account)):
+        for data in _SAMPLE_EVENTS:
+            db.add(Account(source="seed", **data))
+        db.commit()
+    # Each seed user is added if missing (by username), not "if the table is
+    # empty": a database created before this user existed - or holding only
+    # Keycloak users - should still get it.
+    existing = set(db.scalars(select(User.username)))
+    for data in _SEED_USERS:
+        if data["username"] not in existing:
+            db.add(User(password_hash=hash_password(DEMO_PASSWORD), provider="demo", **data))
     db.commit()

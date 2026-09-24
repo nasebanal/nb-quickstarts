@@ -1,82 +1,121 @@
-import json
+import base64
+import hashlib
+import hmac
 import os
-import secrets
-import threading
-from pathlib import Path
+from dataclasses import dataclass
 
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWKClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-# Mock authentication for a demo app - no real expiry (tokens never time
-# out on their own), and persisted to a file on the bind-mounted source
-# dir instead of in-memory only, so a session survives both `--reload`
-# restarts (any code edit triggers one) and a full container recreate
-# (apps:restart, apps:down -> up). Used to be in-memory only: every
-# restart silently invalidated every logged-in session, which is exactly
-# what UnauthorizedError (see apps/frontend/src/lib/api.ts) exists to
-# handle gracefully - that handling stays, since a full apps:reset (wipes
-# the whole MySQL volume - see apps/docker-compose.yml) still legitimately
-# invalidates every token along with everything else. Not a real session
-# store: no rotation, no per-token metadata, just enough persistence that
-# routine dev-loop restarts don't keep kicking you out.
-_TOKENS_FILE = Path(__file__).resolve().parent.parent / ".tokens.json"
+from app.models import User
+from app.passwords import verify_password
 
-# FastAPI runs sync path operations (like login, below) in a threadpool, so
-# concurrent logins - e.g. Locust's overload scenarios, which log in on
-# every simulated user - genuinely run issue_token() from multiple OS
-# threads at once, not just interleaved on one event loop. Without this,
-# two threads' write_text() calls can race and interleave, corrupting the
-# file (observed directly: a complete JSON object followed by leftover
-# trailing bytes from a second, differently-sized concurrent write - valid
-# JSON's "Extra data" error, crash-looping the whole app on every restart
-# thereafter, since _load_tokens() runs at import time). The lock below
-# serializes the read-modify-write; _save_tokens' write-to-temp-then-
-# os.replace makes the file swap itself atomic too, so a reader (a fresh
-# process starting up) never observes a partially-written file even
-# without holding the lock.
-_tokens_lock = threading.Lock()
+# Mock authentication for a demo app. A token is self-contained and signed:
+# `nb1~<username>~<HMAC of it>`, with a secret every instance shares (the
+# TOKEN_SECRET env var - a fixed demo default, since this is a local demo, so
+# instances agree without configuring anything). Any backend instance can
+# verify it on its own, with no shared store and no database query - which is
+# what running several instances behind Consul needs, and what keeps login as
+# cheap as it always was for the load-test scenarios (login must not compete
+# with POST /accounts for the DB connection pool). It also survives restarts
+# for free. There is no expiry and no revocation, by design: it is the demo
+# login, not a session system. (It used to be an in-memory dict persisted to
+# a JSON file; several instances writing that file overwrote each other's
+# tokens.)
+#
+# No `.` in the format, deliberately: Keycloak's tokens are JWTs (three
+# dot-separated parts) and are tried as such first; a mock token skips that
+# branch immediately instead of costing a wasted key lookup.
+_TOKEN_SECRET = os.getenv("TOKEN_SECRET", "nb-quickstarts-demo-secret").encode()
 
 
-def _load_tokens() -> dict[str, str]:
-    if _TOKENS_FILE.exists():
-        return json.loads(_TOKENS_FILE.read_text())
-    return {}
+def _b64(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
 
-def _save_tokens() -> None:
-    tmp_file = _TOKENS_FILE.with_suffix(".json.tmp")
-    tmp_file.write_text(json.dumps(_TOKENS))
-    os.replace(tmp_file, _TOKENS_FILE)
+def _unb64(text: str) -> bytes:
+    return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
 
 
-_TOKENS: dict[str, str] = _load_tokens()
+def _sign(payload: str) -> str:
+    return _b64(hmac.new(_TOKEN_SECRET, payload.encode(), hashlib.sha256).digest())
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
-# Keycloak JWT validation (see `make keycloak:verify-apps`) - empty (the
-# default) leaves this off entirely: _jwks_client stays None, so
-# _decode_keycloak_token below returns None immediately without ever
-# making a network call, and every route behaves exactly as it did before
-# Keycloak existed. Built once at import time, same as _TOKENS - a
-# PyJWKClient caches the fetched key set internally and only re-fetches on
-# a cache miss (e.g. a real key rotation), not on every request.
+# Keycloak JWT validation (see `make keycloak:verify-apps` and the login
+# page's Keycloak toggle) - empty (the default) leaves this off entirely:
+# _jwks_client stays None, so _decode_keycloak_token below returns None
+# immediately without ever making a network call, and every route behaves
+# exactly as it did before Keycloak existed.
+#
+# Two different URLs on purpose. KEYCLOAK_ISSUER is the `iss` a token must
+# carry - the address the *browser* uses (http://localhost:8180/...), since
+# that's where a user logs in, and the keycloak module pins every issued
+# token to it (KC_HOSTNAME). KEYCLOAK_JWKS_URL is where this backend
+# actually fetches the public keys from - the in-network address, because
+# from inside apps-network `localhost` is the backend container itself.
+# Built once at import time, same as _TOKENS - a PyJWKClient caches the
+# fetched key set internally and only re-fetches on a cache miss (e.g. a
+# real key rotation), not on every request.
 _KEYCLOAK_ISSUER = os.getenv("KEYCLOAK_ISSUER", "")
-_jwks_client = PyJWKClient(f"{_KEYCLOAK_ISSUER}/protocol/openid-connect/certs") if _KEYCLOAK_ISSUER else None
+_KEYCLOAK_JWKS_URL = os.getenv("KEYCLOAK_JWKS_URL") or f"{_KEYCLOAK_ISSUER}/protocol/openid-connect/certs"
+_jwks_client = PyJWKClient(_KEYCLOAK_JWKS_URL) if _KEYCLOAK_ISSUER else None
+
+
+def _lookup_token(token: str) -> str | None:
+    """The username a mock token was issued to, or None if it is not one of ours."""
+    try:
+        version, payload, signature = token.split("~")
+        if version != "nb1" or not hmac.compare_digest(signature, _sign(payload)):
+            return None
+        return _unb64(payload).decode()
+    except (ValueError, UnicodeDecodeError):
+        return None
 
 
 def issue_token(username: str) -> str:
-    token = secrets.token_urlsafe(24)
-    with _tokens_lock:
-        _TOKENS[token] = username
-        _save_tokens()
-    return token
+    payload = _b64(username.encode())
+    return f"nb1~{payload}~{_sign(payload)}"
 
 
-def _decode_keycloak_token(token: str) -> str | None:
+@dataclass
+class Principal:
+    """Who is calling: the username, plus what the identity provider told us
+    about them. `email`/`name` are only known for Keycloak (they come from the
+    token's claims); a demo user's live in the `users` table."""
+
+    username: str
+    provider: str = "demo"
+    email: str | None = None
+    name: str | None = None
+
+
+# Password hashes by username, filled on first login and kept for the life of
+# the process. Login then costs one PBKDF2 and no database round-trip after the
+# first: Locust's overload scenarios log in once per simulated user, and a DB
+# query per login would make login compete for the same connection pool the
+# scenarios are trying to exhaust with POST /accounts. (The hashes never change
+# - there is no change-password feature.)
+_password_hashes: dict[str, str] = {}
+
+
+def authenticate(db: Session, username: str, password: str) -> bool:
+    stored = _password_hashes.get(username)
+    if stored is None:
+        user = db.scalar(select(User).where(User.username == username))
+        if user is None or user.password_hash is None:
+            return False
+        stored = _password_hashes[username] = user.password_hash
+    return verify_password(password, stored)
+
+
+def _decode_keycloak_token(token: str) -> Principal | None:
     """Validates `token` as a Keycloak-issued JWT against the configured
-    realm's live JWKS and returns its username - or None if Keycloak isn't
+    realm's live JWKS and returns who it is - or None if Keycloak isn't
     configured, the token isn't a JWT at all (the mock /auth/login token
     is a plain secrets.token_urlsafe() string, never containing a `.`), or
     signature/issuer validation fails, so the caller falls back to the
@@ -96,17 +135,25 @@ def _decode_keycloak_token(token: str) -> str | None:
         )
     except jwt.PyJWTError:
         return None
-    return claims.get("preferred_username") or claims.get("sub")
+    username = claims.get("preferred_username") or claims.get("sub")
+    if not username:
+        return None
+    return Principal(username=username, provider="keycloak", email=claims.get("email"), name=claims.get("name"))
 
 
-def get_current_username(
+def get_current_principal(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
-) -> str:
+) -> Principal:
     if credentials is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid or missing token")
-    keycloak_username = _decode_keycloak_token(credentials.credentials)
-    if keycloak_username is not None:
-        return keycloak_username
-    if credentials.credentials not in _TOKENS:
+    keycloak_principal = _decode_keycloak_token(credentials.credentials)
+    if keycloak_principal is not None:
+        return keycloak_principal
+    username = _lookup_token(credentials.credentials)
+    if username is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid or missing token")
-    return _TOKENS[credentials.credentials]
+    return Principal(username=username)
+
+
+def get_current_username(principal: Principal = Depends(get_current_principal)) -> str:
+    return principal.username

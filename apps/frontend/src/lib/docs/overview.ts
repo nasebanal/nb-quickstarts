@@ -18,13 +18,13 @@ export const overview: LocalizedDocsPage = {
             ["apps", "The test-target stack itself - frontend, backend, MySQL."],
             ["Kong", "API gateway in front of the backend - can swap its target to a contract mock."],
             ["Kafka + kafka-bridge", "Asynchronous event ingestion - a topic, drained into POST /accounts."],
-            ["Consul", "Service discovery - registers and health-checks the real backend/MySQL."],
+            ["Consul", "Service discovery - registers and health-checks the real backend (up to three instances) and MySQL; a client finds healthy instances through it."],
             ["Keycloak", "OIDC identity provider - issues real JWTs the backend validates."],
             ["Vault", "Secret storage - can supply the MySQL credential the backend connects with."],
             ["Specmatic", "Contract testing (Provider + Consumer) against openapi.yaml, plus a stub mock."],
             ["Microcks", "A second, independent mock server built from the same OpenAPI schema."],
             ["agentgateway", "A second way to expose the backend as MCP tools - built from OpenAPI, not code."],
-            ["Observability", "OTel Collector + Prometheus + Tempo + Grafana, receiving OTLP from the backend."],
+            ["Observability", "OTel Collector + Prometheus + Alertmanager + Tempo + Loki + Grafana, receiving traces, metrics and logs over OTLP from the backend."],
           ],
         },
       },
@@ -54,17 +54,19 @@ export const overview: LocalizedDocsPage = {
       {
         heading: "Authentication, at baseline",
         body: [
-          "POST /auth/login accepts any username and returns an opaque bearer token - no real " +
-            "identity check, just enough to demo a protected write path (POST /accounts). Scenarios 4 " +
-            "and 5 replace pieces of this with real infrastructure: Keycloak for the identity check " +
-            "itself, Vault for the credential the backend's own database connection uses.",
+          "POST /auth/login takes a username and password, checked against the users table in MySQL " +
+            "(one seeded user: demo, with the password demo), and returns an " +
+            "opaque bearer token that unlocks the protected write path (POST /accounts) and the profile " +
+            "(GET /me, PUT /me/profile - email, display name and language, edited on the app's Profile " +
+            "page). Scenarios 5 and 6 replace pieces of this with real infrastructure: Keycloak for the " +
+            "identity check itself, Vault for the credential the backend's own database connection uses.",
         ],
       },
       {
         heading: "Where to go next",
         body: [
           "Getting Started covers the basic make apps:up / down / restart / reset commands and the " +
-            "one-shot test tools. The six scenarios each take one module from the table above and wire " +
+            "one-shot test tools. The seven scenarios each take one module from the table above and wire " +
             "it into this same running apps stack, with the exact commands and what to expect at every " +
             "step.",
         ],
@@ -88,13 +90,13 @@ export const overview: LocalizedDocsPage = {
             ["apps", "テスト対象のスタックそのもの — frontend・backend・MySQL。"],
             ["Kong", "backendの前段に立つAPIゲートウェイ。向き先を契約モックに切り替えられる。"],
             ["Kafka + kafka-bridge", "非同期のイベント取り込み — トピックをPOST /accountsへ流し込む。"],
-            ["Consul", "サービスディスカバリ — 実際のbackend/MySQLを登録・ヘルスチェックする。"],
+            ["Consul", "サービスディスカバリ — 実際のbackend(最大3インスタンス)とMySQLを登録・ヘルスチェックし、クライアントはそこから健全なインスタンスを見つける。"],
             ["Keycloak", "OIDC IDプロバイダー — backendが検証する本物のJWTを発行する。"],
             ["Vault", "シークレットストア — backendが接続に使うMySQL認証情報を供給できる。"],
             ["Specmatic", "openapi.yamlに対する契約テスト(Provider/Consumer)と、同じ契約由来のスタブ。"],
             ["Microcks", "同じOpenAPIスキーマから作られる、もう一つの独立したモックサーバー。"],
             ["agentgateway", "backendをMCPツールとして公開するもう一つの経路 — コードではなくOpenAPI由来。"],
-            ["Observability", "OTel Collector + Prometheus + Tempo + Grafana。backendからOTLPを受信。"],
+            ["Observability", "OTel Collector + Prometheus + Alertmanager + Tempo + Loki + Grafana。backendからトレース・メトリクス・ログをOTLPで受信。"],
           ],
         },
       },
@@ -123,17 +125,18 @@ export const overview: LocalizedDocsPage = {
       {
         heading: "認証のベースライン",
         body: [
-          "POST /auth/loginは任意のユーザー名を受け付け、不透明なbearerトークンを返します — 実際の本人" +
-            "確認はなく、保護された書き込み(POST /accounts)をデモするためだけの仕組みです。シナリオ4・5は" +
-            "この一部を本物のインフラに置き換えます — 本人確認そのものをKeycloakに、backend自身のDB接続に" +
-            "使う認証情報をVaultに、それぞれ委ねます。",
+          "POST /auth/loginはユーザー名とパスワードを受け取り、MySQLのusersテーブルと照合して(demoユーザー1人が" +
+            "シード済みで、パスワードはdemo)、保護された書き込み(POST /accounts)とプロフィール" +
+            "(GET /me・PUT /me/profile — メール・表示名・言語。アプリのプロフィール画面で編集)を使える不透明な" +
+            "bearerトークンを返します。シナリオ5と6は、この一部を本物のインフラに置き換えます: 本人確認そのものを" +
+            "Keycloakに、backend自身のデータベース接続の認証情報をVaultに。",
         ],
       },
       {
         heading: "次に読むもの",
         body: [
           "Getting Startedでは、基本のmake apps:up / down / restart / resetコマンドと、一発実行のテスト" +
-            "ツール群を扱います。6つのシナリオは、それぞれ上の表のモジュールを1つずつ取り上げて、この同じ" +
+            "ツール群を扱います。7つのシナリオは、それぞれ上の表のモジュールを1つずつ取り上げて、この同じ" +
             "稼働中のappsスタックに組み込みます — 実際のコマンドと、各ステップで何が起きるかを添えて。",
         ],
       },

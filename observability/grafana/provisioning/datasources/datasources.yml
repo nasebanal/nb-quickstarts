@@ -15,3 +15,32 @@ datasources:
     jsonData:
       tracesToMetrics:
         datasourceUid: prometheus
+      # "Logs for this span" button on a trace: same trace_id in Loki.
+      tracesToLogsV2:
+        datasourceUid: loki
+        filterByTraceID: true
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      # Under OTLP ingestion trace_id is structured metadata, not a label
+      # or part of the line - matcherType: label reads it from there and
+      # turns it into a link to the trace in Tempo.
+      derivedFields:
+        - name: trace_id
+          matcherType: label
+          matcherRegex: trace_id
+          url: "$${__value.raw}"
+          datasourceUid: tempo
+          urlDisplayLabel: View trace
+  - name: Alertmanager
+    uid: alertmanager
+    type: alertmanager
+    access: proxy
+    url: http://alertmanager:9093
+    jsonData:
+      implementation: prometheus

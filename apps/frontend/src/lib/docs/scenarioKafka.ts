@@ -1,4 +1,25 @@
+import { kafkaProduceRun, restOverloadRun } from "./locustSeries";
 import type { LocalizedDocsPage } from "./types";
+
+const EN_CHART_LABELS = {
+  success: "Success",
+  failure: "Failure",
+  time: "Elapsed (s)",
+  requests: "Requests",
+  failures: "Failed",
+  summary: "Success rate and failure rate over time",
+  showTable: "Show data as a table",
+};
+
+const JA_CHART_LABELS = {
+  success: "成功",
+  failure: "失敗",
+  time: "経過時間(秒)",
+  requests: "リクエスト数",
+  failures: "失敗数",
+  summary: "成功率と失敗率の時系列推移",
+  showTable: "データを表で表示",
+};
 
 export const scenarioKafka: LocalizedDocsPage = {
   en: {
@@ -9,6 +30,14 @@ export const scenarioKafka: LocalizedDocsPage = {
       "scenario measures why that indirection is worth it: the same Locust load, sent down two " +
       "different paths into the same backend.",
     sections: [
+      {
+        heading: "Why Kafka",
+        bullets: [
+          "Absorbs bursts: producers write to a durable log at their own pace while the consumer drains it at a steady rate, so a traffic spike doesn't overwhelm the backend.",
+          "No lost events: messages are retained until consumed, so a backend outage only delays processing instead of dropping data.",
+          "Decoupled: producers and consumers don't know about each other, so either side can be added, scaled or replaced independently.",
+        ],
+      },
       {
         heading: "1. Start the target and both paths in",
         code: [
@@ -68,7 +97,7 @@ export const scenarioKafka: LocalizedDocsPage = {
             [
               "300 / 100",
               "40s",
-              "~30% failures, median at the 30s DB-pool timeout",
+              "66 of 78 POST /accounts failed (84.6%) in the run charted below, median at the 30s DB-pool timeout - earlier runs landed nearer ~30%, so expect it to vary",
               "1.66M events, 0% failures, ~4ms median",
             ],
             [
@@ -79,6 +108,28 @@ export const scenarioKafka: LocalizedDocsPage = {
             ],
           ],
         },
+        charts: [
+          {
+            title: "Direct REST - POST /accounts",
+            subtitle: "300 users / 100 spawn rate / 40s. A request counts once it completes, so failures only show up as the 30s timeouts land.",
+            points: restOverloadRun,
+            xMax: 40,
+            labels: EN_CHART_LABELS,
+          },
+          {
+            title: "Via Kafka - produce",
+            subtitle: "Same load. A request is the producer's write being acknowledged by Kafka; the backend is fed afterwards by kafka-bridge.",
+            points: kafkaProduceRun,
+            xMax: 40,
+            labels: EN_CHART_LABELS,
+          },
+        ],
+        note:
+          "Success rate and failure rate are cumulative (failed / completed requests so far), from " +
+          "Locust's own per-second stats history. Direct REST sits at 100% until the first timeouts land " +
+          "at ~35s - the 300 users are stuck waiting on the exhausted DB pool the whole time (only " +
+          "~4 writes completed in the first 35s) - then collapses to 15% success. Via Kafka the producer " +
+          "is never refused: 1.58M writes by 40s, 0 failures.",
       },
       {
         heading: "Why the gap",
@@ -102,7 +153,7 @@ export const scenarioKafka: LocalizedDocsPage = {
           ],
         },
         note:
-          "Scenario 3 (Observability) shows this same overload run live in Grafana - 5xx ratio, p95 " +
+          "Scenario 4 (Observability) shows this same overload run live in Grafana - 5xx ratio, p95 " +
           "latency and DB connections in use spike during the direct-REST step and stay flat during the " +
           "Kafka one.",
       },
@@ -129,6 +180,14 @@ export const scenarioKafka: LocalizedDocsPage = {
       "その間接化がなぜ価値を持つのかを、同じLocust負荷を2つの異なる経路で同じbackendに流し込んで実測" +
       "します。",
     sections: [
+      {
+        heading: "Kafkaを使うメリット",
+        bullets: [
+          "バーストを吸収: 書き込み側は永続化されたログに自分のペースで書き込み、消費側が一定のペースで処理するため、急なトラフィック増でもbackendが溢れません。",
+          "イベントを失わない: メッセージは消費されるまで保持されるので、backendが止まっても処理が遅れるだけでデータは失われません。",
+          "疎結合: 送る側と受ける側が互いを知らなくてよいため、どちらも独立して追加・スケール・差し替えができます。",
+        ],
+      },
       {
         heading: "1. テスト対象と両方の経路を起動",
         code: [
@@ -188,7 +247,7 @@ export const scenarioKafka: LocalizedDocsPage = {
             [
               "300 / 100",
               "40s",
-              "失敗率約30%、medianは30秒のDBプールタイムアウトに張り付く",
+              "下のグラフの実行ではPOST /accounts 78件中66件が失敗(84.6%)、medianは30秒のDBプールタイムアウトに張り付く — 以前の実行では約30%で、ばらつきます",
               "166万件、失敗0%、median約4ms",
             ],
             [
@@ -199,6 +258,28 @@ export const scenarioKafka: LocalizedDocsPage = {
             ],
           ],
         },
+        charts: [
+          {
+            title: "REST直叩き — POST /accounts",
+            subtitle: "300ユーザー / spawn rate 100 / 40秒。リクエストは完了した時点で数えるため、失敗は30秒タイムアウトが返ってくる時点で初めて現れます。",
+            points: restOverloadRun,
+            xMax: 40,
+            labels: JA_CHART_LABELS,
+          },
+          {
+            title: "Kafka経由 — produce",
+            subtitle: "同じ負荷。リクエストは「Kafkaがproducerの書き込みを受理したこと」で、backendへはその後kafka-bridgeが流します。",
+            points: kafkaProduceRun,
+            xMax: 40,
+            labels: JA_CHART_LABELS,
+          },
+        ],
+        note:
+          "成功率・失敗率は累積(それまでに完了したリクエストのうち成功/失敗した割合)で、Locust自身が" +
+          "1秒ごとに記録する統計履歴から作っています。REST直叩きは最初のタイムアウトが返る約35秒まで" +
+          "100%のままですが、これは300ユーザーが枯渇したDBプールを待って止まっているためで(最初の35秒間に" +
+          "完了した書き込みは約4件だけ)、その後成功率15%まで急落します。Kafka経由ではproducerが拒否されることが" +
+          "なく、40秒で158万件を失敗0で書き込めています。",
       },
       {
         heading: "この差が出る理由",
@@ -221,7 +302,7 @@ export const scenarioKafka: LocalizedDocsPage = {
           ],
         },
         note:
-          "シナリオ3(オブザーバビリティ)では、この同じoverload実行をGrafana上でライブに見ます — " +
+          "シナリオ4(オブザーバビリティ)では、この同じoverload実行をGrafana上でライブに見ます — " +
           "REST直叩きのステップでは5xx比率・p95レイテンシ・使用中のDB接続数が跳ね上がり、Kafka経由の" +
           "ステップでは平坦なままになります。",
       },

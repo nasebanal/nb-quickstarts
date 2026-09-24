@@ -9,9 +9,9 @@ from locust import User, between, events, tag, task
 # MySQL Connection Configuration (from environment variables)
 MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql-server")
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
-MYSQL_USER = os.getenv("MYSQL_USER", "testuser")
-MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "testpassword")
-MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "testdb")
+MYSQL_USER = os.getenv("MYSQL_USER", "demo")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "demo")
+MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "demo")
 MYSQL_CARTESIAN_LIMIT = int(os.getenv("MYSQL_CARTESIAN_LIMIT", "10000"))
 
 class MySQLUser(User):
