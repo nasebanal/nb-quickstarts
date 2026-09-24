@@ -128,42 +128,11 @@ export const gettingStarted: LocalizedDocsPage = {
           "(or locust/logs/<timestamp>/ for Locust) - all gitignored, regenerated on every run.",
       },
       {
-        heading: "What each report actually looks like",
+        heading: "Reports",
         body: [
-          "Every report below is a real, freshly-generated capture from this exact environment - open " +
-            "<module>/report/<file> directly in a browser (no server needed) to see the live version " +
-            "any of these commands leaves behind.",
-        ],
-        table: {
-          headers: ["Tool", "Report file"],
-          rows: [
-            ["pytest", "pytest/report/report.html"],
-            ["vitest", "vitest/report/index.html"],
-            ["playwright", "playwright/report/index.html"],
-            ["specmatic", "specmatic/report/html/index.html"],
-          ],
-        },
-        images: [
-          {
-            src: "/docs/screenshots/report-pytest.png",
-            alt: "pytest-html report: Environment table (Python 3.12.14, pytest 9.1.1) and a Summary listing all 6 backend tests as Passed",
-            caption: "pytest - a single self-contained report.html, environment metadata plus a per-test pass/fail table.",
-          },
-          {
-            src: "/docs/screenshots/report-vitest.png",
-            alt: "Vitest HTML report dashboard: 5 Pass, 0 Fail, 5 Total, with the test tree on the left showing each api client test by name",
-            caption: "vitest - a dashboard summary plus a browsable test tree (this is api.test.ts, not the Specmatic-stub-backed consumer contract test).",
-          },
-          {
-            src: "/docs/screenshots/report-playwright.png",
-            alt: "Playwright HTML report listing all 5 E2E tests from login-and-register.spec.ts as passed, with per-test duration",
-            caption: "playwright - one row per test, with duration; click through any of them for the full trace (screenshots, network, console) on a failure.",
-          },
-          {
-            src: "/docs/screenshots/report-specmatic.png",
-            alt: "Specmatic Contract Test Results: 100% API coverage, 12/12 successes, a per-path/method/response coverage table all marked Covered",
-            caption: "specmatic - 100% API coverage against openapi.yaml, broken down by path, method and response code.",
-          },
+          "Each test command leaves an HTML report behind. The Testing page (last in the sidebar) shows " +
+            "every one of them with real screenshots, what each layer checks, and the numbers from this " +
+            "repository.",
         ],
       },
       {
@@ -301,41 +270,10 @@ export const gettingStarted: LocalizedDocsPage = {
           "ブラウザで見られるHTMLレポートが残ります — すべて.gitignore対象で、実行のたびに新しく生成されます。",
       },
       {
-        heading: "各レポートの実際の見た目",
+        heading: "レポート",
         body: [
-          "以下はすべて、この環境で実際に生成した本物のキャプチャです — <module>/report/<file>を" +
-            "ブラウザで直接開けば(サーバー不要)、これらのコマンドが残すのと同じ内容がそのまま見られます。",
-        ],
-        table: {
-          headers: ["ツール", "レポートファイル"],
-          rows: [
-            ["pytest", "pytest/report/report.html"],
-            ["vitest", "vitest/report/index.html"],
-            ["playwright", "playwright/report/index.html"],
-            ["specmatic", "specmatic/report/html/index.html"],
-          ],
-        },
-        images: [
-          {
-            src: "/docs/screenshots/report-pytest.png",
-            alt: "pytest-htmlのレポート。Environment表(Python 3.12.14、pytest 9.1.1)と、backendの6テストすべてがPassedと表示されたSummary",
-            caption: "pytest — 単一の自己完結型report.html。環境メタデータと、テストごとのpass/fail表。",
-          },
-          {
-            src: "/docs/screenshots/report-vitest.png",
-            alt: "VitestのHTMLレポートダッシュボード。5 Pass、0 Fail、5 Total。左側のテストツリーにapi clientの各テスト名が表示されている",
-            caption: "vitest — ダッシュボードのサマリーと、ブラウズ可能なテストツリー(これはapi.test.tsで、Specmaticスタブを使うConsumer契約テストとは別物)。",
-          },
-          {
-            src: "/docs/screenshots/report-playwright.png",
-            alt: "PlaywrightのHTMLレポート。login-and-register.spec.tsの5テストすべてがpassedとして、テストごとの実行時間とともに一覧表示されている",
-            caption: "playwright — テストごとに1行、実行時間つき。失敗時はクリックすればスクリーンショット・ネットワーク・コンソールを含む完全なトレースを確認できる。",
-          },
-          {
-            src: "/docs/screenshots/report-specmatic.png",
-            alt: "SpecmaticのContract Test Results。API Coverage 100%、12件中12件成功、パス/メソッド/レスポンスごとのカバレッジ表がすべてCoveredと表示",
-            caption: "specmatic — openapi.yamlに対するAPI Coverage 100%。パス・メソッド・レスポンスコードごとの内訳。",
-          },
+          "各テストコマンドは、HTMLレポートを残します。サイドバーの最後にある「テスト」ページで、すべてのレポートを" +
+            "実際のスクリーンショット付きで、各レイヤーが確認することや、このリポジトリでの数字とともに見られます。",
         ],
       },
       {

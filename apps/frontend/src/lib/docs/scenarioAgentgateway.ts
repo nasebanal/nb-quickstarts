@@ -11,6 +11,9 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
     sections: [
       {
         heading: "Why agentgateway",
+        body: [
+          "An agent's create-account tool call is the same POST /accounts that the Kafka bridge (Scenario 2) makes for each event: another way in to the same write path.",
+        ],
         bullets: [
           "Turns an existing OpenAPI contract into MCP tools with configuration only - no MCP server code to write or maintain in the backend.",
           "One gateway in front of MCP (and A2A) traffic is a single place for access control, observability and routing of what AI agents can call.",
@@ -125,6 +128,9 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
     sections: [
       {
         heading: "agentgatewayを使うメリット",
+        body: [
+          "エージェントのアカウント作成ツールの呼び出しは、Kafkaブリッジ(シナリオ2)がイベントごとに行うのと同じPOST /accountsです: 同じ書き込み経路への、もう1つの入口。",
+        ],
         bullets: [
           "既存のOpenAPI契約から設定だけでMCPツールを作れ、backend側にMCPサーバーのコードを書いて保守する必要がありません。",
           "MCP(およびA2A)の通信を1つのゲートウェイに通すことで、AIエージェントが呼べるものへのアクセス制御・可観測性・ルーティングを一元化できます。",

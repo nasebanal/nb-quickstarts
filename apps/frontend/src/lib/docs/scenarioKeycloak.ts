@@ -12,6 +12,9 @@ export const scenarioKeycloak: LocalizedDocsPage = {
     sections: [
       {
         heading: "Why Keycloak",
+        body: [
+          "The Kafka bridge (Scenario 2) logs in to the backend with the demo password like any other client; the backend accepts that token or a Keycloak one on the same protected routes.",
+        ],
         bullets: [
           "Standard OIDC/OAuth 2.0: login, token issuing and SSO are handled by a proven identity provider instead of hand-rolled auth code.",
           "The backend only verifies signed JWTs against Keycloak's public keys - it never sees or stores passwords.",
@@ -216,6 +219,9 @@ export const scenarioKeycloak: LocalizedDocsPage = {
     sections: [
       {
         heading: "Keycloakを使うメリット",
+        body: [
+          "Kafkaブリッジ(シナリオ2)は、他のクライアントと同じようにデモのパスワードでbackendへログインします。backendは、同じ保護されたルートで、そのトークンもKeycloakのトークンも受け付けます。",
+        ],
         bullets: [
           "標準のOIDC/OAuth 2.0: ログイン・トークン発行・SSOを実績あるIDプロバイダーに任せられ、認証コードを自前で書く必要がありません。",
           "backendはKeycloakの公開鍵で署名付きJWTを検証するだけで、パスワードを扱ったり保存したりすることが一切ありません。",

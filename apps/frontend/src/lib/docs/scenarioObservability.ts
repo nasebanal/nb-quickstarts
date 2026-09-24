@@ -11,6 +11,9 @@ export const scenarioObservability: LocalizedDocsPage = {
     sections: [
       {
         heading: "Why OpenTelemetry, Prometheus, Alertmanager, Tempo, Loki and Grafana",
+        body: [
+          "The requests the Kafka bridge (Scenario 2) makes are ordinary traffic to the backend, so they show up in the same traces, metrics and dashboard as any other client's.",
+        ],
         bullets: [
           "OpenTelemetry: a vendor-neutral standard for traces and metrics - instrument once, and switch the backend that receives them (here a local stack, in production e.g. New Relic) without touching app code.",
           "Prometheus, Tempo and Loki: purpose-built stores for metrics, traces and logs, all open source with no license cost.",
@@ -281,6 +284,9 @@ export const scenarioObservability: LocalizedDocsPage = {
     sections: [
       {
         heading: "OpenTelemetry・Prometheus・Alertmanager・Tempo・Loki・Grafanaを使うメリット",
+        body: [
+          "Kafkaブリッジ(シナリオ2)が送るリクエストは、backendへの普通のトラフィックなので、他のクライアントと同じトレース・メトリクス・ダッシュボードに現れます。",
+        ],
         bullets: [
           "OpenTelemetry: トレースとメトリクスのベンダー中立な標準規格で、一度計装すればアプリのコードを変えずに送信先を切り替えられます(ここではローカル構成、本番ではNew Relicなど)。",
           "Prometheus・Tempo・Loki: それぞれメトリクス・トレース・ログに特化した保存先で、いずれもOSSのためライセンス費用がかかりません。",

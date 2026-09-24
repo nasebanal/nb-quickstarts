@@ -11,6 +11,9 @@ export const scenarioKong: LocalizedDocsPage = {
     sections: [
       {
         heading: "Why Kong, Specmatic and Microcks",
+        body: [
+          "Kafka's path (Scenario 2) does not go through Kong: by default the bridge posts to the backend directly. Kong is where the REST clients - the browser, the load tests - are routed, and where a contract mock can be swapped in.",
+        ],
         bullets: [
           "Kong: put auth, rate limiting and routing in one gateway in front of the backend, and change where traffic goes at runtime - no application code change.",
           "Specmatic: a mock server generated straight from the OpenAPI contract, and the same contract can verify the real backend, so mock and implementation can't quietly drift apart.",
@@ -166,6 +169,9 @@ export const scenarioKong: LocalizedDocsPage = {
     sections: [
       {
         heading: "Kong・Specmatic・Microcksを使うメリット",
+        body: [
+          "Kafkaの経路(シナリオ2)はKongを通りません: ブリッジはデフォルトでbackendへ直接POSTします。Kongは、RESTのクライアント — ブラウザや負荷テスト — をルーティングし、契約モックへ差し替えられる場所です。",
+        ],
         bullets: [
           "Kong: 認証・レート制限・ルーティングをbackendの前段のゲートウェイに集約でき、向き先の変更もアプリのコードを触らず実行時に行えます。",
           "Specmatic: OpenAPIの契約からそのままモックサーバーを生成でき、同じ契約で実backendも検証できるため、モックと実装が知らないうちにずれることを防げます。",

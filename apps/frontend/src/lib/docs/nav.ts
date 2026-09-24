@@ -36,6 +36,7 @@ export const DOCS_NAV: DocsNavItem[] = [
       },
     ],
   },
+  { href: "/docs/testing", labelEn: "Testing", labelJa: "テスト" },
 ];
 
 export function navLabel(item: DocsNavItem, locale: Locale): string {
