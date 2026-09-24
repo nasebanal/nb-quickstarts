@@ -31,6 +31,14 @@ config:
     otlpEndpoint: http://otel-collector:4318
     otlpProtocol: http
     randomSampling: true
+# Access logs (one record per request) exported over OTLP to the Collector,
+# which forwards them to Loki - alongside the traces above.
+frontendPolicies:
+  accessLog:
+    otlp:
+      host: otel-collector:4318
+      protocol: http
+      path: /v1/logs
 binds:
 - port: 3000
   listeners:

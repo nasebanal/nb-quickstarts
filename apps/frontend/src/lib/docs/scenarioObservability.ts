@@ -196,7 +196,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "5. Gateways send traces too: Kong and agentgateway",
+        heading: "5. Gateways send telemetry too: Kong and agentgateway",
         body: [
           "Kong and agentgateway can export their own traces to the same Collector, so a request that " +
             "goes through a gateway shows up as one trace: the gateway's span with the backend's spans " +
@@ -242,9 +242,14 @@ export const scenarioObservability: LocalizedDocsPage = {
         note:
           "Real runs. Every Kong trace of /api/accounts/balances that was checked contained both nb-kong " +
           "and nb-backend spans, so the trace context is passed on to the backend (the plugin's " +
-          "header_type is preserve, the default). Kong here exports traces only: metrics would come from " +
-          "its prometheus plugin, scraped by Prometheus, which is not set up. Sampling every request is " +
-          "fine for a demo, not for production.",
+          "header_type is preserve, the default). Kong 3.6's opentelemetry plugin exports traces only (its " +
+          "schema has no log or metric export), so Kong's logs and metrics are not in Loki or Prometheus: " +
+          "metrics would come from its prometheus plugin, scraped by Prometheus, which is not set up. " +
+          "agentgateway also exports its access logs over OTLP (frontendPolicies.accessLog.otlp in " +
+          "config.yaml, to the Collector's /v1/logs): in Grafana Explore on Loki, {service_name=\"agentgateway\"} " +
+          "returns one record per request, with the method, path, status and MCP method as labels, and the " +
+          "trace_id/span_id that link it to the trace above (the record's body is empty; the fields are its " +
+          "labels). Sampling every request is fine for a demo, not for production.",
       },
       {
         heading: "Beyond the local stack",
@@ -507,9 +512,14 @@ export const scenarioObservability: LocalizedDocsPage = {
         note:
           "実際の実行結果です。確認したKong経由の/api/accounts/balancesのトレースはすべて、nb-kongとnb-backendの" +
           "両方のスパンを含んでいたので、トレースコンテキストはbackendへ引き継がれています(プラグインの" +
-          "header_typeはデフォルトのpreserve)。ここではKongはトレースだけを送ります: メトリクスはprometheusプラグインを" +
-          "Prometheusにスクレイプさせる形になりますが、設定していません。全リクエストをサンプリングするのはデモ用で、" +
-          "本番向けではありません。",
+          "header_typeはデフォルトのpreserve)。Kong 3.6のopentelemetryプラグインが送れるのはトレースだけ(スキーマに" +
+          "ログやメトリクスの送信設定がありません)なので、KongのログとメトリクスはLokiにもPrometheusにも入りません: " +
+          "メトリクスはprometheusプラグインをPrometheusにスクレイプさせる形になりますが、設定していません。" +
+          "agentgatewayはアクセスログもOTLPで送れます(config.yamlのfrontendPolicies.accessLog.otlp、宛先は" +
+          "Collectorの/v1/logs): GrafanaのExploreでLokiに{service_name=\"agentgateway\"}を問い合わせると、" +
+          "リクエストごとに1件、メソッド・パス・ステータス・MCPメソッドがラベルとして、上のトレースへつながる" +
+          "trace_id/span_idとともに返ります(レコードの本文は空で、項目はラベルに入っています)。" +
+          "全リクエストをサンプリングするのはデモ用で、本番向けではありません。",
       },
       {
         heading: "ローカルスタックの先へ",
