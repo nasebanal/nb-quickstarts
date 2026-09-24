@@ -207,7 +207,8 @@ export const scenarioObservability: LocalizedDocsPage = {
             "block in agentgateway/config.yaml with otlpEndpoint, otlpProtocol: http and randomSampling: " +
             "true - sampling defaults to false, and with it nothing is exported unless the request already " +
             "carries a trace. In this run agentgateway picked the tracing block up after a container " +
-            "restart, not on the config file's live reload.",
+            "restart, not on the config file's live reload. The dashboard's Gateway traces panel (bottom) lists " +
+            "them; click a trace ID to open it.",
         ],
         code: [
           {
@@ -219,6 +220,12 @@ export const scenarioObservability: LocalizedDocsPage = {
           },
         ],
         images: [
+          {
+            src: "/docs/screenshots/grafana-gateway-traces.png",
+            alt: "The Grafana dashboard's Gateway traces panel: a table of recent traces, each row a Kong ('kong') or agentgateway ('initialize', 'tools/list') root span with its start time and duration",
+            caption:
+              "The dashboard's Gateway traces panel (bottom of the Apps backend dashboard): every Kong and agentgateway request, newest first. Click a trace ID to open it.",
+          },
           {
             src: "/docs/screenshots/tempo-kong-trace.png",
             alt: "Grafana Explore on Tempo showing one trace: an nb-kong span 'kong' of 60 ms with the nb-backend span GET /accounts/balances and its connect, SELECT demo and http send spans nested underneath",
@@ -465,7 +472,8 @@ export const scenarioObservability: LocalizedDocsPage = {
             "agentgateway/config.yamlのtracingブロックに、otlpEndpoint・otlpProtocol: http・randomSampling: true" +
             "を指定します — サンプリングのデフォルトはfalseで、リクエストがすでにトレースを持っていない限り何も" +
             "送られません。今回の実行では、agentgatewayはtracingブロックを、設定ファイルのライブリロードでは" +
-            "なく、コンテナの再起動後に読み込みました。",
+            "なく、コンテナの再起動後に読み込みました。ダッシュボード最下部の「Gateway traces」パネルに一覧されるので、" +
+            "トレースIDをクリックすると開きます。",
         ],
         code: [
           {
@@ -477,6 +485,12 @@ export const scenarioObservability: LocalizedDocsPage = {
           },
         ],
         images: [
+          {
+            src: "/docs/screenshots/grafana-gateway-traces.png",
+            alt: "Grafanaダッシュボードの「Gateway traces」パネル。最近のトレースの表で、各行がKong(kong)またはagentgateway(initialize、tools/list)のルートスパンと、その開始時刻・所要時間を示している",
+            caption:
+              "ダッシュボードの「Gateway traces」パネル(Apps backendダッシュボードの最下部): KongとagentgatewayのリクエストとMCP呼び出しを新しい順に一覧します。トレースIDをクリックすると開きます。",
+          },
           {
             src: "/docs/screenshots/tempo-kong-trace.png",
             alt: "GrafanaのExploreでTempoの1本のトレースを表示。60msのnb-kongのスパン「kong」の下に、nb-backendのスパンGET /accounts/balancesと、そのconnect・SELECT demo・http sendが入れ子で並んでいる",
