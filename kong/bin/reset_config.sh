@@ -21,7 +21,7 @@ if ! curl -s "${KONG_ADMIN_URL}" > /dev/null 2>&1; then
     exit 1
 fi
 
-if [ "${KONG_DB:-off}" = "postgres" ]; then
+if [ "${KONG_DB:-postgres}" = "postgres" ]; then
     echo -e "${BLUE}Resetting Kong database configuration...${NC}"
 
     # Delete all routes first (routes depend on services). ${(f)ROUTES} is

@@ -25,8 +25,8 @@ kong:
 	@echo "  kong:test-rate-limit - Test rate limiting with multiple requests"
 	@echo ""
 	@echo "Configuration (.env file):"
-	@echo "  KONG_DB=off       # DB-less mode (uses kong/conf/declarative.yml) - default"
-	@echo "  KONG_DB=postgres  # Database mode (uses PostgreSQL)"
+	@echo "  KONG_DB=postgres  # Database mode (uses PostgreSQL) - default"
+	@echo "  KONG_DB=off       # DB-less mode (reads kong/conf/declarative.yml only; Admin API is read-only)"
 	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  Proxy:              http://localhost:8000 (HTTPS: 8443)"
@@ -36,7 +36,7 @@ kong:
 	@echo "  Admin API:          http://localhost:8001 (HTTPS: 8444)"
 	@echo "  Manager UI:         http://localhost:8002 (HTTPS: 8445)"
 	@echo ""
-	@echo "Note: override KONG_DB per invocation, e.g. 'make kong:up KONG_DB=postgres'."
+	@echo "Note: override KONG_DB per invocation, e.g. 'make kong:up KONG_DB=off'."
 
 export KONG_DB
 
@@ -58,7 +58,7 @@ kong-up: apps-network-ensure
 			echo "Skipping installation. Some features may not work."; \
 		fi; \
 	fi
-	@if [ "$${KONG_DB:-off}" = "postgres" ]; then \
+	@if [ "$${KONG_DB:-postgres}" = "postgres" ]; then \
 		IS_FIRST_RUN=$$(docker volume ls -q | grep -q '^kong_kong-db-data$$' && echo "no" || echo "yes"); \
 		echo "Starting Kong with PostgreSQL database..."; \
 		KONG_DATABASE=postgres docker-compose -f kong/docker-compose.yml --profile database up -d; \
