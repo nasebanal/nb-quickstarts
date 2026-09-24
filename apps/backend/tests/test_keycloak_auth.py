@@ -9,11 +9,11 @@ keys are fetched from), expiry, and the fall-through to the mock token.
 import time
 from types import SimpleNamespace
 
+import app.auth as auth
 import jwt
-import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-import app.auth as auth
+import pytest
 
 ISSUER = "http://localhost:8180/realms/nasebanal"
 
