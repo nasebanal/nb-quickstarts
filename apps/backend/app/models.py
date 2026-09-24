@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Integer, String
+from sqlalchemy import DateTime, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -31,3 +31,28 @@ class Account(Base):
     quantity: Mapped[int] = mapped_column(Integer, default=0)
     source: Mapped[str] = mapped_column(String(16), default="api")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+
+
+class User(Base):
+    """A person who can use the app: their login (for the demo login) and their
+    profile. Rows come from the seed data (`app/seed.py`) - the initial demo
+    users - and are also created on first use for users who log in through
+    Keycloak, whose identity lives in Keycloak (`provider` = "keycloak", no
+    `password_hash`, `email` mirrored from the token and not editable here).
+
+    Deliberately not linked to `Account`: an account event is a ledger entry,
+    not owned by a user.
+    """
+
+    __tablename__ = "users"
+    __table_args__ = (UniqueConstraint("username", name="uq_users_username"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(64))
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    display_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    language: Mapped[str] = mapped_column(String(8), default="en")
+    provider: Mapped[str] = mapped_column(String(16), default="demo")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, onupdate=_utc_now)

@@ -1,0 +1,21 @@
+# Routes everything to one webhook receiver (alert-sink, which just prints
+# what it gets - see bin/alert_sink.py). Swap the receiver for Slack, email,
+# PagerDuty, ... in a real setup; the routing/grouping stays the same.
+route:
+  receiver: alert-sink
+  group_by: [alertname]
+  group_wait: 5s        # batch alerts that fire together into one notification
+  group_interval: 30s   # how soon a group is notified again when it changes
+  repeat_interval: 1h
+
+receivers:
+  - name: alert-sink
+    webhook_configs:
+      - url: http://alert-sink:8080/
+        send_resolved: true
+
+# A critical alert makes the warning-level ones for the same service redundant.
+inhibit_rules:
+  - source_matchers: [severity="critical"]
+    target_matchers: [severity="warning"]
+    equal: [service]

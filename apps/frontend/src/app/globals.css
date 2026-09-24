@@ -13,6 +13,8 @@
   --nb-header-bg: rgba(255, 255, 255, 0.95);
   --nb-page-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   --nb-surface: #ffffff;
+  --nb-note-bg: #f5f5f5;
+  --nb-note-code-bg: #e8eaed;
   --nb-border: #e5e7eb;
   --nb-border-soft: #eee;
   --nb-footer-bg: #222;
@@ -29,6 +31,8 @@
   --nb-header-bg: rgba(20, 22, 27, 0.95);
   --nb-page-gradient: linear-gradient(135deg, #14161a 0%, #1b2430 100%);
   --nb-surface: #1a1d23;
+  --nb-note-bg: #22262d;
+  --nb-note-code-bg: #2f353e;
   --nb-border: #2d333b;
   --nb-border-soft: #2d333b;
   --nb-footer-bg: #0d0f12;
@@ -47,6 +51,8 @@
     --nb-header-bg: rgba(20, 22, 27, 0.95);
     --nb-page-gradient: linear-gradient(135deg, #14161a 0%, #1b2430 100%);
     --nb-surface: #1a1d23;
+    --nb-note-bg: #22262d;
+    --nb-note-code-bg: #2f353e;
     --nb-border: #2d333b;
     --nb-border-soft: #2d333b;
     --nb-footer-bg: #0d0f12;
@@ -200,6 +206,10 @@ h1 {
 
 .nb-header-login-link:hover {
   color: #47b1e8;
+  /* The generic `:where(.container) button:hover` reset (meant for form/CTA
+     buttons) would otherwise paint a blue box behind the link on hover -
+     nb-landing-page's login link has no background on hover. */
+  background: none;
 }
 
 /* Logged-in state: a person-icon button that opens a dropdown (name +
@@ -259,6 +269,12 @@ h1 {
   color: var(--nb-fg);
 }
 
+.nb-nav-dropdown-sub {
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: var(--nb-fg-muted);
+}
+
 .nb-nav-dropdown-footer {
   padding: 0.5rem;
   border-top: 1px solid var(--nb-border-soft);
@@ -266,6 +282,9 @@ h1 {
 
 .nb-nav-dropdown-item {
   display: block;
+  /* border-box: with width: 100% plus padding, the row (and its hover
+     background) otherwise spills past the dropdown's right edge. */
+  box-sizing: border-box;
   width: 100%;
   padding: 0.75rem 1rem;
   border: none;
@@ -567,14 +586,45 @@ h1 {
   word-break: break-word;
 }
 
-.nb-docs-section p.nb-docs-note {
-  margin-top: 16px;
-  padding: 10px 14px;
-  border-left: 3px solid var(--nb-accent);
-  border-radius: 0 6px 6px 0;
-  background: var(--nb-border-soft);
-  font-size: 0.875rem;
-  line-height: 1.6;
+/* A note: the same callout as nb-landing-page's blog (:::note) - a raised
+   surface with a 1px border and a 4px brand-accent rule on the left, full
+   contrast text (the accent rule, not dimming, is what marks it as an aside),
+   an optional bold title, and inline code as chips. */
+.nb-docs-note {
+  margin: 20px 0;
+  padding: 14px 18px;
+  border: 1px solid var(--nb-border);
+  border-left: 4px solid #47b1e8;
+  border-radius: 6px;
+  background: var(--nb-note-bg);
+  color: var(--nb-fg);
+  font-size: 0.92em;
+  line-height: 1.75;
+}
+
+.nb-docs-note p {
+  margin: 0 0 6px;
+  color: var(--nb-fg);
+}
+
+.nb-docs-note p:last-child {
+  margin-bottom: 0;
+}
+
+.nb-docs-note .nb-docs-note-title {
+  font-weight: 700;
+}
+
+.nb-docs-note .nb-docs-note-title a {
+  color: var(--nb-accent);
+  text-decoration: underline;
+}
+
+.nb-docs-note code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--nb-note-code-bg);
+  font-size: 0.9em;
 }
 
 .nb-docs-section table {
@@ -593,19 +643,301 @@ h1 {
   overflow-x: auto;
 }
 
-/* Deliberately NOT max-width: 100% here - mermaid's own SVG carries
-   width="100%" plus an inline max-width matching its intrinsic viewBox
-   (confirmed via the rendered element: viewBox ~2414x590, style max-width
-   2414px), so a CSS max-width:100% on top of that shrinks the whole
-   diagram down to the 776px content column - at ten-node width, that
-   made every label unreadably small. width: auto (a real stylesheet rule
-   beats an SVG presentation attribute) renders it at that intrinsic size
-   instead, legible at 100%, with .nb-docs-diagram's own overflow-x: auto
-   handling the horizontal scroll that needs on anything narrower. */
+/* Scales down to the content column (the SVG has a viewBox), but never
+   past its natural size. The lightbox copy overrides this with an inline
+   pixel size. */
 .nb-docs-diagram svg {
   display: block;
-  width: auto;
+  width: 100%;
+  max-width: 810px;
   height: auto;
+  margin: 0 auto;
+}
+
+/* ArchitectureDiagram.tsx's colors, all from the site's own theme tokens so
+   the diagram follows light/dark with the rest of the page. */
+.nb-docs-diagram svg,
+.nb-docs-lightbox-diagram svg {
+  --nb-arch-group: color-mix(in srgb, var(--nb-fg) 6%, var(--nb-surface));
+  font-family: Arial, sans-serif;
+}
+
+.nb-arch-group {
+  fill: var(--nb-arch-group);
+  stroke: var(--nb-border);
+}
+
+.nb-arch-group-title {
+  fill: var(--nb-fg-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.nb-arch-node {
+  fill: var(--nb-surface);
+  stroke: var(--nb-fg-muted);
+}
+
+.nb-arch-text {
+  fill: var(--nb-fg);
+  font-size: 13px;
+}
+
+.nb-arch-edge {
+  stroke: var(--nb-fg-muted);
+  stroke-width: 1.25;
+}
+
+/* The Browser -> Frontend -> Backend -> MySQL spine reads heavier than the
+   modules attached around it. */
+.nb-arch-edge-main {
+  stroke: var(--nb-fg);
+  stroke-width: 2;
+}
+
+/* MCP-protocol edges: the accent color, so the second diagram's protocol
+   reads differently from the REST one above it. */
+.nb-arch-edge-mcp {
+  stroke: var(--nb-accent);
+}
+
+.nb-arch-arrow-mcp {
+  fill: var(--nb-accent);
+}
+
+.nb-arch-arrow {
+  fill: var(--nb-fg-muted);
+}
+
+/* The halo (a stroke in the background color, painted under the glyphs)
+   keeps a label readable where an edge passes behind it. */
+.nb-arch-label {
+  fill: var(--nb-fg-muted);
+  font-size: 11px;
+  stroke: var(--nb-surface);
+  stroke-width: 4px;
+  paint-order: stroke;
+  stroke-linejoin: round;
+}
+
+.nb-arch-label-on-group {
+  stroke: var(--nb-arch-group);
+}
+
+/* TimeSeriesChart.tsx - success/failure rate charts. Success/failure are
+   states, so they use the fixed status colors (same steps in both themes,
+   each >= 3:1 on both surfaces); text stays in the theme's text tokens. */
+.nb-docs-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.nb-docs-chart {
+  --nb-chart-good: #0ca30c;
+  --nb-chart-critical: #d03b3b;
+  margin: 0;
+  padding: 12px 12px 8px;
+  background: var(--nb-surface);
+  border: 1px solid var(--nb-border-soft);
+  border-radius: 12px;
+}
+
+.nb-docs-chart-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9rem;
+  color: var(--nb-fg);
+}
+
+.nb-docs-chart-title span {
+  font-size: 0.78rem;
+  color: var(--nb-fg-muted);
+}
+
+.nb-docs-chart-plot {
+  position: relative;
+}
+
+.nb-docs-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.nb-chart-grid {
+  stroke: var(--nb-border);
+  stroke-width: 1;
+}
+
+.nb-chart-tick,
+.nb-chart-axis-title {
+  fill: var(--nb-fg-muted);
+  font-size: 13px;
+}
+
+.nb-chart-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.nb-chart-success {
+  stroke: var(--nb-chart-good);
+}
+
+.nb-chart-failure {
+  stroke: var(--nb-chart-critical);
+}
+
+.nb-chart-success-fill {
+  fill: var(--nb-chart-good);
+}
+
+.nb-chart-failure-fill {
+  fill: var(--nb-chart-critical);
+}
+
+.nb-chart-marker {
+  stroke: var(--nb-surface);
+  stroke-width: 2;
+}
+
+.nb-chart-crosshair {
+  stroke: var(--nb-fg-subtle);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.nb-chart-label {
+  fill: var(--nb-fg-muted);
+  font-size: 13px;
+}
+
+.nb-chart-label-value {
+  fill: var(--nb-fg);
+  font-weight: 600;
+}
+
+.nb-docs-chart-tooltip {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  transform: translateX(10px);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--nb-fg);
+  background: var(--nb-surface);
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.nb-docs-chart-tooltip[data-flip="left"] {
+  transform: translateX(calc(-100% - 10px));
+}
+
+.nb-docs-chart-tooltip-muted {
+  color: var(--nb-fg-muted);
+}
+
+.nb-docs-chart-table {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--nb-fg-muted);
+}
+
+.nb-docs-chart-table summary {
+  cursor: pointer;
+}
+
+.nb-docs-chart-table table {
+  margin-top: 6px;
+  max-height: 240px;
+  display: block;
+  overflow: auto;
+}
+
+/* SequenceDiagram.tsx - reuses the architecture diagram's node/edge/arrow
+   classes; these are only what a sequence diagram adds. */
+.nb-docs-sequence {
+  margin: 16px 0;
+  padding: 12px;
+  background: var(--nb-surface);
+  border: 1px solid var(--nb-border-soft);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.nb-docs-sequence svg {
+  display: block;
+  width: 100%;
+  max-width: 840px;
+  height: auto;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+.nb-seq-lifeline {
+  stroke: var(--nb-border);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.nb-seq-return {
+  stroke: var(--nb-fg-muted);
+}
+
+.nb-seq-text {
+  fill: var(--nb-fg);
+  font-size: 13px;
+  stroke: var(--nb-surface);
+  stroke-width: 4px;
+  paint-order: stroke;
+  stroke-linejoin: round;
+}
+
+.nb-seq-sub {
+  fill: var(--nb-fg-muted);
+  font-size: 11.5px;
+}
+
+.nb-seq-note {
+  fill: color-mix(in srgb, var(--nb-fg) 6%, var(--nb-surface));
+  stroke: var(--nb-border);
+}
+
+.nb-seq-note-text {
+  fill: var(--nb-fg-muted);
+  font-size: 12px;
+}
+
+.nb-seq-frame {
+  fill: none;
+  stroke: var(--nb-fg-subtle);
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+}
+
+.nb-seq-frame-label {
+  fill: var(--nb-fg-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.nb-docs-diagram-caption {
+  margin: 8px 4px 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--nb-fg-muted);
 }
 
 .nb-docs-diagram-zoomable {
@@ -685,7 +1017,7 @@ h1 {
   cursor: zoom-in;
 }
 
-/* Click-to-enlarge (ZoomableImage.tsx, MermaidDiagram.tsx) - same shape as
+/* Click-to-enlarge (ZoomableImage.tsx, ArchitectureDiagram.tsx) - same shape as
    nb-landing-page's blog LightboxImage.tsx (a from-scratch implementation
    there too, no library): a fixed, full-viewport, near-opaque backdrop
    with the content at a size capped to the viewport. Above both
@@ -705,7 +1037,7 @@ h1 {
 }
 
 /* The one wrapper LightboxOverlay puts around whatever content it's given
-   (an <img>, a Mermaid <svg>) - stops the backdrop's own onClose-on-click
+   (an <img>, the architecture <svg>) - stops the backdrop's own onClose-on-click
    from firing when the content itself is clicked (see Lightbox.tsx), and
    overrides the backdrop's zoom-out cursor back to a normal one over the
    content itself. */
@@ -723,7 +1055,7 @@ h1 {
 }
 
 /* Unlike a screenshot (an opaque PNG - .nb-docs-lightbox-image needs
-   nothing extra), a Mermaid SVG's canvas is transparent outside its own
+   nothing extra), the architecture SVG's canvas is transparent outside its own
    shapes - on the thumbnail that's fine, since .nb-docs-diagram already
    gives it a --nb-surface background, but the lightbox's backdrop is
    almost-black (.nb-docs-lightbox above), so without its own background
@@ -1217,6 +1549,70 @@ h1 {
   text-align: center;
 }
 
+/* Login modal: the Demo/Keycloak toggle (only rendered when Keycloak is
+   configured - see LoginModal.tsx) and the pieces of the Keycloak panel. */
+.nb-login-toggle {
+  display: flex;
+  margin: 12px 0 8px;
+  padding: 3px;
+  gap: 3px;
+  background: var(--nb-border-soft);
+  border-radius: 8px;
+}
+
+.nb-login-toggle button {
+  flex: 1;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nb-fg-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.nb-login-toggle button.nb-login-toggle-active {
+  background: var(--nb-surface);
+  color: var(--nb-fg);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.nb-login-hint {
+  margin: 8px 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--nb-fg-muted);
+}
+
+.nb-modal-secondary {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--nb-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--nb-fg);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.nb-modal-secondary:hover {
+  background: var(--nb-border-soft);
+}
+
+.nb-provider-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--nb-accent);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
 .nb-modal-close {
   position: absolute;
   top: 12px;
@@ -1285,4 +1681,205 @@ h1 {
 .light-mode .scalar-mcp-layer-link,
 .light-mode .scalar-mcp-layer .mcp-logo {
   color: var(--scalar-color-1) !important;
+}
+
+
+/* Profile page (/profile) - modeled on nb-landing-page's settings profile:
+   read-only email, editable display name and language, one save button. */
+.nb-profile {
+  max-width: 560px;
+  margin: 40px auto;
+}
+
+/* :where(.container) form is a wrapping flex row (for the accounts page's
+   inline forms); a settings form stacks its fields instead. */
+.nb-profile form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.nb-profile h1 {
+  margin: 0 0 20px;
+}
+
+.nb-profile .nb-cta-button {
+  align-self: flex-start;
+}
+
+.nb-profile-field {
+  margin-bottom: 20px;
+}
+
+.nb-profile-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--nb-fg);
+}
+
+.nb-profile-field input,
+.nb-profile-field select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--nb-border);
+  border-radius: 8px;
+  background: var(--nb-surface);
+  color: var(--nb-fg);
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.nb-profile-field input[readonly] {
+  background: var(--nb-border-soft);
+  color: var(--nb-fg-muted);
+  cursor: not-allowed;
+}
+
+.nb-profile-hint {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--nb-fg-muted);
+}
+
+.nb-profile-status-ok {
+  color: #16a34a;
+}
+
+
+/* ErDiagram.tsx - the MySQL tables as entity cards, one under the other
+   (the note column needs the width). */
+.nb-docs-er {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nb-docs-er-entity {
+  border: 1px solid var(--nb-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.nb-docs-er-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--nb-border-soft);
+  color: var(--nb-fg);
+}
+
+.nb-docs-er-head span {
+  font-size: 0.8rem;
+  color: var(--nb-fg-muted);
+}
+
+.nb-docs-diagram .nb-docs-er-entity table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.nb-docs-diagram .nb-docs-er-entity th,
+.nb-docs-diagram .nb-docs-er-entity td {
+  padding: 5px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--nb-border-soft);
+}
+
+.nb-docs-diagram .nb-docs-er-entity th {
+  font-size: 0.75rem;
+  color: var(--nb-fg-muted);
+}
+
+.nb-docs-diagram .nb-docs-er-entity td:nth-child(1),
+.nb-docs-diagram .nb-docs-er-entity td:nth-child(2) {
+  white-space: nowrap;
+}
+
+.nb-docs-diagram .nb-docs-er-entity td:last-child {
+  color: var(--nb-fg-muted);
+}
+
+.nb-docs-er-key,
+.nb-docs-er-null {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.nb-docs-er-key {
+  background: var(--nb-accent);
+  color: #fff;
+}
+
+.nb-docs-er-null {
+  border: 1px solid var(--nb-border);
+  color: var(--nb-fg-muted);
+}
+
+.nb-docs-er-legend {
+  margin: 8px 4px 0;
+  font-size: 0.75rem;
+  color: var(--nb-fg-subtle);
+}
+
+
+/* "GitHub" link with its mark on the landing page (HowItWorks.tsx). */
+.nb-source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+
+
+/* BackendRouting.tsx - which backend instance answered, and how the frontend
+   server found it (fixed address or Consul). */
+.nb-routing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--nb-border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--nb-fg-muted);
+}
+
+.nb-routing strong {
+  color: var(--nb-fg);
+}
+
+.nb-routing-toggle {
+  margin-left: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nb-fg-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.nb-routing-toggle-active {
+  border-color: var(--nb-accent);
+  background: var(--nb-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.nb-routing-detail {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
 }

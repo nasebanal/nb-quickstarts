@@ -1,9 +1,9 @@
 "use client";
 
 import { DocsArticle } from "@/components/docs/DocsArticle";
-import { MermaidDiagram } from "@/components/docs/MermaidDiagram";
+import { ArchitectureDiagram } from "@/components/docs/ArchitectureDiagram";
+import { ErDiagram } from "@/components/docs/ErDiagram";
 import { useLocale } from "@/components/LocaleProvider";
-import { buildArchitectureDiagram } from "@/lib/docs/architectureDiagram";
 import { overview } from "@/lib/docs/overview";
 
 export default function DocsOverviewPage() {
@@ -12,10 +12,20 @@ export default function DocsOverviewPage() {
     <DocsArticle
       content={overview[locale]}
       extra={
-        <MermaidDiagram
-          chart={buildArchitectureDiagram(locale)}
-          label={locale === "ja" ? "nb-quickstartsのアーキテクチャ図" : "nb-quickstarts architecture diagram"}
-        />
+        <>
+          <ArchitectureDiagram
+            label={locale === "ja" ? "nb-quickstartsのアーキテクチャ図" : "nb-quickstarts architecture diagram"}
+          />
+          <ArchitectureDiagram
+            variant="consul"
+            label={locale === "ja" ? "Consul(サービス検出)の図" : "Consul service discovery diagram"}
+          />
+          <ArchitectureDiagram
+            variant="mcp"
+            label={locale === "ja" ? "MCPアクセス経路の図" : "MCP access path diagram"}
+          />
+          <ErDiagram />
+        </>
       }
     />
   );

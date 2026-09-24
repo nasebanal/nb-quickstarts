@@ -21,8 +21,13 @@ consul:
 	@echo "  consul:open               - Open Consul UI in browser"
 	@echo ""
 	@echo "Service Registration (the real apps stack - requires apps:up):"
-	@echo "  consul:register-apps      - Register apps' backend/mysql with real health checks"
+	@echo "  consul:register-apps      - Register apps' MySQL and EVERY running backend instance (however many"
+	@echo "                              APPS_BACKEND_INSTANCES=N make apps:up started), each with its own health"
+	@echo "                              check; run it again after scaling to bring the catalog in step"
 	@echo "  consul:deregister-apps    - Deregister them"
+	@echo "  consul:instances          - Which backend instances Consul currently sees, and their health"
+	@echo "  consul:lb-demo            - A client that asks Consul for the healthy backends on every request and"
+	@echo "                              spreads its calls over them  (REQUESTS=12 INTERVAL=0.3)"
 	@echo ""
 	@echo "Service Discovery:"
 	@echo "  consul:get-services       - List all registered services (raw catalog)"
@@ -100,20 +105,22 @@ consul-get-services:
 # service. apps-backend and apps-mysql are the two things anything else
 # would actually discover through Consul.
 
+# Registers every running backend instance (see consul/bin/register_backends.sh)
+# and apps' MySQL. How many backends run is `make apps:up APPS_BACKEND_INSTANCES=N`.
 consul-register-apps:
-	@echo "Registering apps' backend/mysql with Consul..."
-	@curl -s -X PUT http://localhost:8500/v1/agent/service/register \
-		-d '{"ID": "apps-backend", "Name": "apps-backend", "Tags": ["rest", "graphql", "mcp"], "Address": "backend", "Port": 8080, "Check": {"HTTP": "http://backend:8080/health", "Interval": "10s"}}'
+	@echo "Registering apps' backend(s)/mysql with Consul..."
+	@sh consul/bin/register_backends.sh
 	@curl -s -X PUT http://localhost:8500/v1/agent/service/register \
 		-d '{"ID": "apps-mysql", "Name": "apps-mysql", "Tags": ["mysql"], "Address": "mysql-server", "Port": 3306, "Check": {"TCP": "mysql-server:3306", "Interval": "10s"}}'
-	@echo "Registered apps-backend, apps-mysql."
-	@echo "Check health: make consul:discover-apps  (or http://localhost:8500/ui)"
-	@echo "Prove it actually works: make consul:verify-apps"
+	@echo "  registered apps-mysql -> mysql-server:3306"
+	@echo "Check health: make consul:instances  (or http://localhost:8500/ui)"
+	@echo "Prove it actually works: make consul:verify-apps, or make consul:lb-demo"
 
 consul-deregister-apps:
 	@echo "Deregistering apps' backend/mysql from Consul..."
-	@curl -s -X PUT http://localhost:8500/v1/agent/service/deregister/apps-backend
-	@curl -s -X PUT http://localhost:8500/v1/agent/service/deregister/apps-mysql
+	@for id in $$(curl -s http://localhost:8500/v1/agent/services | jq -r 'keys[] | select(startswith("apps-"))'); do \
+		curl -s -X PUT http://localhost:8500/v1/agent/service/deregister/$$id; \
+	done
 	@echo ""
 	@echo "Deregistered."
 
@@ -156,3 +163,20 @@ consul-verify-apps:
 		fi; \
 	done
 	@echo ""
+
+#################### SEVERAL BACKENDS ####################
+# `APPS_BACKEND_INSTANCES=N make apps:up` runs N instances of the backend;
+# `consul:register-apps` registers whatever is running.
+
+consul-instances:
+	@echo "Backend instances Consul sees:"
+	@curl -s "http://localhost:8500/v1/health/service/apps-backend" | \
+		jq -r '.[] | "  \(.Service.ID)  \(.Service.Address):\(.Service.Port)  \(([.Checks[] | select(.CheckID | startswith("service:")) | .Status] | first) // "?")"'
+
+# Runs from a throwaway container on apps-network (so `consul` and the backend
+# names resolve, exactly as they do for any other client of the stack).
+consul-lb-demo:
+	@docker run --rm --network apps-network \
+		-v "$$(pwd)/consul/bin/lb_demo.py:/lb_demo.py:ro" \
+		-e CONSUL_HTTP_ADDR=http://consul:8500 \
+		python:3.13-alpine python -u /lb_demo.py $${REQUESTS:-12} $${INTERVAL:-0.3}

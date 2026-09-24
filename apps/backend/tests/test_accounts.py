@@ -32,7 +32,7 @@ def test_create_account_requires_auth(client):
 
 
 def test_login_and_create_account(client):
-    login_response = client.post("/auth/login", json={"username": "E001"})
+    login_response = client.post("/auth/login", json={"username": "demo", "password": "demo"})
     assert login_response.status_code == 200
     token = login_response.json()["token"]
 
@@ -66,3 +66,40 @@ def test_graphql_query_and_mutation(client):
     created = mutation_response.json()["data"]["createAccount"]
     assert created["name"] == "GQL Account"
     assert created["quantity"] == 2
+
+
+def test_login_rejects_a_wrong_password(client):
+    response = client.post("/auth/login", json={"username": "demo", "password": "wrong"})
+    assert response.status_code == 401
+    assert response.json() == {"detail": "invalid username or password"}
+
+
+def test_login_rejects_an_unknown_user_with_the_same_message(client):
+    response = client.post("/auth/login", json={"username": "nobody", "password": "demo"})
+    assert response.status_code == 401
+    assert response.json() == {"detail": "invalid username or password"}
+
+
+def test_login_requires_a_password(client):
+    assert client.post("/auth/login", json={"username": "demo"}).status_code == 422
+
+
+def test_a_token_with_a_forged_signature_is_rejected(client):
+    token = client.post("/auth/login", json={"username": "demo", "password": "demo"}).json()["token"]
+    version, payload, _signature = token.split("~")
+    forged = f"{version}~{payload}~not-the-signature"
+    response = client.post("/accounts", json={"name": "x", "quantity": 1}, headers={"Authorization": f"Bearer {forged}"})
+    assert response.status_code == 401
+
+
+def test_a_token_cannot_be_reused_for_another_username(client):
+    # The username is part of what is signed: swapping it invalidates the token.
+    import base64
+
+    token = client.post("/auth/login", json={"username": "demo", "password": "demo"}).json()["token"]
+    version, _payload, signature = token.split("~")
+    other = base64.urlsafe_b64encode(b"someone-else").rstrip(b"=").decode()
+    response = client.post(
+        "/accounts", json={"name": "x", "quantity": 1}, headers={"Authorization": f"Bearer {version}~{other}~{signature}"}
+    )
+    assert response.status_code == 401

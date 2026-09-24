@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 
@@ -42,11 +43,31 @@ class AccountBalance(CamelModel):
 
 class LoginRequest(CamelModel):
     username: str
+    password: str
 
 
 class LoginResponse(CamelModel):
     token: str
     username: str
+
+
+class Profile(CamelModel):
+    """The current user's profile (`GET /me`). `email` is recorded but not
+    editable here: for a Keycloak user it is mirrored from the token, for a
+    demo user it comes from the seed data."""
+
+    username: str
+    email: str | None = None
+    display_name: str | None = None
+    language: Literal["ja", "en"]
+    provider: Literal["demo", "keycloak"]
+
+
+class ProfileUpdate(CamelModel):
+    """`PUT /me/profile` - only what the user may change."""
+
+    display_name: str | None = Field(default=None, max_length=64)
+    language: Literal["ja", "en"] | None = None
 
 
 class HealthResponse(CamelModel):

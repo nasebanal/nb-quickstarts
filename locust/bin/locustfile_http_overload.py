@@ -21,7 +21,13 @@ class OverloadUser(HttpUser):
     host = os.getenv("HTTP_HOST", "http://localhost:8080")
 
     def on_start(self):
-        response = self.client.post("/auth/login", json={"username": "overload-test"})
+        # "demo" is the seeded demo user (apps/backend/app/seed.py) - login now
+        # needs a real one, and checks the password against a hash kept in
+        # memory after the first login, so it stays cheap under load.
+        response = self.client.post(
+            "/auth/login",
+            json={"username": "demo", "password": os.getenv("DEMO_PASSWORD", "demo")},
+        )
         self.token = response.json()["token"]
 
     @task

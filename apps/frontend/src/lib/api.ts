@@ -1,3 +1,5 @@
+import { recordServed } from "./servedBy";
+
 // Thin client for the backend (apps/backend, FastAPI). This runs in the
 // browser, so it must use the host-published URL, not the container name.
 // Exported read-only so the UI can show what it's actually talking to
@@ -5,6 +7,12 @@
 // Specmatic stub, or a Microcks mock via NEXT_PUBLIC_API_BASE (see
 // AGENTS.md's Kong section) without any other visible difference.
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+
+// True when API_BASE is a path on this app itself (e.g. /api/backend) rather
+// than a URL of the backend/Kong: the browser then calls the frontend server,
+// which finds the backend (one fixed address, or through Consul) and forwards
+// - see lib/server/backendResolver.ts.
+export const VIA_FRONTEND_SERVER = API_BASE.startsWith("/");
 
 // Event-sourced: each Account is one quantity-change event, not a
 // standalone row with an absolute quantity. `quantity` is a signed delta -
@@ -44,6 +52,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...options.headers,
     },
   });
+  recordServed(response.headers);
   if (!response.ok) {
     const body = await response.text();
     if (response.status === 401) {
@@ -88,10 +97,38 @@ export async function checkKafkaBridge(): Promise<boolean> {
   }
 }
 
-export function login(username: string): Promise<{ token: string; username: string }> {
+export function login(username: string, password: string): Promise<{ token: string; username: string }> {
   return request("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ username }),
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+// The current user's profile (GET /me). The email is recorded but not
+// editable: it comes from the seed data for a demo user, and is mirrored from
+// the token for a Keycloak user.
+export interface Profile {
+  username: string;
+  email: string | null;
+  displayName: string | null;
+  language: "ja" | "en";
+  provider: "demo" | "keycloak";
+}
+
+export interface ProfileInput {
+  displayName?: string | null;
+  language?: "ja" | "en";
+}
+
+export function getMe(token: string): Promise<Profile> {
+  return request("/me", { headers: { Authorization: `Bearer ${token}` } });
+}
+
+export function updateProfile(token: string, input: ProfileInput): Promise<Profile> {
+  return request("/me/profile", {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(input),
   });
 }
 

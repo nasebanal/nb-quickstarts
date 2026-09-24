@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 /** Open/close state + the Escape-key/body-scroll-lock wiring shared by every
- * lightbox in /docs (ZoomableImage.tsx, MermaidDiagram.tsx) - split out so
+ * lightbox in /docs (ZoomableImage.tsx, ArchitectureDiagram.tsx) - split out so
  * neither has to reimplement it. */
 export function useLightbox() {
   const [open, setOpen] = useState(false);
@@ -30,7 +30,7 @@ export function useLightbox() {
  * nb-landing-page's blog LightboxImage.tsx (a from-scratch implementation
  * there too, no library): clicking the backdrop or the close button closes
  * it; clicking the enlarged content itself does not, via stopPropagation
- * on the one wrapper both content types (an <img>, a Mermaid <svg>) share. */
+ * on the one wrapper both content types (an <img>, the architecture <svg>) share. */
 export function LightboxOverlay({
   label,
   onClose,

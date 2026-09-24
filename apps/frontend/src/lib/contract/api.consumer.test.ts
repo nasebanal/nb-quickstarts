@@ -25,7 +25,7 @@ import { createAccount, listAccounts, listBalances, login, UnauthorizedError } f
 
 describe("api client against the Specmatic contract stub", () => {
   it("login returns a token and username", async () => {
-    const result = await login("E001");
+    const result = await login("demo", "demo");
     expect(typeof result.token).toBe("string");
     expect(typeof result.username).toBe("string");
   });
@@ -61,7 +61,7 @@ describe("api client against the Specmatic contract stub", () => {
     // stub doesn't validate auth, it dispatches purely on method+path+body
     // shape/value, falling back to a schema-random response - not
     // necessarily 201 - for anything that doesn't match an example).
-    const { token } = await login("E001");
+    const { token } = await login("demo", "demo");
     const account = await createAccount(token, { name: "Specmatic Test Account", quantity: 1 });
     expect(typeof account.id).toBe("number");
     expect(typeof account.name).toBe("string");

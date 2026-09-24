@@ -2,13 +2,21 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioAgentgateway: LocalizedDocsPage = {
   en: {
-    title: "Scenario 6: MCP access via agentgateway",
+    title: "Scenario 7: MCP access via agentgateway",
     description:
       "The backend already mounts its own MCP server natively at /mcp (via fastapi-mcp, auto-derived " +
       "from its REST routes). agentgateway is a different way to get there: instead of backend-side " +
       "MCP code, it builds MCP tools entirely from the OpenAPI contract (openapi.yaml) - the same " +
       "contract Specmatic/Microcks/Kong already build against, fetched live from /openapi.json.",
     sections: [
+      {
+        heading: "Why agentgateway",
+        bullets: [
+          "Turns an existing OpenAPI contract into MCP tools with configuration only - no MCP server code to write or maintain in the backend.",
+          "One gateway in front of MCP (and A2A) traffic is a single place for access control, observability and routing of what AI agents can call.",
+          "Because tools come from the same contract as everything else, they stay in sync with the API automatically.",
+        ],
+      },
       {
         heading: "1. Start it and verify what it actually serves",
         code: [
@@ -108,13 +116,21 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ6: agentgateway経由でのMCPアクセス",
+    title: "シナリオ7: agentgateway経由でのMCPアクセス",
     description:
       "backendはすでに、自身のREST routesから自動生成されたMCPサーバーをfastapi-mcp経由で/mcpにネイティブ" +
       "にマウントしています。agentgatewayはそこに至るもう一つの経路です — backend側のMCP用コードではなく、" +
       "OpenAPIの契約(openapi.yaml、Specmatic/Microcks/Kongがすでに使っているのと同じ契約)から、/openapi.json" +
       "をライブに取得してMCPツールを丸ごと構築します。",
     sections: [
+      {
+        heading: "agentgatewayを使うメリット",
+        bullets: [
+          "既存のOpenAPI契約から設定だけでMCPツールを作れ、backend側にMCPサーバーのコードを書いて保守する必要がありません。",
+          "MCP(およびA2A)の通信を1つのゲートウェイに通すことで、AIエージェントが呼べるものへのアクセス制御・可観測性・ルーティングを一元化できます。",
+          "ツールは他のすべてと同じ契約から作られるため、APIの変更に自動で追従します。",
+        ],
+      },
       {
         heading: "1. 起動し、実際に何を提供しているか確認する",
         code: [

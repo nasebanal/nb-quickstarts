@@ -37,6 +37,50 @@ export interface DocsImage {
   caption?: string;
 }
 
+/** A success-rate / failure-rate time series, drawn from cumulative counts (TimeSeriesChart.tsx). */
+export interface DocsChart {
+  title: string;
+  /** One-line description under the title (what "a request" is, which run it came from, ...). */
+  subtitle?: string;
+  /** [seconds since start, requests completed, of which failed], one sample per row. */
+  points: [number, number, number][];
+  /** X-axis extent in seconds; shared between charts so they line up. */
+  xMax: number;
+  labels: {
+    success: string;
+    failure: string;
+    time: string;
+    requests: string;
+    failures: string;
+    /** aria-label for the chart. */
+    summary: string;
+    showTable: string;
+  };
+}
+
+/** A sequence diagram (SequenceDiagram.tsx): participants across the top, messages and notes down the page. */
+export type DocsSequenceStep =
+  | {
+      kind: "message";
+      from: string;
+      to: string;
+      text: string;
+      /** Smaller second line under the arrow (headers, payload, ...). */
+      detail?: string;
+      /** A response/return rather than a request. */
+      dashed?: boolean;
+    }
+  | { kind: "note"; at: string; text: string };
+
+export interface DocsSequence {
+  /** aria-label for the diagram. */
+  summary: string;
+  participants: { id: string; label: string; sub?: string }[];
+  steps: DocsSequenceStep[];
+  /** Dashed boxes around a run of steps (inclusive indexes into `steps`), e.g. "only if the keys aren't cached". */
+  frames?: { from: number; to: number; label: string }[];
+}
+
 export interface DocsSection {
   heading?: string;
   /** Each entry is one paragraph. */
@@ -45,11 +89,18 @@ export interface DocsSection {
   code?: DocsCodeBlock[];
   table?: DocsTable;
   terminal?: DocsTerminal;
+  /** A sequence diagram of an interaction between systems. */
+  sequence?: DocsSequence;
+  /** Time-series charts laid out side by side (one per compared run). */
+  charts?: DocsChart[];
   /** Real screenshot(s) of a GUI this scenario actually produces (Kong Manager, Grafana, a
    * report file, ...) - one item renders full-width, several lay out as a responsive grid. */
   images?: DocsImage[];
   /** A callout box - a caveat, warning, or aside worth setting apart from the main prose. */
   note?: string;
+  /** Bold heading of the callout above (e.g. "What is event sourcing"), optionally a link - the same shape as nb-landing-page's blog notes. */
+  noteTitle?: string;
+  noteHref?: string;
 }
 
 export interface DocsPageContent {

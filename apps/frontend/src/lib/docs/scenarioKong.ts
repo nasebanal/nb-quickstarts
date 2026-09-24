@@ -10,6 +10,14 @@ export const scenarioKong: LocalizedDocsPage = {
       "the real backend - with no frontend code change either time.",
     sections: [
       {
+        heading: "Why Kong, Specmatic and Microcks",
+        bullets: [
+          "Kong: put auth, rate limiting and routing in one gateway in front of the backend, and change where traffic goes at runtime - no application code change.",
+          "Specmatic: a mock server generated straight from the OpenAPI contract, and the same contract can verify the real backend, so mock and implementation can't quietly drift apart.",
+          "Microcks: import the contract once and get a running mock with example responses - frontend and other consumers can develop before the real API is ready.",
+        ],
+      },
+      {
         heading: "1. Start Kong and route the frontend through it",
         body: [
           "Kong Manager needs DB mode (KONG_DB=postgres) - the default DB-less mode's Admin API is " +
@@ -28,7 +36,33 @@ export const scenarioKong: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "2. Swap the target to a contract mock",
+        heading: "2. Start the contract mocks",
+        body: [
+          "Start whichever mock you want apps_backend to point at in the next step - the real backend " +
+            "needs nothing extra.",
+        ],
+        code: [
+          {
+            label:
+              "Specmatic's stub (needs apps:up first, to seed its schema+examples):",
+            code: "make specmatic:stub-up",
+          },
+          {
+            label:
+              "Microcks (needs apps:up first, to fetch the live OpenAPI schema):",
+            code: "make microcks:up\nmake microcks:import-openapi",
+          },
+        ],
+        note:
+          "Microcks needs the full /rest/<service>/<version> prefix baked into apps_backend's own Path " +
+          "(e.g. /rest/nb-quickstarts+apps+backend/0.1.0), since Kong's strip_path only removes /api - " +
+          "whatever's left of the incoming path gets appended onto the service's own Path. Specmatic's " +
+          "stub needs no Path at all, since its mock paths already match the real API directly. " +
+          "Microcks can't mock POST /accounts (it needs a real bearer token, which an OpenAPI example " +
+          "has no way to carry) - but every read endpoint works fine.",
+      },
+      {
+        heading: "3. Swap the target to a contract mock",
         body: [
           "apps_backend's Host/Port/Path, edited right from Kong Manager, is the seam: repoint it at a " +
             "mock built from the same contract instead of the real backend, and neither the frontend " +
@@ -41,6 +75,7 @@ export const scenarioKong: LocalizedDocsPage = {
           rows: [
             ["Real backend (default)", "backend", "8080", "(empty)"],
             ["Specmatic's stub", "specmatic-stub", "9091", "(empty)"],
+            ["Microcks", "microcks", "8080", "/rest/nb-quickstarts+apps+backend/0.1.0"],
           ],
         },
         images: [
@@ -103,30 +138,21 @@ export const scenarioKong: LocalizedDocsPage = {
         },
       },
       {
-        heading: "Prerequisites for each mock target",
+        heading: "Cleanup",
+        body: [
+          "Stop everything this scenario started. Kong goes last, and the frontend is pointed back at " +
+            "the backend directly first - otherwise it would keep calling a gateway that's no longer there.",
+        ],
         code: [
           {
-            label:
-              "Specmatic's stub (needs apps:up first, to seed its schema+examples):",
-            code: "make specmatic:stub-up",
-          },
-          {
-            label:
-              "Microcks (needs apps:up first, to fetch the live OpenAPI schema):",
-            code: "make microcks:up\nmake microcks:import-openapi",
+            code:
+              "# .env: remove NEXT_PUBLIC_API_BASE (or set it back to http://localhost:8080)\n" +
+              "make apps:restart          # frontend needs recreating to pick up the change\n" +
+              "make specmatic:stub-down   # if you started Specmatic's stub\n" +
+              "make microcks:down         # if you started Microcks\n" +
+              "make kong:down",
           },
         ],
-        note:
-          "Microcks needs the full /rest/<service>/<version> prefix baked into apps_backend's own Path " +
-          "(e.g. /rest/nb-quickstarts+apps+backend/0.1.0), since Kong's strip_path only removes /api - " +
-          "whatever's left of the incoming path gets appended onto the service's own Path. Specmatic's " +
-          "stub needs no Path at all, since its mock paths already match the real API directly. " +
-          "Microcks can't mock POST /accounts (it needs a real bearer token, which an OpenAPI example " +
-          "has no way to carry) - but every read endpoint works fine.",
-      },
-      {
-        heading: "Cleanup",
-        code: [{ code: "make kong:down" }],
       },
     ],
   },
@@ -138,6 +164,14 @@ export const scenarioKong: LocalizedDocsPage = {
       "このシナリオでは、まずfrontendの接続先をこのKong経由に切り替え、そのうえで同じServiceの向き先を" +
       "実backendから契約モックへ差し替えます — どちらの場合もfrontend側のコード変更は一切不要です。",
     sections: [
+      {
+        heading: "Kong・Specmatic・Microcksを使うメリット",
+        bullets: [
+          "Kong: 認証・レート制限・ルーティングをbackendの前段のゲートウェイに集約でき、向き先の変更もアプリのコードを触らず実行時に行えます。",
+          "Specmatic: OpenAPIの契約からそのままモックサーバーを生成でき、同じ契約で実backendも検証できるため、モックと実装が知らないうちにずれることを防げます。",
+          "Microcks: 契約を一度取り込むだけでexample付きのモックが立ち上がり、実APIの完成前でもfrontendなどの利用側が開発を進められます。",
+        ],
+      },
       {
         heading: "1. Kongを起動し、frontendをKong経由にする",
         body: [
@@ -157,7 +191,33 @@ export const scenarioKong: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "2. 向き先を契約モックへ差し替える",
+        heading: "2. 契約モックを起動する",
+        body: [
+          "次の手順でapps_backendの向き先にしたいモックを起動しておきます — 実backendに戻すだけなら" +
+            "追加の準備は不要です。",
+        ],
+        code: [
+          {
+            label:
+              "Specmaticのスタブ(先にapps:upが必要 — スキーマ/exampleを取り込むため):",
+            code: "make specmatic:stub-up",
+          },
+          {
+            label:
+              "Microcks(先にapps:upが必要 — 稼働中のOpenAPIスキーマを取得するため):",
+            code: "make microcks:up\nmake microcks:import-openapi",
+          },
+        ],
+        note:
+          "Microcksの場合、apps_backend自身のPathに/rest/<service>/<version>のプレフィックスをまるごと" +
+          "埋め込む必要があります(例: /rest/nb-quickstarts+apps+backend/0.1.0)。Kongのstrip_pathは/api" +
+          "しか取り除かないため、残りのパスがそのままServiceのPathに追加されるからです。Specmaticのスタブ" +
+          "はモック側のパスが実APIとそのまま一致するため、Pathの指定は不要です。MicrocksはPOST /accounts" +
+          "をモックできません(実際のbearerトークンが必要で、OpenAPIのexampleにはそれを運ぶ手段がないため)" +
+          "が、読み取り系のエンドポイントは問題なく動きます。",
+      },
+      {
+        heading: "3. 向き先を契約モックへ差し替える",
         body: [
           "Kong Managerから直接編集できるapps_backendのHost/Port/Pathが差し替えの接点です — 実backendの" +
             "代わりに同じ契約由来のモックを指すよう変更するだけで、frontend側も/api/*を叩く側も一切変更" +
@@ -169,6 +229,7 @@ export const scenarioKong: LocalizedDocsPage = {
           rows: [
             ["実backend(デフォルト)", "backend", "8080", "(空)"],
             ["Specmaticのスタブ", "specmatic-stub", "9091", "(空)"],
+            ["Microcks", "microcks", "8080", "/rest/nb-quickstarts+apps+backend/0.1.0"],
           ],
         },
         images: [
@@ -229,30 +290,21 @@ export const scenarioKong: LocalizedDocsPage = {
         },
       },
       {
-        heading: "各モックの前提条件",
+        heading: "片付け",
+        body: [
+          "このシナリオで起動したものをすべて停止します。Kongは最後に止め、その前にfrontendの接続先を" +
+            "backend直結へ戻します — そうしないと、存在しなくなったゲートウェイを呼び続けてしまいます。",
+        ],
         code: [
           {
-            label:
-              "Specmaticのスタブ(先にapps:upが必要 — スキーマ/exampleを取り込むため):",
-            code: "make specmatic:stub-up",
-          },
-          {
-            label:
-              "Microcks(先にapps:upが必要 — 稼働中のOpenAPIスキーマを取得するため):",
-            code: "make microcks:up\nmake microcks:import-openapi",
+            code:
+              "# .env: NEXT_PUBLIC_API_BASEを削除(またはhttp://localhost:8080に戻す)\n" +
+              "make apps:restart          # frontendを再作成して変更を反映\n" +
+              "make specmatic:stub-down   # Specmaticのスタブを起動した場合\n" +
+              "make microcks:down         # Microcksを起動した場合\n" +
+              "make kong:down",
           },
         ],
-        note:
-          "Microcksの場合、apps_backend自身のPathに/rest/<service>/<version>のプレフィックスをまるごと" +
-          "埋め込む必要があります(例: /rest/nb-quickstarts+apps+backend/0.1.0)。Kongのstrip_pathは/api" +
-          "しか取り除かないため、残りのパスがそのままServiceのPathに追加されるからです。Specmaticのスタブ" +
-          "はモック側のパスが実APIとそのまま一致するため、Pathの指定は不要です。MicrocksはPOST /accounts" +
-          "をモックできません(実際のbearerトークンが必要で、OpenAPIのexampleにはそれを運ぶ手段がないため)" +
-          "が、読み取り系のエンドポイントは問題なく動きます。",
-      },
-      {
-        heading: "片付け",
-        code: [{ code: "make kong:down" }],
       },
     ],
   },

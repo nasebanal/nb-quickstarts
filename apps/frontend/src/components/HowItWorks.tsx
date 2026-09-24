@@ -1,6 +1,11 @@
 "use client";
 
+import { GitHubIcon } from "./icons";
 import { useLocale } from "./LocaleProvider";
+
+// The repository itself, not its README: the details live in /docs now, so the
+// pointer here is to the source.
+const GITHUB_URL = "https://github.com/nasebanal/nb-quickstarts";
 
 // Icon shapes/colors and card styling mirror nb-dentiscope's "How It Works"
 // section (60x60 rounded-2xl icon tile, light-blue gradient, #47b1e8
@@ -37,14 +42,12 @@ export function HowItWorks() {
         ))}
       </div>
       <p className="nb-how-it-works-readme">
-        {t.howItWorks.readmeNote}{" "}
-        <a
-          href="https://github.com/nasebanal/nb-quickstarts#readme"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {t.howItWorks.readmeLinkLabel}
+        {t.howItWorks.sourceNote}{" "}
+        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="nb-source-link" data-testid="github-link">
+          <GitHubIcon />
+          {t.howItWorks.sourceLinkLabel}
         </a>
+        {t.howItWorks.sourceNoteAfter}
       </p>
     </section>
   );

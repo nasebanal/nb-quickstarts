@@ -15,14 +15,16 @@ services:
     environment:
       MYSQL_HOST: ${LOCUST_MYSQL_HOST:-mysql-server}
       MYSQL_PORT: ${LOCUST_MYSQL_PORT:-3306}
-      MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
-      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
+      MYSQL_USER: ${LOCUST_MYSQL_USER:-${APPS_MYSQL_USER:-demo}}
+      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-${APPS_MYSQL_PASSWORD:-demo}}
       MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
       MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
       DEBUG_MODE: ${LOCUST_DEBUG_MODE:-false}
       HTTP_HOST: ${LOCUST_HTTP_HOST:-http://backend:8080}
       KAFKA_BOOTSTRAP_SERVERS: ${LOCUST_KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
       KAFKA_TOPIC: ${LOCUST_KAFKA_TOPIC:-quickstart-events}
+      # locustfile_http_overload_consul.py finds the backend instances here.
+      CONSUL_HTTP_ADDR: ${LOCUST_CONSUL_HTTP_ADDR:-http://consul:8500}
       PYTHONUNBUFFERED: 1
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -55,14 +57,16 @@ services:
     environment:
       MYSQL_HOST: ${LOCUST_MYSQL_HOST:-mysql-server}
       MYSQL_PORT: ${LOCUST_MYSQL_PORT:-3306}
-      MYSQL_USER: ${LOCUST_MYSQL_USER:-testuser}
-      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-testpassword}
+      MYSQL_USER: ${LOCUST_MYSQL_USER:-${APPS_MYSQL_USER:-demo}}
+      MYSQL_PASSWORD: ${LOCUST_MYSQL_PASSWORD:-${APPS_MYSQL_PASSWORD:-demo}}
       MYSQL_DATABASE: ${LOCUST_MYSQL_DATABASE:-information_schema}
       MYSQL_CARTESIAN_LIMIT: ${LOCUST_MYSQL_CARTESIAN_LIMIT:-10000}
       DEBUG_MODE: ${LOCUST_DEBUG_MODE:-false}
       HTTP_HOST: ${LOCUST_HTTP_HOST:-http://backend:8080}
       KAFKA_BOOTSTRAP_SERVERS: ${LOCUST_KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
       KAFKA_TOPIC: ${LOCUST_KAFKA_TOPIC:-quickstart-events}
+      # locustfile_http_overload_consul.py finds the backend instances here.
+      CONSUL_HTTP_ADDR: ${LOCUST_CONSUL_HTTP_ADDR:-http://consul:8500}
       PYTHONUNBUFFERED: 1
     extra_hosts:
       - "host.docker.internal:host-gateway"

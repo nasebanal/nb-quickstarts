@@ -40,9 +40,71 @@ export const gettingStarted: LocalizedDocsPage = {
             ["Backend REST", "http://localhost:8080"],
             ["Backend GraphQL", "http://localhost:8080/graphql"],
             ["MCP server", "http://localhost:8080/mcp"],
-            ["MySQL", "localhost:3306 (database testdb)"],
+            ["MySQL", "localhost:3306 (database demo)"],
+            ["SQL client (phpMyAdmin, no login needed)", "http://localhost:8081"],
           ],
         },
+      },
+      {
+        heading: "Log in",
+        body: [
+          "The login checks a username and password against the users table in MySQL. One user is " +
+            "seeded - demo, with the password demo. After logging in, the header's user menu leads to " +
+            "the Profile page, where the email is shown (recorded, not editable) and the display name and " +
+            "language can be changed and saved.",
+        ],
+        table: {
+          headers: ["Username", "Password", "Language", "Display name"],
+          rows: [
+            ["demo", "demo", "ja", "Demo User"],
+          ],
+        },
+        note:
+          "These are seed data for a local demo (apps/backend/app/seed.py), not credentials to protect. " +
+          "Only a hash of the password is stored. Every test tool (Playwright, Locust, kafka-bridge, " +
+          "Specmatic) logs in as demo.",
+      },
+      {
+        heading: "Look inside MySQL",
+        body: [
+          "The easiest way in is the SQL client: make apps:sql opens phpMyAdmin already logged in to " +
+            "demo (no password prompt - it connects as root for this local demo), with the two tables, " +
+            "accounts and users, in the left-hand list. It also lets you click through the rows, and " +
+            "shows mysql.user, where the users Vault creates in Scenario 6 appear.",
+          "From the terminal, make apps:mysql opens a mysql shell, or runs one statement:",
+        ],
+        code: [
+          { code: "make apps:sql      # phpMyAdmin, already logged in" },
+          { code: "make apps:mysql    # an interactive mysql shell on demo" },
+          { code: "make apps:mysql SQL=\"SHOW TABLES\"" },
+        ],
+        terminal: {
+          lines: [
+            { text: "$ make apps:mysql SQL=\"SELECT id, name, quantity, source FROM accounts ORDER BY id LIMIT 5\"", tone: "muted" },
+            { text: "+----+---------------+----------+--------+" },
+            { text: "| id | name          | quantity | source |" },
+            { text: "+----+---------------+----------+--------+" },
+            { text: "|  1 | Cash          |   100000 | seed   |" },
+            { text: "|  2 | Rent Expense  |    30000 | seed   |" },
+            { text: "|  3 | Cash          |   -30000 | seed   |" },
+            { text: "|  4 | Sales Revenue |    50000 | seed   |" },
+            { text: "|  5 | Cash          |    50000 | seed   |" },
+            { text: "+----+---------------+----------+--------+" },
+            { text: "" },
+            { text: "$ make apps:mysql SQL=\"SELECT username, email, display_name, language, provider FROM users WHERE provider = 'demo'\"", tone: "muted" },
+            { text: "+----------+--------------------+--------------+----------+----------+" },
+            { text: "| username | email              | display_name | language | provider |" },
+            { text: "+----------+--------------------+--------------+----------+----------+" },
+            { text: "| demo     | demo@nasebanal.com | Demo User    | ja       | demo     |" },
+            { text: "+----------+--------------------+--------------+----------+----------+" },
+          ],
+        },
+        note:
+          "Real output. Try it in step with the app: record a transaction and a new accounts row appears; " +
+          "save a new display name on the Profile page and the users row changes; log in through Keycloak " +
+          "once (Scenario 5) and a keycloak row is created for you. A balance is the SUM of an account's " +
+          "rows: SELECT name, SUM(quantity) FROM accounts GROUP BY name. The Overview page's ER diagram " +
+          "shows every column.",
       },
       {
         heading: "One-shot test tools",
@@ -105,7 +167,7 @@ export const gettingStarted: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "Next: the six scenarios",
+        heading: "Next: the seven scenarios",
         body: [
           "Each scenario below builds on apps:up and is independent of the others - run them in any " +
             "order, or skip straight to the one you're interested in. Every scenario ends the same way: " +
@@ -153,9 +215,69 @@ export const gettingStarted: LocalizedDocsPage = {
             ["Backend REST", "http://localhost:8080"],
             ["Backend GraphQL", "http://localhost:8080/graphql"],
             ["MCPサーバー", "http://localhost:8080/mcp"],
-            ["MySQL", "localhost:3306(データベース testdb)"],
+            ["MySQL", "localhost:3306(データベース demo)"],
+            ["SQLクライアント(phpMyAdmin、ログイン不要)", "http://localhost:8081"],
           ],
         },
+      },
+      {
+        heading: "ログインする",
+        body: [
+          "ログインは、ユーザー名とパスワードをMySQLのusersテーブルと照合します。デモ用のユーザー1人(demo、パスワードもdemo)が" +
+            "シードされています。ログイン後、ヘッダーのユーザーメニューからプロフィール画面に" +
+            "進むと、メールアドレス(記録のみで編集不可)が表示され、表示名と言語を変更して保存できます。",
+        ],
+        table: {
+          headers: ["ユーザー名", "パスワード", "言語", "表示名"],
+          rows: [
+            ["demo", "demo", "ja", "Demo User"],
+          ],
+        },
+        note:
+          "これらはローカルデモ用のシードデータ(apps/backend/app/seed.py)で、守るべき認証情報ではありません。" +
+          "保存されているのはパスワードのハッシュだけです。すべてのテストツール(Playwright・Locust・" +
+          "kafka-bridge・Specmatic)は、demoでログインします。",
+      },
+      {
+        heading: "MySQLの中身を確認する",
+        body: [
+          "いちばん手軽なのはSQLクライアントです: make apps:sqlでphpMyAdminが、demoにログイン済みの状態で" +
+            "開きます(パスワード入力は不要 — このローカルデモではrootで接続します)。左の一覧に2つのテーブル、" +
+            "accountsとusersが並び、行をクリックして辿れます。シナリオ6でVaultが作るユーザーが現れる" +
+            "mysql.userも見られます。",
+          "ターミナルからは、make apps:mysqlでmysqlシェルを開くか、SQLを1文だけ実行できます:",
+        ],
+        code: [
+          { code: "make apps:sql      # phpMyAdmin(ログイン済み)" },
+          { code: "make apps:mysql    # demoへの対話的なmysqlシェル" },
+          { code: "make apps:mysql SQL=\"SHOW TABLES\"" },
+        ],
+        terminal: {
+          lines: [
+            { text: "$ make apps:mysql SQL=\"SELECT id, name, quantity, source FROM accounts ORDER BY id LIMIT 5\"", tone: "muted" },
+            { text: "+----+---------------+----------+--------+" },
+            { text: "| id | name          | quantity | source |" },
+            { text: "+----+---------------+----------+--------+" },
+            { text: "|  1 | Cash          |   100000 | seed   |" },
+            { text: "|  2 | Rent Expense  |    30000 | seed   |" },
+            { text: "|  3 | Cash          |   -30000 | seed   |" },
+            { text: "|  4 | Sales Revenue |    50000 | seed   |" },
+            { text: "|  5 | Cash          |    50000 | seed   |" },
+            { text: "+----+---------------+----------+--------+" },
+            { text: "" },
+            { text: "$ make apps:mysql SQL=\"SELECT username, email, display_name, language, provider FROM users WHERE provider = 'demo'\"", tone: "muted" },
+            { text: "+----------+--------------------+--------------+----------+----------+" },
+            { text: "| username | email              | display_name | language | provider |" },
+            { text: "+----------+--------------------+--------------+----------+----------+" },
+            { text: "| demo     | demo@nasebanal.com | Demo User    | ja       | demo     |" },
+            { text: "+----------+--------------------+--------------+----------+----------+" },
+          ],
+        },
+        note:
+          "実際の出力です。アプリの操作と並べて試してみてください: 取引を記帳するとaccountsに新しい行が増え、" +
+          "プロフィール画面で表示名を保存するとusersの行が変わり、Keycloakで一度ログインすれば(シナリオ5)" +
+          "keycloakの行が自動で作られます。残高は科目の行のSUMです: SELECT name, SUM(quantity) FROM accounts " +
+          "GROUP BY name。すべてのカラムは概要ページのER図にあります。",
       },
       {
         heading: "一発実行のテストツール",
@@ -217,7 +339,7 @@ export const gettingStarted: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "次は6つのシナリオ",
+        heading: "次は7つのシナリオ",
         body: [
           "以下の各シナリオはapps:upの上に成り立ち、互いに独立しています — どの順で試しても、興味のある" +
             "ものだけ試してもかまいません。どのシナリオも最後はmake <module>:downでそのモジュールだけを" +

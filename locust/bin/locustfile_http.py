@@ -16,5 +16,6 @@ class WebsiteUser(HttpUser):
     @tag('http-login')
     def test_login(self):
         self.client.post("/auth/login", json={
-            "username": "E001"
+            "username": "demo",
+            "password": os.getenv("DEMO_PASSWORD", "demo"),
         })

@@ -29,12 +29,16 @@ apps:
 	@echo "Test-target stack under verification: MySQL + FastAPI backend (REST/GraphQL/MCP) + Next.js frontend."
 	@echo ""
 	@echo "Container Management:"
-	@echo "  apps:up             - Build (if needed) and start test target apps (MySQL + backend + frontend)"
+	@echo "  apps:up             - Build (if needed) and start test target apps (MySQL + backend + frontend)."
+	@echo "                        APPS_BACKEND_INSTANCES=3 make apps:up runs three backend instances (default 1);"
+	@echo "                        run it again with another number to scale up or down"
 	@echo "  apps:down           - Stop and remove apps containers (MySQL data preserved)"
 	@echo "  apps:status         - Check apps container status"
 	@echo "  apps:restart        - Restart apps containers (MySQL data preserved)"
 	@echo "  apps:reset          - Restart AND wipe MySQL data (fresh database)"
 	@echo "  apps:open           - Open the frontend (TypeScript UI) in browser"
+	@echo "  apps:sql            - Open the SQL client (phpMyAdmin, already logged in to demo) in browser"
+	@echo "  apps:mysql          - Open a mysql shell on the database (or: make apps:mysql SQL='SELECT ...')"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  NEXT_PUBLIC_API_BASE=http://localhost:8080 # URL apps/frontend calls from the"
@@ -49,7 +53,8 @@ apps:
 	@echo "  Backend REST:    http://localhost:8080"
 	@echo "  Backend GraphQL: http://localhost:8080/graphql"
 	@echo "  MCP server:      http://localhost:8080/mcp"
-	@echo "  MySQL:           localhost:3306 (database: testdb)"
+	@echo "  MySQL:           localhost:3306 (database: demo)"
+	@echo "  SQL client:      http://localhost:8081 (phpMyAdmin, no login - see apps:sql)"
 	@echo ""
 	@echo "Note: apps:up/apps:down manage the test target lifecycle independently"
 	@echo "      from any test tool. Point a test tool at an external host instead"
@@ -66,8 +71,8 @@ apps-network-ensure:
 	@docker network create apps-network >/dev/null 2>&1 || true
 
 apps-up: apps-network-ensure
-	@echo "Starting apps (MySQL + backend + frontend)..."
-	@docker compose -p apps -f apps/docker-compose.yml up -d $${APPS_BUILD_FLAG---build}
+	@echo "Starting apps (MySQL + backend + frontend; $${APPS_BACKEND_INSTANCES:-1} backend instance(s))..."
+	@sh apps/bin/compose.sh up -d $${APPS_BUILD_FLAG---build}
 	@printf "Waiting for MySQL (mysql-server) to be ready"
 	@i=0; \
 		until [ "$$(docker inspect -f '{{.State.Health.Status}}' nb-mysql-server 2>/dev/null)" = "healthy" ] || [ $$i -ge 60 ]; do \
@@ -81,16 +86,17 @@ apps-up: apps-network-ensure
 	@echo "  Backend REST:    http://localhost:8080"
 	@echo "  Backend GraphQL: http://localhost:8080/graphql"
 	@echo "  MCP server:      http://localhost:8080/mcp"
-	@echo "  MySQL:           localhost:$${LOCUST_MYSQL_PORT:-3306}"
+	@echo "  MySQL:           localhost:$${APPS_MYSQL_PORT:-3306}"
+	@echo "  SQL client:      http://localhost:$${SQL_CLIENT_PORT:-8081} (phpMyAdmin, already logged in)"
 
 apps-down:
 	@echo "Stopping apps containers..."
-	@docker compose -p apps -f apps/docker-compose.yml down --remove-orphans
+	@sh apps/bin/compose.sh down --remove-orphans
 	@echo "Apps containers stopped and removed. (MySQL data preserved in the apps_apps-db-data Docker volume — use 'make apps:reset' to wipe it.)"
 
 apps-status:
 	@echo "Checking apps container status..."
-	@docker compose -p apps -f apps/docker-compose.yml ps
+	@sh apps/bin/compose.sh ps
 
 apps-restart:
 	@$(MAKE) apps-down
@@ -98,8 +104,19 @@ apps-restart:
 
 apps-reset:
 	@echo "Resetting apps (wiping MySQL data)..."
-	@docker compose -p apps -f apps/docker-compose.yml down --remove-orphans --volumes
+	@sh apps/bin/compose.sh down --remove-orphans --volumes
 	@APPS_BUILD_FLAG= $(MAKE) apps-up
 
 apps-open:
 	@bin/open_browser.sh http://localhost:5173
+
+apps-sql:
+	@bin/open_browser.sh "http://localhost:$${SQL_CLIENT_PORT:-8081}/index.php?route=/database/structure&db=$${APPS_MYSQL_DATABASE:-demo}"
+
+# With SQL='...' runs that one statement; without, opens an interactive shell.
+apps-mysql:
+	@if [ -n "$$SQL" ]; then \
+		docker exec nb-mysql-server mysql -uroot -p$${APPS_MYSQL_ROOT_PASSWORD:-rootpassword} -t $${APPS_MYSQL_DATABASE:-demo} -e "$$SQL" 2>/dev/null; \
+	else \
+		docker exec -it nb-mysql-server mysql -uroot -p$${APPS_MYSQL_ROOT_PASSWORD:-rootpassword} $${APPS_MYSQL_DATABASE:-demo}; \
+	fi

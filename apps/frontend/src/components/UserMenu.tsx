@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthProvider";
 import { useLocale } from "./LocaleProvider";
@@ -10,7 +11,7 @@ import { useLocale } from "./LocaleProvider";
 // see Header.tsx's own note on why.
 export function UserMenu() {
   const { t } = useLocale();
-  const { username, logout } = useAuth();
+  const { username, provider, profile, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -54,10 +55,28 @@ export function UserMenu() {
         <div className="nb-nav-dropdown" data-testid="user-menu-dropdown">
           <div className="nb-nav-dropdown-header">
             <div className="nb-nav-dropdown-name" data-testid="user-menu-name">
-              {username}
+              {profile?.displayName || username}
             </div>
+            {profile?.displayName && (
+              <div className="nb-nav-dropdown-sub" data-testid="user-menu-username">
+                {username}
+              </div>
+            )}
+            {provider === "keycloak" && (
+              <div className="nb-provider-badge" data-testid="user-menu-provider">
+                {t.login.keycloakBadge}
+              </div>
+            )}
           </div>
           <div className="nb-nav-dropdown-footer">
+            <Link
+              href="/profile"
+              className="nb-nav-dropdown-item"
+              onClick={() => setOpen(false)}
+              data-testid="profile-link"
+            >
+              {t.profile.menuLabel}
+            </Link>
             <button
               type="button"
               className="nb-nav-dropdown-item nb-nav-dropdown-logout"

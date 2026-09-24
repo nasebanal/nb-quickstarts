@@ -15,6 +15,7 @@ services:
       - "${OTEL_HTTP_PORT:-4318}:4318"
     depends_on:
       - tempo
+      - loki
     networks:
       - observability-net
       - apps-network
@@ -28,6 +29,7 @@ services:
       - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-7d}
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - prometheus-data:/prometheus
     ports:
       - "${PROMETHEUS_PORT:-9094}:9090"
@@ -52,6 +54,53 @@ services:
     networks:
       - observability-net
 
+  # Application logs. Receives OTLP logs from the collector on its native
+  # /otlp endpoint; Grafana queries it (LogQL) alongside metrics and traces.
+  loki:
+    image: grafana/loki:${LOKI_VERSION:-3.3.2}
+    container_name: nb-loki
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    # Same reason as tempo above: root-owned named volume, non-root process.
+    user: root
+    volumes:
+      - ./loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    networks:
+      - observability-net
+
+  # Receives alerts from Prometheus (alert-rules.yml), groups/dedupes them and
+  # routes them to a receiver (alertmanager.yml).
+  alertmanager:
+    image: prom/alertmanager:${ALERTMANAGER_VERSION:-v0.28.0}
+    container_name: nb-alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      # 9095, not Alertmanager's own 9093 default - 9093 is Kafka's
+      # controller port on the host.
+      - "${ALERTMANAGER_PORT:-9095}:9093"
+    depends_on:
+      - alert-sink
+    networks:
+      - observability-net
+
+  # Webhook receiver standing in for Slack/email/etc. Prints each alert it
+  # is sent; see bin/alert_sink.py.
+  alert-sink:
+    image: python:3.13-alpine
+    container_name: nb-alert-sink
+    command: ["python", "-u", "/app/alert_sink.py"]
+    volumes:
+      - ./bin/alert_sink.py:/app/alert_sink.py:ro
+    networks:
+      - observability-net
+
   grafana:
     image: grafana/grafana:${GRAFANA_VERSION:-11.4.0}
     container_name: nb-grafana
@@ -72,6 +121,8 @@ services:
     depends_on:
       - prometheus
       - tempo
+      - loki
+      - alertmanager
     networks:
       - observability-net
 
@@ -86,4 +137,6 @@ networks:
 volumes:
   prometheus-data:
   tempo-data:
+  loki-data:
+  alertmanager-data:
   grafana-data:
