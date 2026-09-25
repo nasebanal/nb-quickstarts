@@ -31,8 +31,8 @@ app = FastAPI(lifespan=lifespan)
 setup_telemetry(app, engine)
 
 
-# Which instance answered: with more than one backend behind Consul (see the
-# Consul scenario) a client needs to see who served it. A raw ASGI middleware,
+# Which instance answered: with more than one backend instance
+# (APPS_BACKEND_INSTANCES > 1) a client needs to see who served it. A raw ASGI middleware,
 # not @app.middleware("http") - that one wraps every request in
 # BaseHTTPMiddleware, which costs measurable throughput, and this app is the
 # thing the load-test scenarios measure.

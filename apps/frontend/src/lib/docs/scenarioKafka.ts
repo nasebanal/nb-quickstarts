@@ -153,7 +153,7 @@ export const scenarioKafka: LocalizedDocsPage = {
           ],
         },
         note:
-          "Scenario 4 (Observability) shows this same overload run live in Grafana - 5xx ratio, p95 " +
+          "Scenario 3 (Observability) shows this same overload run live in Grafana - 5xx ratio, p95 " +
           "latency and DB connections in use spike during the direct-REST step and stay flat during the " +
           "Kafka one.",
       },
@@ -302,7 +302,7 @@ export const scenarioKafka: LocalizedDocsPage = {
           ],
         },
         note:
-          "シナリオ4(オブザーバビリティ)では、この同じoverload実行をGrafana上でライブに見ます — " +
+          "シナリオ3(オブザーバビリティ)では、この同じoverload実行をGrafana上でライブに見ます — " +
           "REST直叩きのステップでは5xx比率・p95レイテンシ・使用中のDB接続数が跳ね上がり、Kafka経由の" +
           "ステップでは平坦なままになります。",
       },

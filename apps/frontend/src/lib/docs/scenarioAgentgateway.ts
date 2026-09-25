@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioAgentgateway: LocalizedDocsPage = {
   en: {
-    title: "Scenario 7: MCP access via agentgateway",
+    title: "Scenario 6: MCP access via agentgateway",
     description:
       "The backend already mounts its own MCP server natively at /mcp (via fastapi-mcp, auto-derived " +
       "from its REST routes). agentgateway is a different way to get there: instead of backend-side " +
@@ -119,7 +119,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ7: agentgateway経由でのMCPアクセス",
+    title: "シナリオ6: agentgateway経由でのMCPアクセス",
     description:
       "backendはすでに、自身のREST routesから自動生成されたMCPサーバーをfastapi-mcp経由で/mcpにネイティブ" +
       "にマウントしています。agentgatewayはそこに至るもう一つの経路です — backend側のMCP用コードではなく、" +

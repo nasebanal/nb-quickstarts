@@ -1,6 +1,6 @@
 # Alert rules evaluated by Prometheus; firing alerts go to Alertmanager
 # (see alertmanager.yml). They watch the same signals the Grafana dashboard
-# graphs - the point of scenario 4's overload run is that the direct-REST
+# graphs - the point of scenario 3's overload run is that the direct-REST
 # step trips these and the Kafka step doesn't.
 #
 # `for: 30s` (three 10s scrapes) keeps a single noisy sample from firing.

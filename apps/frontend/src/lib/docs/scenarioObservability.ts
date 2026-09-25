@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioObservability: LocalizedDocsPage = {
   en: {
-    title: "Scenario 4: Observability",
+    title: "Scenario 3: Observability",
     description:
       "The backend can export OpenTelemetry traces (FastAPI requests + SQLAlchemy queries), HTTP " +
       "server metrics and application logs over OTLP - off by default, so apps:up behaves exactly as " +
@@ -36,7 +36,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         body: [
           "The dashboard shows request rate per path, 5xx ratio, p50/p95/p99 latency, active " +
             "requests / DB connections in use, and recent traces - click through to the span waterfall, " +
-            "including each SQL query. /health is excluded from instrumentation, since Consul and " +
+            "including each SQL query. /health is excluded from instrumentation, since " +
             "healthchecks would otherwise dominate every panel.",
         ],
         terminal: {
@@ -275,7 +275,7 @@ export const scenarioObservability: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ4: オブザーバビリティ",
+    title: "シナリオ3: オブザーバビリティ",
     description:
       "backendはOpenTelemetryのトレース(FastAPIのリクエスト + SQLAlchemyのクエリ)・HTTPサーバー" +
       "メトリクス・アプリケーションログをOTLPで送信できます — デフォルトはオフなので、明示的に有効化" +
@@ -309,7 +309,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         body: [
           "ダッシュボードには、パスごとのリクエストレート・5xx比率・p50/p95/p99レイテンシ・アクティブな" +
             "リクエスト数/使用中のDB接続数、そして直近のトレース(クリックするとスパンのウォーターフォール、" +
-            "各SQLクエリまで確認可)が表示されます。/healthは計装から除外されているため、Consulなどの" +
+            "各SQLクエリまで確認可)が表示されます。/healthは計装から除外されているため、" +
             "ヘルスチェックがすべてのパネルを占領することはありません。",
         ],
         terminal: {

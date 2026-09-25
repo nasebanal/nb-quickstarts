@@ -74,7 +74,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_SERVICE_NAME: nb-backend
       # Reported in every response's X-Served-By header - what tells the
-      # instances apart when the Consul module starts more of them.
+      # instances apart when APPS_BACKEND_INSTANCES starts more of them.
       INSTANCE_ID: backend-1
       # Keycloak JWT validation (app/auth.py) - empty (the default) leaves
       # it off, only the mock /auth/login token is accepted. Set to
