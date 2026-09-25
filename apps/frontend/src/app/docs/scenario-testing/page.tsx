@@ -2,9 +2,9 @@
 
 import { DocsArticle } from "@/components/docs/DocsArticle";
 import { useLocale } from "@/components/LocaleProvider";
-import { testing } from "@/lib/docs/testing";
+import { scenarioTesting } from "@/lib/docs/scenarioTesting";
 
 export default function DocsTestingPage() {
   const { locale } = useLocale();
-  return <DocsArticle content={testing[locale]} />;
+  return <DocsArticle content={scenarioTesting[locale]} />;
 }

@@ -5,13 +5,13 @@ import { scenarioKeycloak } from "./scenarioKeycloak";
 import { scenarioKong } from "./scenarioKong";
 import { scenarioObservability } from "./scenarioObservability";
 import { scenarioVault } from "./scenarioVault";
-import { testing } from "./testing";
+import { scenarioTesting } from "./scenarioTesting";
 import { DOCS_NAV } from "./nav";
 import nextConfig from "../../../next.config";
 
 // Scenario 1 is the Testing page (its URL predates the numbering), then the six module scenarios.
 const SCENARIOS = [
-  ["1", testing],
+  ["1", scenarioTesting],
   ["2", scenarioKong],
   ["3", scenarioKafka],
   ["4", scenarioObservability],
@@ -55,7 +55,7 @@ describe("scenario pages", () => {
 
 describe("Scenario 1: verify the demo app", () => {
   for (const locale of ["en", "ja"] as const) {
-    const page = testing[locale];
+    const page = scenarioTesting[locale];
     const CHECK = locale === "en" ? "Checking the results" : "確認方法";
     const EVALUATION = locale === "en" ? "Evaluation" : "評価結果";
 
@@ -93,7 +93,7 @@ describe("Scenario 1: verify the demo app", () => {
 
   it("comparison: implementation, API tests and mock features, as facts only", () => {
     for (const locale of ["en", "ja"] as const) {
-      const reference = testing[locale].sections.at(-1)!;
+      const reference = scenarioTesting[locale].sections.at(-1)!;
       expect(reference.subsections?.map((sub) => sub.heading)).toEqual(
         locale === "en" ? ["Implementation", "API tests", "Mock features"] : ["実装形態", "APIテスト", "提供Mock機能"],
       );
@@ -133,7 +133,7 @@ describe("Scenario 1: verify the demo app", () => {
 
   it("links the tools' own pages from the comparison tables (https only, same targets in both languages)", () => {
     const linksOf = (locale: "en" | "ja") =>
-      testing[locale].sections
+      scenarioTesting[locale].sections
         .at(-1)!
         .subsections!.flatMap((sub) => sub.table!.rows.flat())
         .flatMap((cell) => [...cell.matchAll(/\[([^\]]+)\]\(([^)\s]+)\)/g)].map((m) => m[2]));
@@ -143,14 +143,14 @@ describe("Scenario 1: verify the demo app", () => {
     expect(linksOf("ja")).toEqual(en);
     // Nothing half-written is left over.
     for (const locale of ["en", "ja"] as const) {
-      const text = testing[locale].sections.at(-1)!.subsections!.flatMap((sub) => sub.table!.rows.flat()).join(" ");
+      const text = scenarioTesting[locale].sections.at(-1)!.subsections!.flatMap((sub) => sub.table!.rows.flat()).join(" ");
       expect(text.replace(/\[[^\]]+\]\([^)\s]+\)/g, "")).not.toMatch(/\]\(/);
     }
   });
 
   it("keeps ja and en in the same shape", () => {
     const shape = (locale: "en" | "ja") =>
-      testing[locale].sections.map((section) => [
+      scenarioTesting[locale].sections.map((section) => [
         section.body?.length ?? 0,
         Boolean(section.table),
         section.subsections?.map((sub) => [sub.body?.length ?? 0, sub.bullets?.length ?? 0, sub.code?.length ?? 0, sub.images?.length ?? 0, Boolean(sub.table), Boolean(sub.note)]),
@@ -159,7 +159,7 @@ describe("Scenario 1: verify the demo app", () => {
   });
 
   it("keeps the report screenshots the old page had", () => {
-    const images = testing.en.sections.flatMap((section) => section.subsections?.flatMap((sub) => sub.images?.map((image) => image.src) ?? []) ?? []);
+    const images = scenarioTesting.en.sections.flatMap((section) => section.subsections?.flatMap((sub) => sub.images?.map((image) => image.src) ?? []) ?? []);
     expect(images.sort()).toEqual(
       [
         "/docs/screenshots/report-locust.png",

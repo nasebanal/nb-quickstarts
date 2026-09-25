@@ -6,12 +6,12 @@ import { scenarioKafka } from "./scenarioKafka";
 import { scenarioKeycloak } from "./scenarioKeycloak";
 import { scenarioKong } from "./scenarioKong";
 import { scenarioObservability } from "./scenarioObservability";
-import { testing } from "./testing";
+import { scenarioTesting } from "./scenarioTesting";
 import { scenarioVault } from "./scenarioVault";
 
 // Sidebar order (see nav.ts): the Overview lists the seven scenarios in this order (scenario 1 is the Testing page).
 const SCENARIOS = [
-  testing,
+  scenarioTesting,
   scenarioKong,
   scenarioKafka,
   scenarioObservability,

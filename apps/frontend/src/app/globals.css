@@ -1926,3 +1926,72 @@ h1 {
   font-family: ui-monospace, monospace;
   font-size: 0.8rem;
 }
+
+/* Printing / "Save as PDF".
+   - The site header's search/nav chrome, the footer and the docs sidebar are
+     navigation, not content: hidden. (Chrome's own "Headers and footers"
+     checkbox only controls the browser's date/title/URL/page-number strip; it
+     never touches the page's own <footer>.) The Next.js dev badge is dev-only.
+   - The screen layout makes <body> a flex column (sticky footer, see the body
+     rule above). Chrome cannot break a flex item across pages the way it
+     breaks normal flow, so a page taller than one sheet laid its footer at the
+     first sheet's height and let the content run on underneath/after it. In
+     print <body> is a plain block, so the content simply flows over as many
+     sheets as it needs.
+   - Scroll containers (overflow: auto/hidden) are laid out as unbreakable
+     boxes, so anything taller than the rest of the sheet was clipped or
+     overlapped; on paper there is nothing to scroll, so they show everything. */
+@media print {
+  .nb-header,
+  .nb-footer,
+  .nb-docs-sidebar,
+  nextjs-portal {
+    display: none !important;
+  }
+
+  body {
+    display: block;
+    min-height: 0;
+    background: #fff;
+  }
+
+  body > main {
+    flex: none;
+  }
+
+  .nb-docs-layout {
+    display: block;
+    padding: 0;
+  }
+
+  .nb-docs-main {
+    min-width: 0;
+  }
+
+  .nb-docs-content pre,
+  .nb-docs-diagram,
+  .nb-docs-sequence,
+  .nb-docs-terminal,
+  .nb-docs-er-entity,
+  .nb-docs-chart-table table {
+    overflow: visible;
+  }
+
+  .nb-docs-content pre {
+    white-space: pre-wrap;
+  }
+
+  /* Keep a table row, a figure and a code block on one sheet when they fit. */
+  .nb-docs-content tr,
+  .nb-docs-figure,
+  .nb-docs-content pre,
+  .nb-docs-terminal {
+    break-inside: avoid;
+  }
+
+  .nb-docs-content h1,
+  .nb-docs-content h2,
+  .nb-docs-content h3 {
+    break-after: avoid;
+  }
+}

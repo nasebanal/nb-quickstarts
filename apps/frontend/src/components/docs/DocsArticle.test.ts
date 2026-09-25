@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { overview } from "../../lib/docs/overview";
-import { testing } from "../../lib/docs/testing";
+import { scenarioTesting } from "../../lib/docs/scenarioTesting";
 import { DocsArticle } from "./DocsArticle";
 
 // Server-side render of the real page content: catches a runtime error in the renderer (subsections that
@@ -13,8 +13,8 @@ const render = (content: Parameters<typeof DocsArticle>[0]["content"], slots?: R
 describe("DocsArticle", () => {
   for (const locale of ["en", "ja"] as const) {
     it(`renders Scenario 1 (${locale}) with its subsections' code, images, tables and notes`, () => {
-      const html = render(testing[locale]);
-      expect(html).toContain(`<h1>${testing[locale].title}</h1>`);
+      const html = render(scenarioTesting[locale]);
+      expect(html).toContain(`<h1>${scenarioTesting[locale].title}</h1>`);
       // 7 tools x (check + evaluation) + the reference comparison's three (implementation / API tests / mock features).
       expect((html.match(/<h3>/g) ?? []).length).toBe(7 * 2 + 3);
       expect((html.match(/<figure/g) ?? []).length).toBe(8);
