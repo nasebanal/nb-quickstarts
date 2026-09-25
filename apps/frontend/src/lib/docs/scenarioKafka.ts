@@ -23,7 +23,7 @@ const JA_CHART_LABELS = {
 
 export const scenarioKafka: LocalizedDocsPage = {
   en: {
-    title: "Scenario 2: Switch to Kafka",
+    title: "Scenario 3: Switch to Kafka",
     description:
       "kafka-bridge is a small standalone consumer that reads events off a Kafka topic and forwards " +
       "each one to the real backend via POST /accounts - the same write every other client uses. This " +
@@ -153,7 +153,7 @@ export const scenarioKafka: LocalizedDocsPage = {
           ],
         },
         note:
-          "Scenario 3 (Observability) shows this same overload run live in Grafana - 5xx ratio, p95 " +
+          "Scenario 4 (Observability) shows this same overload run live in Grafana - 5xx ratio, p95 " +
           "latency and DB connections in use spike during the direct-REST step and stay flat during the " +
           "Kafka one.",
       },
@@ -173,7 +173,7 @@ export const scenarioKafka: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ2: Kafka経由への切り替え",
+    title: "シナリオ3: Kafka経由への切り替え",
     description:
       "kafka-bridgeは、Kafkaトピックからイベントを読み取り、1件ずつ実際のbackendへPOST /accountsとして" +
       "転送する、小さな独立したconsumerです — 他のどのクライアントとも同じ書き込みです。このシナリオでは、" +
@@ -302,7 +302,7 @@ export const scenarioKafka: LocalizedDocsPage = {
           ],
         },
         note:
-          "シナリオ3(オブザーバビリティ)では、この同じoverload実行をGrafana上でライブに見ます — " +
+          "シナリオ4(オブザーバビリティ)では、この同じoverload実行をGrafana上でライブに見ます — " +
           "REST直叩きのステップでは5xx比率・p95レイテンシ・使用中のDB接続数が跳ね上がり、Kafka経由の" +
           "ステップでは平坦なままになります。",
       },
@@ -316,7 +316,7 @@ export const scenarioKafka: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "片付け",
+        heading: "環境のクリーンアップ",
         code: [{ code: "make kafka:down" }],
       },
     ],

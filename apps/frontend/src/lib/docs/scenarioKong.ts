@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioKong: LocalizedDocsPage = {
   en: {
-    title: "Scenario 1: Switch to Kong",
+    title: "Scenario 2: Switch to Kong",
     description:
       "Kong's apps_backend gateway service proxies http://localhost:8000/api/* to the real backend's " +
       "own root (strip_path: true, so /api/accounts reaches backend:8080/accounts). This scenario " +
@@ -12,7 +12,7 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "Why Kong, Specmatic and Microcks",
         body: [
-          "Kafka's path (Scenario 2) does not go through Kong: by default the bridge posts to the backend directly. Kong is where the REST clients - the browser, the load tests - are routed, and where a contract mock can be swapped in.",
+          "Kafka's path (Scenario 3) does not go through Kong: by default the bridge posts to the backend directly. Kong is where the REST clients - the browser, the load tests - are routed, and where a contract mock can be swapped in.",
         ],
         bullets: [
           "Kong: put auth, rate limiting and routing in one gateway in front of the backend, and change where traffic goes at runtime - no application code change.",
@@ -47,7 +47,7 @@ export const scenarioKong: LocalizedDocsPage = {
         code: [
           {
             label:
-              "Specmatic's stub (needs apps:up first, to seed its schema+examples):",
+              "Specmatic's mock (needs apps:up first, to seed its schema+examples):",
             code: "make specmatic:stub-up",
           },
           {
@@ -60,7 +60,7 @@ export const scenarioKong: LocalizedDocsPage = {
           "Microcks needs the full /rest/<service>/<version> prefix baked into apps_backend's own Path " +
           "(e.g. /rest/nb-quickstarts+apps+backend/0.1.0), since Kong's strip_path only removes /api - " +
           "whatever's left of the incoming path gets appended onto the service's own Path. Specmatic's " +
-          "stub needs no Path at all, since its mock paths already match the real API directly. " +
+          "mock needs no Path at all, since its mock paths already match the real API directly. " +
           "Microcks can't mock POST /accounts (it needs a real bearer token, which an OpenAPI example " +
           "has no way to carry) - but every read endpoint works fine.",
       },
@@ -77,7 +77,7 @@ export const scenarioKong: LocalizedDocsPage = {
           headers: ["Target", "Host", "Port", "Path"],
           rows: [
             ["Real backend (default)", "backend", "8080", "(empty)"],
-            ["Specmatic's stub", "specmatic-stub", "9091", "(empty)"],
+            ["Specmatic's mock", "specmatic-stub", "9091", "(empty)"],
             ["Microcks", "microcks", "8080", "/rest/nb-quickstarts+apps+backend/0.1.0"],
           ],
         },
@@ -104,8 +104,8 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "Verify it worked",
         body: [
-          "The real backend and Specmatic's stub return structurally similar but genuinely different " +
-            "data - the stub's is schema-valid but randomly generated, never the ledger's real values. " +
+          "The real backend and Specmatic's mock return structurally similar but genuinely different " +
+            "data - the mock's is schema-valid but randomly generated, never the ledger's real values. " +
             "That difference through the exact same curl, before and after the edit, is the proof the " +
             "swap actually took effect (via the Admin API here - the same edit Kong Manager's Save " +
             "button makes):",
@@ -135,7 +135,7 @@ export const scenarioKong: LocalizedDocsPage = {
               tone: "success",
             },
             {
-              text: "  ^ Specmatic's stub - a schema-valid but randomly generated response, not the real ledger",
+              text: "  ^ Specmatic's mock - a schema-valid but randomly generated response, not the real ledger",
             },
           ],
         },
@@ -151,7 +151,7 @@ export const scenarioKong: LocalizedDocsPage = {
             code:
               "# .env: remove NEXT_PUBLIC_API_BASE (or set it back to http://localhost:8080)\n" +
               "make apps:restart          # frontend needs recreating to pick up the change\n" +
-              "make specmatic:stub-down   # if you started Specmatic's stub\n" +
+              "make specmatic:stub-down   # if you started Specmatic's mock\n" +
               "make microcks:down         # if you started Microcks\n" +
               "make kong:down",
           },
@@ -160,7 +160,7 @@ export const scenarioKong: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ1: Kong経由への切り替え",
+    title: "シナリオ2: Kong経由への切り替え",
     description:
       "Kongのapps_backendというGateway Serviceは、http://localhost:8000/api/*を実際のbackendのルートへ" +
       "そのままプロキシします(strip_path: trueなので、/api/accountsはbackend:8080/accountsに届きます)。" +
@@ -170,7 +170,7 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "Kong・Specmatic・Microcksを使うメリット",
         body: [
-          "Kafkaの経路(シナリオ2)はKongを通りません: ブリッジはデフォルトでbackendへ直接POSTします。Kongは、RESTのクライアント — ブラウザや負荷テスト — をルーティングし、契約モックへ差し替えられる場所です。",
+          "Kafkaの経路(シナリオ3)はKongを通りません: ブリッジはデフォルトでbackendへ直接POSTします。Kongは、RESTのクライアント — ブラウザや負荷テスト — をルーティングし、契約モックへ差し替えられる場所です。",
         ],
         bullets: [
           "Kong: 認証・レート制限・ルーティングをbackendの前段のゲートウェイに集約でき、向き先の変更もアプリのコードを触らず実行時に行えます。",
@@ -205,7 +205,7 @@ export const scenarioKong: LocalizedDocsPage = {
         code: [
           {
             label:
-              "Specmaticのスタブ(先にapps:upが必要 — スキーマ/exampleを取り込むため):",
+              "Specmaticのモック(先にapps:upが必要 — スキーマ/exampleを取り込むため):",
             code: "make specmatic:stub-up",
           },
           {
@@ -217,7 +217,7 @@ export const scenarioKong: LocalizedDocsPage = {
         note:
           "Microcksの場合、apps_backend自身のPathに/rest/<service>/<version>のプレフィックスをまるごと" +
           "埋め込む必要があります(例: /rest/nb-quickstarts+apps+backend/0.1.0)。Kongのstrip_pathは/api" +
-          "しか取り除かないため、残りのパスがそのままServiceのPathに追加されるからです。Specmaticのスタブ" +
+          "しか取り除かないため、残りのパスがそのままServiceのPathに追加されるからです。Specmaticのモック" +
           "はモック側のパスが実APIとそのまま一致するため、Pathの指定は不要です。MicrocksはPOST /accounts" +
           "をモックできません(実際のbearerトークンが必要で、OpenAPIのexampleにはそれを運ぶ手段がないため)" +
           "が、読み取り系のエンドポイントは問題なく動きます。",
@@ -234,7 +234,7 @@ export const scenarioKong: LocalizedDocsPage = {
           headers: ["向き先", "Host", "Port", "Path"],
           rows: [
             ["実backend(デフォルト)", "backend", "8080", "(空)"],
-            ["Specmaticのスタブ", "specmatic-stub", "9091", "(空)"],
+            ["Specmaticのモック", "specmatic-stub", "9091", "(空)"],
             ["Microcks", "microcks", "8080", "/rest/nb-quickstarts+apps+backend/0.1.0"],
           ],
         },
@@ -260,8 +260,8 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "反映されたことを確認する",
         body: [
-          "実backendとSpecmaticのスタブは、構造は似ていても中身がまったく異なるデータを返します — " +
-            "スタブの応答はスキーマ的には正しいものの、ランダムに生成された値で、台帳の実データでは" +
+          "実backendとSpecmaticのモックは、構造は似ていても中身がまったく異なるデータを返します — " +
+            "モックの応答はスキーマ的には正しいものの、ランダムに生成された値で、台帳の実データでは" +
             "決してありません。同じcurlを編集の前後で叩いたときのこの違いこそが、切り替えが実際に" +
             "反映された証拠です(ここではAdmin API経由 — Kong ManagerのSaveボタンが行うのと同じ編集です):",
         ],
@@ -290,13 +290,13 @@ export const scenarioKong: LocalizedDocsPage = {
               tone: "success",
             },
             {
-              text: "  ^ Specmaticのスタブ — スキーマ的には妥当だがランダム生成された値で、実際の台帳ではない",
+              text: "  ^ Specmaticのモック — スキーマ的には妥当だがランダム生成された値で、実際の台帳ではない",
             },
           ],
         },
       },
       {
-        heading: "片付け",
+        heading: "環境のクリーンアップ",
         body: [
           "このシナリオで起動したものをすべて停止します。Kongは最後に止め、その前にfrontendの接続先を" +
             "backend直結へ戻します — そうしないと、存在しなくなったゲートウェイを呼び続けてしまいます。",
@@ -306,7 +306,7 @@ export const scenarioKong: LocalizedDocsPage = {
             code:
               "# .env: NEXT_PUBLIC_API_BASEを削除(またはhttp://localhost:8080に戻す)\n" +
               "make apps:restart          # frontendを再作成して変更を反映\n" +
-              "make specmatic:stub-down   # Specmaticのスタブを起動した場合\n" +
+              "make specmatic:stub-down   # Specmaticのモックを起動した場合\n" +
               "make microcks:down         # Microcksを起動した場合\n" +
               "make kong:down",
           },

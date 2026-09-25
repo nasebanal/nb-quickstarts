@@ -5,9 +5,9 @@ import type { Locale } from "@/lib/i18n";
 // (nb-landing-page's "NASEBANAL Quickstarts" post) to also cover Keycloak,
 // Vault, agentgateway and observability, all added since that post. Edge
 // labels are deliberately short (no "(Scenario N)" suffixes) - which
-// scenario covers which module is already in the sidebar and the
-// Constituent modules table, so repeating it on every arrow just added
-// clutter without adding information.
+// scenario covers which module is already in the sidebar and in the
+// Overview's scenario descriptions, so repeating it on every arrow just
+// added clutter without adding information.
 //
 // The geometry lives in ArchitectureDiagram.tsx, not here: the diagram used
 // to be a Mermaid flowchart, but Mermaid's auto-layout can't be told "put
@@ -57,14 +57,14 @@ export const ARCHITECTURE_LABELS: Record<Locale, Record<string, string>> = {
     captionStack:
       "The shared apps-network and the modules around it, over REST. Arrows point from the caller to what " +
       "it calls (the label says what comes back); dashed lines are integrations that are off by default. Frontend <-> Keycloak (login) is " +
-      "drawn in Scenario 4's sequence diagram; the MCP path (agentgateway) is the diagram below.",
+      "drawn in Scenario 5's sequence diagram; the MCP path (agentgateway) is the diagram below.",
     captionMcp:
       "The MCP access path, on the same columns as the diagram above so the two read one over the other: " +
       "an MCP client (accent color = MCP) reaches the Backend through its built-in /mcp, skipping the " +
       "Frontend, or optionally through agentgateway (dashed, like Kong), which builds MCP tools from the " +
       "OpenAPI contract and calls the REST API. Keycloak and Vault sit in the same place: the client logs in " +
       "at Keycloak and its JWT is verified at the Backend (agentgateway can verify it at the gateway too - " +
-      "supported, not configured in Scenario 6), and the Backend gets its DB credential from Vault.",
+      "supported, not configured in Scenario 7), and the Backend gets its DB credential from Vault.",
   },
   ja: {
     appsNetwork: "apps-network",
@@ -108,14 +108,14 @@ export const ARCHITECTURE_LABELS: Record<Locale, Record<string, string>> = {
     dbUsers: "DBユーザーを作成",
     captionStack:
       "共通のapps-networkと周辺モジュール(通信はREST)。矢印は呼び出す側から呼び出される側へ向かい、点線は" +
-      "既定ではオフの連携です。Frontend<->Keycloak(ログイン)のやりとりはシナリオ4のシーケンス図に、" +
+      "既定ではオフの連携です。Frontend<->Keycloak(ログイン)のやりとりはシナリオ5のシーケンス図に、" +
       "MCPの経路(agentgateway)は下の図に描いています。",
     captionMcp:
       "MCPアクセスの経路を、上の図と同じ列位置で描いているので、上下で見比べられます: MCPクライアント" +
       "(アクセント色がMCP)はFrontendを経由せず、backend内蔵の/mcpで、または任意でagentgateway(点線、" +
       "Kongと同じ位置づけ)経由でbackendに到達します。agentgatewayはOpenAPI契約からMCPツールを作ってREST APIを" +
       "呼びます。KeycloakとVaultも同じ位置で連携します: クライアントはKeycloakでログインし、そのJWTは" +
-      "backendで検証されます(agentgatewayのゲートウェイ側でも検証できますが、シナリオ6では未設定です)。" +
+      "backendで検証されます(agentgatewayのゲートウェイ側でも検証できますが、シナリオ7では未設定です)。" +
       "backendのDB接続情報はVaultから取得します。",
   },
 };

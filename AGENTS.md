@@ -147,6 +147,7 @@ Current breakdown:
 | `playwright` | E2E browser tests against the running frontend | Yes | Uses the `data-testid` attributes in `apps/frontend` as selectors. |
 | `specmatic:test` | Provider contract test of the running backend against `apps/backend/openapi.yaml` | Yes | Runs `specmatic/bin/prepare_contract.sh` (fetches the live schema + builds examples), then `specmatic test`. |
 | `microcks` | Long-running mock server loaded from the backend's live OpenAPI schema | Only for `microcks:import-openapi` itself; not to keep serving the mock afterward | `make microcks:import-openapi` fetches `http://localhost:8080/openapi.json` and uploads it. |
+| `microcks:test` | Provider conformance test (runner `OPEN_API_SCHEMA`) of the running backend against the contract's named examples | Yes, plus `microcks:up` | Imports the contract first, then `microcks/bin/run_test.sh` starts the test through Microcks' REST API (`POST /api/tests`), polls it, prints one line per example and exits 1 on any failure. See "Microcks: the conformance test" below. |
 | `zap:baseline` | Passive DAST scan of `apps/frontend` | Yes | Never sends an attack payload - spiders + observes only. |
 | `zap:full-scan` | Active DAST scan of `apps/frontend` | Yes | Sends real attack payloads (SQLi, XSS, ...) - `apps` only, never an external host. |
 | `zap:api-scan` | Active, OpenAPI-driven DAST scan of `apps/backend` | Yes | Scans every route in `apps/backend/openapi.yaml`'s live schema, not just what a spider crawls. |
@@ -167,6 +168,7 @@ specmatic, also a `junit/`) directory back onto the host, so every `make
 | `vitest:contract-test` | `vitest/report-contract/index.html` (same reporter, separate output dir) |
 | `playwright` | `playwright/report/index.html` (Playwright's built-in `html` reporter) |
 | `specmatic` | `specmatic/report/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml` |
+| `microcks:test` | `microcks/report/latest.json` (raw result of the last run; each run also keeps `microcks-test-<id>.json`), plus the run's page in the Microcks UI (`http://localhost:9090/#/tests/<id>`, printed by the command) |
 | `zap:baseline`/`zap:full-scan`/`zap:api-scan` | `zap/report/<scan>-report.html` (also `.json`) - each scan's own filename, overwritten on the next run of that same scan |
 
 These directories are gitignored — they're regenerated on every run, not
@@ -314,10 +316,56 @@ Specmatic's/Microcks' own request logs that they were the ones actually
 serving it. See README's "Kong: routing to the real backend, or to a
 contract mock instead" for the exact commands.
 
-Microcks and locust are excluded from this table on purpose: Microcks is a
-long-running mock server with no natural "test run" to report on, and locust
-already writes its own timestamped `locust/logs/<timestamp>/report.html` per
-run (pre-existing, unrelated to this convention).
+Locust is excluded from this table on purpose: it already writes its own
+timestamped `locust/logs/<timestamp>/report.html` per run (pre-existing,
+unrelated to this convention). Microcks used to be excluded too (a mock server
+with no test run); `microcks:test` changed that, and its report is the row above.
+
+### Microcks: the conformance test
+
+`make microcks:test` (`microcks/bin/run_test.sh`) is a Provider check, like
+`specmatic:test`, but with different mechanics - measured, not assumed:
+
+- **What it runs**: Microcks builds one request per *named example* of each
+  operation (request and response examples paired by key) and checks status
+  and body against the example's response and the operation's schema. It
+  generates nothing, so an operation with no example is not tested at all, and
+  a response example with no request example under the same key is sent with an
+  empty body. `GET /health`, `POST /auth/login` (`demo_login`, `bad_credentials`),
+  `GET /me`, `PUT /me/profile` and `POST /accounts` (one `unauthorized` each), and the three
+  read endpoints (`GET /accounts`, `/accounts/balances`, `/accounts/{account_id}`) = 9 examples.
+- **Current result: 6 of 9 pass, on purpose left red** - the failures are real,
+  so the target exits 1 rather than hiding them:
+  1. `GET /accounts` and `GET /accounts/{account_id}`: `createdAt` is
+     `2026-09-23T07:00:26` (no offset) but the contract says `format: date-time`,
+     which Microcks validates as RFC 3339. `specmatic:test` passes 18/18 against
+     the same backend, so this is a strictness difference, and a genuine
+     contract-vs-implementation drift. Fixing it means either the backend
+     returning an offset (which also touches pytest, the frontend and
+     `prepare_contract.sh`'s expected bodies) or the contract dropping `date-time`.
+  2. `POST /auth/login` `bad_credentials`: expects 401, gets 422 - the contract
+     has the 401 *response* example but no matching *request* example, so an
+     empty body is sent. An examples gap; a request example under the same key
+     would fix it, but changes what Specmatic and the Microcks mock see too.
+- **No `Authorization` header, on purpose.** The contract's `unauthorized`
+  examples model a call without a token, and `operationsHeaders` applies to
+  every example of the operations it names, so it cannot mix a valid token
+  and an invalid one. Measured with the demo user's token on every request:
+  6 of 9 fail (the three 401 examples - `GET /me`, `PUT /me/profile`,
+  `POST /accounts` - stop getting 401). The authenticated success paths have no
+  example (see `openapi.yaml`), so Microcks does not run them at all;
+  `prepare_contract.sh` covers them for Specmatic with live-token examples.
+  Specmatic's own `specmatic.yaml` bearer config was tried and had no effect
+  (see the Specmatic section above).
+- **The test result stores its request headers**: with `operationsHeaders` set,
+  the token showed up in plain text in `GET /api/tests/<id>` - so never put a
+  real credential there.
+- **Where the contract comes from**: the same live `/openapi.json` that
+  `microcks:import-openapi` fetches - which is `openapi.yaml` verbatim, inline
+  examples included, so no separate file is imported.
+- **Docs screenshots** (`apps/frontend/public/docs/screenshots/report-microcks*.png`)
+  were taken from the Microcks UI with the repo's Playwright against a freshly
+  restarted Microcks, so the run reads "Test #1".
 
 **Surfacing these in the `apps` frontend was considered and rejected for
 now.** The reports are static HTML files owned by *other* modules, produced

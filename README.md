@@ -23,7 +23,7 @@ Supported OSS, one module per technology:
 - **[pytest](https://docs.pytest.org/)** — `apps/backend` unit tests
 - **[Playwright](https://playwright.dev/)** — E2E browser tests
 - **[Specmatic](https://specmatic.io/)** — OpenAPI contract tests
-- **[Microcks](https://microcks.io/)** — API mocking, seeded from `apps/backend`'s OpenAPI schema
+- **[Microcks](https://microcks.io/)** — API mocking, seeded from `apps/backend`'s OpenAPI schema, and a conformance test of the real backend against it
 - **[Locust](https://locust.io/)** — load testing
 - **[OWASP ZAP](https://www.zaproxy.org/)** — web app vulnerability scanning (DAST)
 - **[agentgateway](https://agentgateway.dev/)** — MCP/A2A gateway for AI agent connectivity
@@ -37,7 +37,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 |---|---|---|---|---|
 | apps | Frontend | http://localhost:5173 | `frontend:5173` | Next.js |
 | apps | API docs (Scalar) | http://localhost:5173/api-specs | `frontend:5173/api-specs` | Reads the backend's live OpenAPI schema |
-| apps | Docs | http://localhost:5173/docs | `frontend:5173/docs` | Architecture, data model, auth/secrets, tooling - same Header/Footer as `/`, opens in a new tab from the header's "Docs" link |
+| apps | Docs | http://localhost:5173/docs | `frontend:5173/docs` | Overview (purpose, structure, scenarios), Getting Started and seven scenarios starting with verification of the demo app - same Header/Footer as `/`, opens in a new tab from the header's "Docs" link |
 | apps | Backend REST | http://localhost:8080 | `backend:8080` | FastAPI |
 | apps | Backend GraphQL | http://localhost:8080/graphql | `backend:8080/graphql` | Strawberry |
 | apps | MCP server | http://localhost:8080/mcp | `backend:8080/mcp` | Streamable HTTP |
@@ -92,6 +92,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
    make playwright:test
    make specmatic:test
    make microcks:up
+   make microcks:test           # conformance test: the contract's examples against the running backend (6 of 9 pass - see below)
 
    # Kong API Gateway
    make kong:up
@@ -149,8 +150,6 @@ make apps:mysql                                 # a mysql shell
 make apps:mysql SQL="SELECT username, email, display_name, language, provider FROM users"
 ```
 
-The docs' Overview page has an ER diagram of the two tables (`accounts`, `users`).
-
 ### Specmatic: contract testing (Provider and Consumer)
 
 `apps/backend/openapi.yaml` is the contract — a checked-in, hand-maintained OpenAPI file, not one generated from the route code (`app/main.py` serves it verbatim at `GET /openapi.json`). That's a deliberate reversal from earlier in this repo's history: a schema generated *from* the implementation can never structurally disagree with it, so a provider verification test run against it can only ever catch behavioral bugs, never real contract drift. A physically separate file makes "does the implementation still honor this contract" a real, failable question — the actual point of Contract-Driven Development, where a Consumer and a Provider both build against one shared file independently. The tradeoff: `openapi.yaml` can drift from what the code actually does if you change one and forget the other — keeping them in sync by hand is the ongoing cost, and `specmatic:test` is what catches it when they diverge.
@@ -171,6 +170,36 @@ make vitest:contract-test    # Consumer: apps/frontend's real api.ts calls again
 `specmatic/bin/prepare_contract.sh` (shared by both `specmatic:test` and `specmatic:stub-up`) fetches the live schema and builds 7 externalized examples fresh on every run — a real bearer token, an id that actually exists, and deliberately-invalid requests covering every documented non-2xx response — so Specmatic's own coverage report reaches 100%. See `AGENTS.md`'s Specmatic section for the full story, including a dead end (Specmatic's own security-token config parses correctly but has no effect on generated requests) and why `SPECMATIC_GENERATIVE_TESTS` was tried and rejected in favor of explicit negative examples.
 
 `openapi.yaml` also carries its own inline `examples:` (named, matching keys between request and response) for the read operations — separate from `prepare_contract.sh`'s dynamically-generated ones, and there for a different consumer: Microcks, below.
+
+### Microcks: a second provider check, and how it differs from Specmatic
+
+Microcks also tests the real backend against the contract: `make microcks:test` imports the contract, then runs Microcks's conformance test (runner `OPEN_API_SCHEMA`). For every named example in `openapi.yaml` it builds the request, sends it to the backend, and checks the status code and the body against the example's response and the schema. Nothing is generated, so it only runs what the contract's examples say. It exits 1 when an example fails; the raw result is `microcks/report/latest.json`, and the run's page in the Microcks UI (the command prints its URL) shows each request and response.
+
+```bash
+make apps:up
+make microcks:up
+make microcks:test
+```
+
+Result against this repository's backend: **6 of 9 examples pass**, and the 3 failures are findings, not flakiness:
+
+- **`createdAt` is not RFC 3339** (`GET /accounts`, `GET /accounts/{account_id}`): the contract says `format: date-time`, the backend answers `2026-09-23T07:00:26` with no offset. Specmatic passes 18 of 18 against the same backend; Microcks checks the format. Either the backend should answer `...Z`, or the contract should stop claiming `date-time`.
+- **`bad_credentials` expects 401 but gets 422** (`POST /auth/login`): the contract has a response example `bad_credentials` but no request example with that key, so Microcks sends an empty body. A gap in the examples, not a backend bug.
+
+No bearer token is sent, on purpose: the contract's 401 examples describe a call without one, and Microcks's `operationsHeaders` adds a header to *every* example of the operations it names. Measured: with an `Authorization` header on every request, 6 of 9 fail instead of 3, because `GET /me`, `PUT /me/profile` and `POST /accounts` no longer get their expected 401. The calls that do need a token have no example in the contract, so Microcks doesn't run them; Specmatic covers them with examples that carry a live token (`prepare_contract.sh`). Specmatic's own `specmatic.yaml` bearer configuration was also tried and had no effect on the generated requests, which is why the token goes into the example files.
+
+| | Specmatic | Microcks |
+|---|---|---|
+| Main job | Contract testing, driven from the file | A long-running mock server and API catalog with a UI; also a conformance test |
+| Provider test | Requests built from the contract plus 7 generated examples: 18 scenarios | Runs each named example in `openapi.yaml`: 9 examples |
+| Coverage | Per path, method and response code (100% here) | Pass/fail per example only |
+| Error cases (401, 404, 422) | Explicit examples with live expected bodies | Only where the contract has a request example under the same key |
+| Authentication | Token fetched at run time, written into each example | `operationsHeaders` on every example of an operation |
+| Format strictness | Let the timezone-less `createdAt` through | Flagged it |
+| Consumer side | A stub, plus `vitest:contract-test` | A mock consumers can use; no check of their calls |
+| Report | HTML + JUnit | Run page in the UI + JSON |
+
+Suggested split: **Specmatic as the gate** (it decides whether the backend keeps its contract, including authentication and every error response, and it is the only one that tests the consumer side); **Microcks for the shared mock** the frontend, Kong or a teammate points at, with its test as a **second opinion** that is stricter about formats.
 
 ### Kong: routing to the real backend, or to a contract mock instead
 
@@ -278,7 +307,7 @@ The dashboard shows request rate per path, 5xx ratio, p50/p95/p99 latency, activ
 
 The instrumentation is standard OTel SDK code (`apps/backend/app/telemetry.py`) that honors the usual `OTEL_*` env vars, so pointing `OTEL_EXPORTER_OTLP_ENDPOINT` (plus `OTEL_EXPORTER_OTLP_HEADERS`) at another OTLP backend such as NewRelic - which the real NASEBANAL apps use - works without code changes. Only the Collector's config (`observability/otel-collector.yaml`) is specific to the local stack.
 
-Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't export to Destinations, and Cloudflare can't reach a `localhost` collector), and Kafka metrics, and Kong's/agentgateway's metrics (each has its own Prometheus/OTel integration that could be added to `observability/prometheus.yml` / their own config). Kong and agentgateway do export **traces** to the same Collector (`opentelemetry` plugin on Kong's `apps_backend` service; `config.tracing` in `agentgateway/config.yaml`), and the trace context is passed on, so a request through either gateway is one trace with the backend's spans under the gateway's - see Scenario 3. The Grafana dashboard's bottom panel, "Gateway traces", lists them.
+Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't export to Destinations, and Cloudflare can't reach a `localhost` collector), and Kafka metrics, and Kong's/agentgateway's metrics (each has its own Prometheus/OTel integration that could be added to `observability/prometheus.yml` / their own config). Kong and agentgateway do export **traces** to the same Collector (`opentelemetry` plugin on Kong's `apps_backend` service; `config.tracing` in `agentgateway/config.yaml`), and the trace context is passed on, so a request through either gateway is one trace with the backend's spans under the gateway's - see Scenario 4. The Grafana dashboard's bottom panel, "Gateway traces", lists them.
 
 ### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
 
@@ -537,6 +566,7 @@ Every `make <module>:test` run leaves a browsable report behind. These are all g
 | `playwright` | `playwright/report/index.html` |
 | `specmatic` | `specmatic/report/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml` |
 | `locust` | `locust/logs/<timestamp>/report.html`, plus the files below |
+| `microcks` | `microcks/report/latest.json` (also the run's page in the Microcks UI) - `microcks:test`, overwritten each run |
 | `zap` | `zap/report/<scan>-report.html` (also `.json`) - `baseline`/`full-scan`/`api-scan`, overwritten each run |
 
 **Locust** writes a whole timestamped directory per run, `locust/logs/YYYYMMDD_HHMMSS/`:
@@ -588,6 +618,7 @@ make vitest:contract-test   # Consumer contract test: does the frontend's API us
 make microcks:up            # long-running mock server
 make microcks:import-openapi # fetches the backend's live OpenAPI schema and loads it (requires apps:up)
 make microcks:open
+make microcks:test            # Provider test: import the contract, run its examples against the real backend (requires apps:up + microcks:up)
 ```
 
 ## 📝 License
@@ -595,3 +626,9 @@ make microcks:open
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 Copyright (c) 2025 NASEBANAL
+
+### Trademarks
+
+The MIT License covers the code in this repository. It does not grant any right to use the "NASEBANAL" name, the "NASEBANAL Stack" name, or the NASEBANAL logo. You are welcome to fork and modify this project, but please do not use these names or logos in a way that suggests your modified version is the official NASEBANAL project or is endorsed by NASEBANAL. Keep the copyright notice and license text as required by the MIT License.
+
+Other product names mentioned in this repository (Kong, Kafka, Keycloak, Vault, etc.) are trademarks of their respective owners.

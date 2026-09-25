@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioAgentgateway: LocalizedDocsPage = {
   en: {
-    title: "Scenario 6: MCP access via agentgateway",
+    title: "Scenario 7: MCP access via agentgateway",
     description:
       "The backend already mounts its own MCP server natively at /mcp (via fastapi-mcp, auto-derived " +
       "from its REST routes). agentgateway is a different way to get there: instead of backend-side " +
@@ -12,7 +12,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "Why agentgateway",
         body: [
-          "An agent's create-account tool call is the same POST /accounts that the Kafka bridge (Scenario 2) makes for each event: another way in to the same write path.",
+          "An agent's create-account tool call is the same POST /accounts that the Kafka bridge (Scenario 3) makes for each event: another way in to the same write path.",
         ],
         bullets: [
           "Turns an existing OpenAPI contract into MCP tools with configuration only - no MCP server code to write or maintain in the backend.",
@@ -119,7 +119,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ6: agentgateway経由でのMCPアクセス",
+    title: "シナリオ7: agentgateway経由でのMCPアクセス",
     description:
       "backendはすでに、自身のREST routesから自動生成されたMCPサーバーをfastapi-mcp経由で/mcpにネイティブ" +
       "にマウントしています。agentgatewayはそこに至るもう一つの経路です — backend側のMCP用コードではなく、" +
@@ -129,7 +129,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "agentgatewayを使うメリット",
         body: [
-          "エージェントのアカウント作成ツールの呼び出しは、Kafkaブリッジ(シナリオ2)がイベントごとに行うのと同じPOST /accountsです: 同じ書き込み経路への、もう1つの入口。",
+          "エージェントのアカウント作成ツールの呼び出しは、Kafkaブリッジ(シナリオ3)がイベントごとに行うのと同じPOST /accountsです: 同じ書き込み経路への、もう1つの入口。",
         ],
         bullets: [
           "既存のOpenAPI契約から設定だけでMCPツールを作れ、backend側にMCPサーバーのコードを書いて保守する必要がありません。",
@@ -230,7 +230,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         note: "apps:upのbackendが正常であることを確認してからmake agentgateway:restartすれば解決します。",
       },
       {
-        heading: "片付け",
+        heading: "環境のクリーンアップ",
         code: [{ code: "make agentgateway:down" }],
       },
     ],

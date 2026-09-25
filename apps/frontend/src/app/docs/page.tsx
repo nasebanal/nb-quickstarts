@@ -2,7 +2,6 @@
 
 import { DocsArticle } from "@/components/docs/DocsArticle";
 import { ArchitectureDiagram } from "@/components/docs/ArchitectureDiagram";
-import { ErDiagram } from "@/components/docs/ErDiagram";
 import { useLocale } from "@/components/LocaleProvider";
 import { overview } from "@/lib/docs/overview";
 
@@ -11,18 +10,20 @@ export default function DocsOverviewPage() {
   return (
     <DocsArticle
       content={overview[locale]}
-      extra={
-        <>
-          <ArchitectureDiagram
-            label={locale === "ja" ? "nb-quickstartsのアーキテクチャ図" : "nb-quickstarts architecture diagram"}
-          />
-          <ArchitectureDiagram
-            variant="mcp"
-            label={locale === "ja" ? "MCPアクセス経路の図" : "MCP access path diagram"}
-          />
-          <ErDiagram />
-        </>
-      }
+      slots={{
+        // Rendered inside the Overview's "Structure" section (see slot: "architecture" in lib/docs/overview.ts).
+        architecture: (
+          <>
+            <ArchitectureDiagram
+              label={locale === "ja" ? "nb-quickstartsのアーキテクチャ図" : "nb-quickstarts architecture diagram"}
+            />
+            <ArchitectureDiagram
+              variant="mcp"
+              label={locale === "ja" ? "MCPアクセス経路の図" : "MCP access path diagram"}
+            />
+          </>
+        ),
+      }}
     />
   );
 }

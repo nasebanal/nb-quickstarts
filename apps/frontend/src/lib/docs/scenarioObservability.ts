@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioObservability: LocalizedDocsPage = {
   en: {
-    title: "Scenario 3: Observability",
+    title: "Scenario 4: Observability",
     description:
       "The backend can export OpenTelemetry traces (FastAPI requests + SQLAlchemy queries), HTTP " +
       "server metrics and application logs over OTLP - off by default, so apps:up behaves exactly as " +
@@ -12,7 +12,7 @@ export const scenarioObservability: LocalizedDocsPage = {
       {
         heading: "Why OpenTelemetry, Prometheus, Alertmanager, Tempo, Loki and Grafana",
         body: [
-          "The requests the Kafka bridge (Scenario 2) makes are ordinary traffic to the backend, so they show up in the same traces, metrics and dashboard as any other client's.",
+          "The requests the Kafka bridge (Scenario 3) makes are ordinary traffic to the backend, so they show up in the same traces, metrics and dashboard as any other client's.",
         ],
         bullets: [
           "OpenTelemetry: a vendor-neutral standard for traces and metrics - instrument once, and switch the backend that receives them (here a local stack, in production e.g. New Relic) without touching app code.",
@@ -82,7 +82,7 @@ export const scenarioObservability: LocalizedDocsPage = {
       {
         heading: "2. Watch an overload happen live",
         body: [
-          "This reuses Scenario 2's direct-REST run - same command, same numbers - but this time with " +
+          "This reuses Scenario 3's direct-REST run - same command, same numbers - but this time with " +
             "Grafana open to watch it instead of only reading Locust's own report afterward.",
         ],
         code: [
@@ -110,7 +110,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         bullets: [
           "Request rate by path shows the burst arriving - /auth/login first, then /accounts as the " +
             "queue behind the DB pool builds.",
-          "p95/p99 latency spikes toward the 30s DB-pool timeout - the same number Scenario 2's report " +
+          "p95/p99 latency spikes toward the 30s DB-pool timeout - the same number Scenario 3's report " +
             "shows after the fact, but visible rising in real time here.",
           "Active requests / DB connections in use pins near the pool's ceiling for the duration of the " +
             "run, then drains back to zero as the backlog clears.",
@@ -122,7 +122,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         note:
           "The first screenshot above (from an earlier version of this dashboard) shows 5xx ratio as " +
           "No data: its query had a malformed selector, since fixed - the second screenshot has it " +
-          "working. Run the same load through Kafka afterward (Scenario 2, step 4) with Grafana still " +
+          "working. Run the same load through Kafka afterward (Scenario 3, step 4) with Grafana still " +
           "open, and every one of these panels stays flat instead.",
       },
       {
@@ -170,7 +170,7 @@ export const scenarioObservability: LocalizedDocsPage = {
           "test alert were removed). The order is the point: the two warnings fire first, the critical " +
           "5xx alert a minute or so later - once it does, the inhibit rule mutes the warnings for the " +
           "same service, so the on-call sees one critical alert instead of three. The same load through " +
-          "Kafka (Scenario 2, step 4) never puts that concurrency on the backend, so these rules " +
+          "Kafka (Scenario 3, step 4) never puts that concurrency on the backend, so these rules " +
           "should stay quiet - not re-run against the alert rules yet, so check for yourself. " +
           "Alertmanager's own UI is at http://localhost:9095, and Grafana's " +
           "Alerting page lists the same alerts through the Alertmanager data source.",
@@ -275,7 +275,7 @@ export const scenarioObservability: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ3: オブザーバビリティ",
+    title: "シナリオ4: オブザーバビリティ",
     description:
       "backendはOpenTelemetryのトレース(FastAPIのリクエスト + SQLAlchemyのクエリ)・HTTPサーバー" +
       "メトリクス・アプリケーションログをOTLPで送信できます — デフォルトはオフなので、明示的に有効化" +
@@ -285,7 +285,7 @@ export const scenarioObservability: LocalizedDocsPage = {
       {
         heading: "OpenTelemetry・Prometheus・Alertmanager・Tempo・Loki・Grafanaを使うメリット",
         body: [
-          "Kafkaブリッジ(シナリオ2)が送るリクエストは、backendへの普通のトラフィックなので、他のクライアントと同じトレース・メトリクス・ダッシュボードに現れます。",
+          "Kafkaブリッジ(シナリオ3)が送るリクエストは、backendへの普通のトラフィックなので、他のクライアントと同じトレース・メトリクス・ダッシュボードに現れます。",
         ],
         bullets: [
           "OpenTelemetry: トレースとメトリクスのベンダー中立な標準規格で、一度計装すればアプリのコードを変えずに送信先を切り替えられます(ここではローカル構成、本番ではNew Relicなど)。",
@@ -355,7 +355,7 @@ export const scenarioObservability: LocalizedDocsPage = {
       {
         heading: "2. overloadの様子をライブに観察する",
         body: [
-          "シナリオ2のREST直叩き実行をそのまま再利用します — 同じコマンド、同じ数値ですが、今回は事後に" +
+          "シナリオ3のREST直叩き実行をそのまま再利用します — 同じコマンド、同じ数値ですが、今回は事後に" +
             "Locust自身のレポートを読むのではなく、Grafanaを開いた状態でライブに観察します。",
         ],
         code: [
@@ -383,7 +383,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         bullets: [
           "Request rate by pathで、バーストが到達する様子 — まず/auth/login、続いてDBプール背後の" +
             "キューが積み上がるにつれて/accountsが増えていく。",
-          "p95/p99レイテンシが30秒のDBプールタイムアウトに向かって急上昇する様子 — シナリオ2のレポートで" +
+          "p95/p99レイテンシが30秒のDBプールタイムアウトに向かって急上昇する様子 — シナリオ3のレポートで" +
             "事後に見る同じ数字が、ここではリアルタイムに立ち上がっていくのが見える。",
           "Active requests / DB connections in useが、実行中ずっとプールの上限近くに張り付き、その後" +
             "バックログが片付くにつれてゼロまで下がっていく様子。",
@@ -395,7 +395,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         note:
           "上の1枚目のスクリーンショット(このダッシュボードの旧版のもの)では5xx比率がNo dataになって" +
           "います — クエリのセレクタが不正だったためで、現在は修正済みです(2枚目では動いています)。" +
-          "この後、Grafanaを開いたままシナリオ2のstep 4(Kafka経由)で同じ負荷を流すと、これらのパネルは" +
+          "この後、Grafanaを開いたままシナリオ3のstep 4(Kafka経由)で同じ負荷を流すと、これらのパネルは" +
           "すべて平坦なまま推移します。",
       },
       {
@@ -442,7 +442,7 @@ export const scenarioObservability: LocalizedDocsPage = {
           "300 / 100 / 40sのREST直叩き実行での実際の出力を省略したものです(手動のテスト用アラートの行は" +
           "除いています)。順序が重要です: まず2つのwarningが発火し、1分ほど後にcriticalの5xxアラートが" +
           "発火します — そうなると抑制ルールが同じサービスのwarningを黙らせるため、当番には3件ではなく" +
-          "critical 1件だけが届きます。同じ負荷をKafka経由(シナリオ2のstep 4)で流してもbackendにはその同時実行数が" +
+          "critical 1件だけが届きます。同じ負荷をKafka経由(シナリオ3のstep 4)で流してもbackendにはその同時実行数が" +
           "かからないため、これらのルールは静かなままのはずですが、アラートルールに対しては未確認なので、" +
           "ご自身で確かめてください。AlertmanagerのUIは" +
           "http://localhost:9095、GrafanaのAlertingページでもAlertmanagerデータソース経由で同じアラートが" +
@@ -538,7 +538,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "片付け",
+        heading: "環境のクリーンアップ",
         code: [{ code: "make observability:down" }],
         note:
           "終わったら.envのOTEL_EXPORTER_OTLP_ENDPOINT=を空に戻し、apps:restartしてください — そうしない" +

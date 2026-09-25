@@ -70,7 +70,7 @@ export const gettingStarted: LocalizedDocsPage = {
           "The easiest way in is the SQL client: make apps:sql opens phpMyAdmin already logged in to " +
             "demo (no password prompt - it connects as root for this local demo), with the two tables, " +
             "accounts and users, in the left-hand list. It also lets you click through the rows, and " +
-            "shows mysql.user, where the users Vault creates in Scenario 5 appear.",
+            "shows mysql.user, where the users Vault creates in Scenario 6 appear.",
           "From the terminal, make apps:mysql opens a mysql shell, or runs one statement:",
         ],
         code: [
@@ -102,7 +102,7 @@ export const gettingStarted: LocalizedDocsPage = {
         note:
           "Real output. Try it in step with the app: record a transaction and a new accounts row appears; " +
           "save a new display name on the Profile page and the users row changes; log in through Keycloak " +
-          "once (Scenario 4) and a keycloak row is created for you. A balance is the SUM of an account's " +
+          "once (Scenario 5) and a keycloak row is created for you. A balance is the SUM of an account's " +
           "rows: SELECT name, SUM(quantity) FROM accounts GROUP BY name. The Overview page's ER diagram " +
           "shows every column.",
       },
@@ -110,8 +110,10 @@ export const gettingStarted: LocalizedDocsPage = {
         heading: "One-shot test tools",
         body: [
           "pytest and vitest are self-contained (no apps:up needed - they swap in an in-memory " +
-            "database / mock fetch respectively). playwright and specmatic:test exercise the real, " +
-            "running apps, so start it first.",
+            "database / mock fetch respectively). playwright, specmatic:test and microcks:test exercise " +
+            "the real, running apps, so start it first; microcks:test also needs the Microcks server " +
+            "(make microcks:up). specmatic:test and microcks:test both check the backend against " +
+            "openapi.yaml - [Scenario 1](/docs/scenario-testing) explains how they differ and when to use which.",
         ],
         code: [
           {
@@ -120,7 +122,8 @@ export const gettingStarted: LocalizedDocsPage = {
               "make pytest:test             # backend unit tests\n" +
               "make vitest:test             # frontend unit tests\n" +
               "make playwright:test         # E2E against the running frontend\n" +
-              "make specmatic:test          # provider contract test against openapi.yaml",
+              "make specmatic:test          # provider contract test against openapi.yaml\n" +
+              "make microcks:up && make microcks:test   # second provider check with Microcks (6 of 9 pass - see Scenario 1)",
           },
         ],
         note:
@@ -130,13 +133,14 @@ export const gettingStarted: LocalizedDocsPage = {
       {
         heading: "Reports",
         body: [
-          "Each test command leaves an HTML report behind. The Testing page (last in the sidebar) shows " +
-            "every one of them with real screenshots, what each layer checks, and the numbers from this " +
-            "repository.",
+          "Each test command leaves an HTML report behind. [Scenario 1](/docs/scenario-testing) covers every one of them: " +
+            "how to check the results, real screenshots, and the evaluation of the results from this " +
+            "repository - including the Microcks run (microcks/report/latest.json, plus its page in the " +
+            "Microcks UI) and the findings it made that Specmatic did not.",
         ],
       },
       {
-        heading: "Next: the six scenarios",
+        heading: "Next: the seven scenarios",
         body: [
           "Each scenario below builds on apps:up and is independent of the others - run them in any " +
             "order, or skip straight to the one you're interested in. Every scenario ends the same way: " +
@@ -212,7 +216,7 @@ export const gettingStarted: LocalizedDocsPage = {
         body: [
           "いちばん手軽なのはSQLクライアントです: make apps:sqlでphpMyAdminが、demoにログイン済みの状態で" +
             "開きます(パスワード入力は不要 — このローカルデモではrootで接続します)。左の一覧に2つのテーブル、" +
-            "accountsとusersが並び、行をクリックして辿れます。シナリオ5でVaultが作るユーザーが現れる" +
+            "accountsとusersが並び、行をクリックして辿れます。シナリオ6でVaultが作るユーザーが現れる" +
             "mysql.userも見られます。",
           "ターミナルからは、make apps:mysqlでmysqlシェルを開くか、SQLを1文だけ実行できます:",
         ],
@@ -244,7 +248,7 @@ export const gettingStarted: LocalizedDocsPage = {
         },
         note:
           "実際の出力です。アプリの操作と並べて試してみてください: 取引を記帳するとaccountsに新しい行が増え、" +
-          "プロフィール画面で表示名を保存するとusersの行が変わり、Keycloakで一度ログインすれば(シナリオ4)" +
+          "プロフィール画面で表示名を保存するとusersの行が変わり、Keycloakで一度ログインすれば(シナリオ5)" +
           "keycloakの行が自動で作られます。残高は科目の行のSUMです: SELECT name, SUM(quantity) FROM accounts " +
           "GROUP BY name。すべてのカラムは概要ページのER図にあります。",
       },
@@ -252,8 +256,10 @@ export const gettingStarted: LocalizedDocsPage = {
         heading: "一発実行のテストツール",
         body: [
           "pytestとvitestは自己完結しています(それぞれインメモリDB・モックfetchに差し替えるため、" +
-            "apps:up不要)。playwrightとspecmatic:testは実際に稼働中のappsを対象にするため、先に" +
-            "起動してください。",
+            "apps:up不要)。playwright、specmatic:test、microcks:testは実際に稼働中のappsを対象にするため、" +
+            "先に起動してください。microcks:testにはMicrocksサーバー(make microcks:up)も必要です。" +
+            "specmatic:testとmicrocks:testはどちらもbackendをopenapi.yamlに照らして確認します。違いと" +
+            "使い分けは、[シナリオ1](/docs/scenario-testing)で説明しています。",
         ],
         code: [
           {
@@ -262,7 +268,8 @@ export const gettingStarted: LocalizedDocsPage = {
               "make pytest:test             # backendの単体テスト\n" +
               "make vitest:test             # frontendの単体テスト\n" +
               "make playwright:test         # 稼働中のfrontendに対するE2Eテスト\n" +
-              "make specmatic:test          # openapi.yamlに対するProvider契約テスト",
+              "make specmatic:test          # openapi.yamlに対するProvider契約テスト\n" +
+              "make microcks:up && make microcks:test   # Microcksによる2つ目のProvider確認(9件中6件が成功 — シナリオ1を参照)",
           },
         ],
         note:
@@ -272,12 +279,14 @@ export const gettingStarted: LocalizedDocsPage = {
       {
         heading: "レポート",
         body: [
-          "各テストコマンドは、HTMLレポートを残します。サイドバーの最後にある「テスト」ページで、すべてのレポートを" +
-            "実際のスクリーンショット付きで、各レイヤーが確認することや、このリポジトリでの数字とともに見られます。",
+          "各テストコマンドは、HTMLレポートを残します。[シナリオ1](/docs/scenario-testing)では、すべてのテストについて、" +
+            "結果の確認方法、実際のスクリーンショット、本リポジトリでの結果の評価を記載しています。" +
+            "Microcksの実行(microcks/report/latest.jsonと、MicrocksのUIにある実行結果のページ)と、Specmaticが" +
+            "検出しなかった発見事項も含みます。",
         ],
       },
       {
-        heading: "次は6つのシナリオ",
+        heading: "次は7つのシナリオ",
         body: [
           "以下の各シナリオはapps:upの上に成り立ち、互いに独立しています — どの順で試しても、興味のある" +
             "ものだけ試してもかまいません。どのシナリオも最後はmake <module>:downでそのモジュールだけを" +

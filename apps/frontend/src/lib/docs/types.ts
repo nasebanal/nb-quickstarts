@@ -81,9 +81,10 @@ export interface DocsSequence {
   frames?: { from: number; to: number; label: string }[];
 }
 
-export interface DocsSection {
-  heading?: string;
-  /** Each entry is one paragraph. */
+/** The content blocks a section - or a subsection of it - can carry. Rendered in this order:
+ * paragraphs, bullets, code, table, sequence diagram, terminal, charts, images, callout. */
+export interface DocsBlock {
+  /** Each entry is one paragraph. `[label](href)` becomes a link - an internal path ("/docs/...") or an https URL. */
   body?: string[];
   bullets?: string[];
   code?: DocsCodeBlock[];
@@ -101,6 +102,21 @@ export interface DocsSection {
   /** Bold heading of the callout above (e.g. "What is event sourcing"), optionally a link - the same shape as nb-landing-page's blog notes. */
   noteTitle?: string;
   noteHref?: string;
+}
+
+/** A headed (h3) block inside a section - e.g. "Checking the results" under one test tool. */
+export interface DocsSubsection extends DocsBlock {
+  heading: string;
+  /** Makes the heading a link (an internal path or an https URL). */
+  href?: string;
+}
+
+export interface DocsSection extends DocsBlock {
+  heading?: string;
+  /** Named place inside this section where the page component renders a custom node (DocsArticle's `slots`), after the paragraphs and bullets - e.g. the Overview's architecture diagrams. */
+  slot?: string;
+  /** Smaller headed blocks (h3) inside this section, each with its own content. */
+  subsections?: DocsSubsection[];
 }
 
 export interface DocsPageContent {
