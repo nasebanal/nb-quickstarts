@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioVault: LocalizedDocsPage = {
   en: {
-    title: "Scenario 5: Use Vault",
+    title: "Scenario 6: Use Vault",
     description:
       "The backend logs in to MySQL with a password from .env. This scenario takes that password out " +
       "of the backend's configuration altogether: the backend asks Vault for a database credential " +
@@ -12,7 +12,7 @@ export const scenarioVault: LocalizedDocsPage = {
       {
         heading: "Why Vault",
         body: [
-          "Every write - including the ones the Kafka bridge (Scenario 2) makes - reaches MySQL through the backend's own connection, so all of them use the credential Vault issued.",
+          "Every write - including the ones the Kafka bridge (Scenario 3) makes - reaches MySQL through the backend's own connection, so all of them use the credential Vault issued.",
         ],
         bullets: [
           "Secrets live in one audited store instead of scattered across .env files, images and CI settings.",
@@ -203,7 +203,7 @@ export const scenarioVault: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ5: Vaultの利用",
+    title: "シナリオ6: Vaultの利用",
     description:
       "backendは、.envのパスワードでMySQLにログインしています。このシナリオでは、そのパスワードをbackendの" +
       "設定から完全に取り除きます: backendは起動時にVaultへデータベースの認証情報を要求し、Vaultがその場で" +
@@ -213,7 +213,7 @@ export const scenarioVault: LocalizedDocsPage = {
       {
         heading: "Vaultを使うメリット",
         body: [
-          "すべての書き込み — Kafkaブリッジ(シナリオ2)が行うものも含む — は、backend自身の接続を通してMySQLに届くので、すべてがVaultの発行した認証情報を使います。",
+          "すべての書き込み — Kafkaブリッジ(シナリオ3)が行うものも含む — は、backend自身の接続を通してMySQLに届くので、すべてがVaultの発行した認証情報を使います。",
         ],
         bullets: [
           "シークレットを.envやイメージ、CI設定に散らさず、監査可能な1か所のストアに集約できます。",
@@ -390,7 +390,7 @@ export const scenarioVault: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "片付け",
+        heading: "環境のクリーンアップ",
         code: [{ code: "make vault:down" }],
         note:
           "Vaultのdevサーバーはインメモリのみです — 書き込んだものは、リースの記録を含めて、vault:down / " +

@@ -1,4 +1,4 @@
-// Cumulative request/failure counts from two real runs of the scenario 2
+// Cumulative request/failure counts from two real runs of the scenario 3
 // comparison (300 users, spawn rate 100, 40s), one sample per second:
 // [seconds since start, requests completed, of which failed].
 //

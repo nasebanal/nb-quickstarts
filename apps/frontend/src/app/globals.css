@@ -531,6 +531,39 @@ h1 {
   color: var(--nb-fg);
 }
 
+.nb-docs-section h3 {
+  margin: 20px 0 6px;
+  font-size: 1.05rem;
+  color: var(--nb-fg);
+}
+
+/* Inline links look exactly like the links in nb-landing-page's blog posts (parseInline in
+   app/[lang]/blog/[slug]/page.tsx): the accent colour and a plain underline, nothing else - no
+   underline offset, no hover colour. Kept identical on purpose so the docs and the blog read as one site. */
+.nb-docs-section p a,
+.nb-docs-section li a,
+.nb-docs-section td a,
+.nb-docs-section h3 a {
+  color: var(--nb-accent);
+  text-decoration: underline;
+}
+
+/* Consecutive subsections (e.g. the "API tests" table, then "Mock features") get real air between
+   them, on top of the heading's own top margin, so one table does not run into the next heading;
+   and each heading gets room above the table it introduces. */
+.nb-docs-subsection + .nb-docs-subsection {
+  margin-top: 40px;
+}
+
+/* A subsection heading sits clear of the table (or text) right under it. */
+.nb-docs-section .nb-docs-subsection h3 {
+  margin-bottom: 18px;
+}
+
+.nb-docs-subsection:first-of-type h3 {
+  margin-top: 8px;
+}
+
 .nb-docs-section p {
   margin: 0 0 12px;
   line-height: 1.7;
@@ -629,6 +662,16 @@ h1 {
 
 .nb-docs-section table {
   margin-top: 8px;
+}
+
+/* Comparison tables (first header empty): the first column only labels the rows, so it gets
+   real room - the labels ("date-time型(RFC 3339)の準拠性", "テストシナリオ") stay on one line
+   at the usual width instead of wrapping in a narrow column. */
+.nb-docs-section table.nb-docs-table-rowlabels th:first-child,
+.nb-docs-section table.nb-docs-table-rowlabels td:first-child {
+  width: 28%;
+  min-width: 12rem;
+  font-weight: 600;
 }
 
 /* Wraps the diagram in its own bordered panel, distinct from the plain

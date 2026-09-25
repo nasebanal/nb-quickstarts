@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioKeycloak: LocalizedDocsPage = {
   en: {
-    title: "Scenario 4: Use Keycloak",
+    title: "Scenario 5: Use Keycloak",
     description:
       "POST /accounts is protected by app/auth.py's get_current_username - until now, only " +
       "satisfiable with a mock token from POST /auth/login. This scenario turns on a real login: the " +
@@ -13,7 +13,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
       {
         heading: "Why Keycloak",
         body: [
-          "The Kafka bridge (Scenario 2) logs in to the backend with the demo password like any other client; the backend accepts that token or a Keycloak one on the same protected routes.",
+          "The Kafka bridge (Scenario 3) logs in to the backend with the demo password like any other client; the backend accepts that token or a Keycloak one on the same protected routes.",
         ],
         bullets: [
           "Standard OIDC/OAuth 2.0: login, token issuing and SSO are handled by a proven identity provider instead of hand-rolled auth code.",
@@ -210,7 +210,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ4: Keycloakの利用",
+    title: "シナリオ5: Keycloakの利用",
     description:
       "POST /accountsは、app/auth.pyのget_current_usernameによって保護されています — これまでは" +
       "POST /auth/loginが発行するモックトークンでしか満たせませんでした。このシナリオでは本物のログインを" +
@@ -220,7 +220,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
       {
         heading: "Keycloakを使うメリット",
         body: [
-          "Kafkaブリッジ(シナリオ2)は、他のクライアントと同じようにデモのパスワードでbackendへログインします。backendは、同じ保護されたルートで、そのトークンもKeycloakのトークンも受け付けます。",
+          "Kafkaブリッジ(シナリオ3)は、他のクライアントと同じようにデモのパスワードでbackendへログインします。backendは、同じ保護されたルートで、そのトークンもKeycloakのトークンも受け付けます。",
         ],
         bullets: [
           "標準のOIDC/OAuth 2.0: ログイン・トークン発行・SSOを実績あるIDプロバイダーに任せられ、認証コードを自前で書く必要がありません。",

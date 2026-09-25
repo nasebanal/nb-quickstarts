@@ -258,11 +258,11 @@ function StackDiagram({ labels, style }: { labels: Record<string, string>; style
       <EdgeLabel x={350} y={cy(fe) - 10} text="REST" onGroup />
       <Edge marker={marker} main d={`M${be.x + be.w},${cy(be)} H${dbX}`} />
 
-      {/* Frontend: can be switched to go through Kong (scenario 1). Kafka is deliberately not linked from here - it's an ingestion path for external producers, not something a browser app writes to. */}
+      {/* Frontend: can be switched to go through Kong (scenario 2). Kafka is deliberately not linked from here - it's an ingestion path for external producers, not something a browser app writes to. */}
       <Edge marker={marker} dashed d={`M${cx(fe)},${bottom(fe)} V${kong.y}`} />
       <EdgeLabel x={cx(fe) + 8} y={418} text={labels.via} anchor="start" />
 
-      {/* Async: Locust -> Kafka -> kafka-bridge -> Backend (the load-test comparison in scenario 2). Kafka carries events; kafka-bridge turns each one into POST /accounts, so its last hop is REST. */}
+      {/* Async: Locust -> Kafka -> kafka-bridge -> Backend (the load-test comparison in scenario 3). Kafka carries events; kafka-bridge turns each one into POST /accounts, so its last hop is REST. */}
       <Edge marker={marker} dashed d={`M${locust.x + locust.w},${cy(locust)} H${kafka.x}`} />
       <EdgeLabel x={(locust.x + locust.w + asyncG.x) / 2} y={cy(locust) - 10} text={labels.load} />
       <Edge marker={marker} d={`M${kafka.x + kafka.w},${cy(kafka)} H${bridge.x}`} />
