@@ -55,6 +55,16 @@ services:
           add:
             headers:
               - "Access-Control-Expose-Headers:Via"
+      # Sends a trace of each request through the gateway to the OTel
+      # Collector (`make observability:up`; it shares apps-network with Kong).
+      # The plugin also needs KONG_TRACING_INSTRUMENTATIONS=request in
+      # kong/docker-compose.yml. Without the Collector running, Kong just
+      # logs that it could not export - requests are unaffected.
+      - name: opentelemetry
+        config:
+          endpoint: http://otel-collector:4318/v1/traces
+          resource_attributes:
+            service.name: nb-kong
 
 # You can add more services, routes, plugins here
 # Example:

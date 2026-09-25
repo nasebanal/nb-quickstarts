@@ -11,6 +11,9 @@ export const scenarioKong: LocalizedDocsPage = {
     sections: [
       {
         heading: "Why Kong, Specmatic and Microcks",
+        body: [
+          "Kafka's path (Scenario 2) does not go through Kong: by default the bridge posts to the backend directly. Kong is where the REST clients - the browser, the load tests - are routed, and where a contract mock can be swapped in.",
+        ],
         bullets: [
           "Kong: put auth, rate limiting and routing in one gateway in front of the backend, and change where traffic goes at runtime - no application code change.",
           "Specmatic: a mock server generated straight from the OpenAPI contract, and the same contract can verify the real backend, so mock and implementation can't quietly drift apart.",
@@ -20,8 +23,8 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "1. Start Kong and route the frontend through it",
         body: [
-          "Kong Manager needs DB mode (KONG_DB=postgres) - the default DB-less mode's Admin API is " +
-            "read-only, so it can display apps_backend but can't save an edit to it. " +
+          "Kong runs in DB mode (KONG_DB=postgres) by default, so Kong Manager can save edits; DB-less mode (KONG_DB=off) " +
+            "has a read-only Admin API, so it can display apps_backend but can't save an edit to it. " +
             "NEXT_PUBLIC_API_BASE is baked into the frontend's bundle at server start (Next.js dev " +
             "mode), so it needs apps:restart, not just a browser reload, to pick up the change.",
         ],
@@ -29,7 +32,7 @@ export const scenarioKong: LocalizedDocsPage = {
           {
             code:
               "make apps:up\n" +
-              "make kong:up KONG_DB=postgres\n" +
+              "make kong:up\n" +
               "# .env: NEXT_PUBLIC_API_BASE=http://localhost:8000/api\n" +
               "make apps:restart   # frontend needs recreating to pick up the new value",
           },
@@ -166,6 +169,9 @@ export const scenarioKong: LocalizedDocsPage = {
     sections: [
       {
         heading: "Kong・Specmatic・Microcksを使うメリット",
+        body: [
+          "Kafkaの経路(シナリオ2)はKongを通りません: ブリッジはデフォルトでbackendへ直接POSTします。Kongは、RESTのクライアント — ブラウザや負荷テスト — をルーティングし、契約モックへ差し替えられる場所です。",
+        ],
         bullets: [
           "Kong: 認証・レート制限・ルーティングをbackendの前段のゲートウェイに集約でき、向き先の変更もアプリのコードを触らず実行時に行えます。",
           "Specmatic: OpenAPIの契約からそのままモックサーバーを生成でき、同じ契約で実backendも検証できるため、モックと実装が知らないうちにずれることを防げます。",
@@ -175,8 +181,8 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "1. Kongを起動し、frontendをKong経由にする",
         body: [
-          "Kong ManagerはDBモード(KONG_DB=postgres)が必要です — デフォルトのDB-lessモードではAdmin " +
-            "APIが読み取り専用になり、apps_backendの表示はできても編集内容を保存できません。" +
+          "KongはデフォルトでDBモード(KONG_DB=postgres)で動くので、Kong Managerで編集内容を保存できます。" +
+            "DB-lessモード(KONG_DB=off)ではAdmin APIが読み取り専用になり、apps_backendの表示はできても保存できません。" +
             "NEXT_PUBLIC_API_BASEはサーバー起動時(Next.jsの開発モード)にfrontendのバンドルへ焼き込まれる" +
             "ため、ブラウザのリロードではなくapps:restartが必要です。",
         ],
@@ -184,7 +190,7 @@ export const scenarioKong: LocalizedDocsPage = {
           {
             code:
               "make apps:up\n" +
-              "make kong:up KONG_DB=postgres\n" +
+              "make kong:up\n" +
               "# .env: NEXT_PUBLIC_API_BASE=http://localhost:8000/api\n" +
               "make apps:restart   # frontendを再作成して新しい値を反映",
           },

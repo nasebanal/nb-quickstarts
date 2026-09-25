@@ -325,6 +325,34 @@
           "tableType": "traces"
         }
       ]
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Gateway traces: Kong and agentgateway (each one includes the backend's spans - click a trace ID)",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{ resource.service.name =~ \"nb-kong|agentgateway\" }",
+          "limit": 20,
+          "tableType": "traces"
+        }
+      ]
     }
   ]
 }

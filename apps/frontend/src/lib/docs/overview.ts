@@ -1,32 +1,133 @@
-import type { LocalizedDocsPage } from "./types";
+import type { DocsSequence, LocalizedDocsPage } from "./types";
+import { scenarioKeycloak } from "./scenarioKeycloak";
+import { scenarioVault } from "./scenarioVault";
+
+// The Overview reuses the scenarios' own flow diagrams, so the picture of "how login works" or
+// "how the credential is issued" is drawn once and cannot drift from the scenario that sets it up.
+function sequenceOf(page: LocalizedDocsPage, locale: "en" | "ja"): DocsSequence {
+  const found = page[locale].sections.find((section) => section.sequence)?.sequence;
+  if (!found) throw new Error("scenario page has no sequence diagram");
+  return found;
+}
+
 
 export const overview: LocalizedDocsPage = {
   en: {
     title: "Overview",
     description:
-      "apps is the test-target stack nb-quickstarts uses to verify the NASEBANAL Stack: a Next.js " +
-      "frontend and a FastAPI backend (REST + GraphQL + MCP) over a MySQL-backed, event-sourced " +
-      "accounting ledger. Every other module in the toolkit exercises this same running stack from a " +
-      "different angle - the diagram below is the bird's-eye view of how they all connect on the shared " +
-      "apps-network.",
+      "nb-quickstarts is a reference architecture for microservices, built only from open-source parts " +
+      "that you can run yourself: clone it, run make, and every piece below is up on your own machine. " +
+      "The application in the middle is deliberately small - an accounting ledger - so that what you look " +
+      "at is everything around it: how traffic is routed, how load is absorbed, who is allowed in, where " +
+      "secrets live, how you see what is happening, and how you check it all still works. The diagram is " +
+      "the bird's-eye view of how the pieces connect on the shared apps-network.",
     sections: [
       {
-        heading: "Constituent modules",
+        heading: "What this is for",
+        body: [
+          "Building a microservice system means answering the same handful of questions, and every " +
+            "answer is another piece of software: how do requests get in, how do you survive a burst, how do " +
+            "instances find each other, how do you know who is calling, where do passwords live, how do you " +
+            "see a slow request, and how do you know a change did not break anyone. Each module here answers " +
+            "exactly one of them with a well-known open-source tool, wired into the same running app, with " +
+            "the commands to try it and real output to compare against.",
+          "The point is to show the pieces working together, not each one in isolation - and, because " +
+            "everything is open source and runs with Docker, to let you run it, change it and break it " +
+            "yourself. It is a demonstration-grade reference (demo passwords, a single node of everything), " +
+            "not a production template; each scenario says where the demo shortcuts are.",
+        ],
+      },
+      {
+        heading: "The concerns, and the tool that answers each",
         table: {
-          headers: ["Module", "Role"],
+          headers: ["Concern", "Tool", "What it does here", "Scenario"],
           rows: [
-            ["apps", "The test-target stack itself - frontend, backend, MySQL."],
-            ["Kong", "API gateway in front of the backend - can swap its target to a contract mock."],
-            ["Kafka + kafka-bridge", "Asynchronous event ingestion - a topic, drained into POST /accounts."],
-            ["Consul", "Service discovery - registers and health-checks the real backend (up to three instances) and MySQL; a client finds healthy instances through it."],
-            ["Keycloak", "OIDC identity provider - issues real JWTs the backend validates."],
-            ["Vault", "Secret storage - can supply the MySQL credential the backend connects with."],
-            ["Specmatic", "Contract testing (Provider + Consumer) against openapi.yaml, plus a stub mock."],
-            ["Microcks", "A second, independent mock server built from the same OpenAPI schema."],
-            ["agentgateway", "A second way to expose the backend as MCP tools - built from OpenAPI, not code."],
-            ["Observability", "OTel Collector + Prometheus + Alertmanager + Tempo + Loki + Grafana, receiving traces, metrics and logs over OTLP from the backend."],
+            ["The application", "apps: Next.js, FastAPI, MySQL", "A small event-sourced accounting ledger with REST, GraphQL and MCP interfaces - the thing everything else is wrapped around.", "Getting Started"],
+            ["Front door and routing", "Kong", "Routes /api/* to the backend, and can be repointed at a contract mock without touching the frontend.", "1"],
+            ["Absorbing bursts", "Kafka + kafka-bridge", "Takes writes into a topic and drains them into the backend at its own pace, so an overload becomes a queue instead of errors.", "2"],
+            ["Finding and balancing instances", "Consul", "Health-checks several backend instances and MySQL; the frontend's server asks it who is healthy and spreads requests across them.", "3"],
+            ["Seeing what is happening", "OpenTelemetry, Prometheus, Alertmanager, Tempo, Loki, Grafana", "Traces, metrics and logs from the backend and the gateways, alerts that reach a notification, and jumps from a log line to its trace.", "4"],
+            ["Who is calling", "Keycloak", "A real identity provider: the user logs in there, and the backend verifies the token it issues.", "5"],
+            ["Where the secrets live", "Vault", "Issues the backend a short-lived MySQL user on demand, so its config holds no database password.", "6"],
+            ["Access for AI agents", "agentgateway", "Exposes the backend as MCP tools, built from the OpenAPI contract rather than from code.", "7"],
+            ["Contracts and mocks", "Specmatic, Microcks", "One OpenAPI file checked against the real backend, and turned into two independent mock servers.", "1 and Testing"],
+            ["Checking it works", "pytest, Vitest, Playwright, Locust, ZAP", "Unit, end-to-end, load and security tests, each with an HTML report.", "Testing"],
           ],
         },
+      },
+      {
+        heading: "Kong and agentgateway: the front doors",
+        body: [
+          "Kong is the gateway for the REST API. It sits in front of the backend, so cross-cutting " +
+            "behaviour (routing, rate limiting, and in Scenario 1 swapping the target for a contract mock) " +
+            "lives at the edge rather than in application code. agentgateway is the same idea for AI " +
+            "agents: it turns the OpenAPI contract into MCP tools, so an agent calls the backend through a " +
+            "gateway too - and its create-account tool is the same POST /accounts a browser or the Kafka " +
+            "bridge uses. Both export traces, so a request through either shows up in Tempo as one trace with " +
+            "the backend's spans under it (Scenario 4).",
+        ],
+      },
+      {
+        heading: "Kafka: turning a burst into a queue",
+        body: [
+          "A write path that talks straight to the database fails under a burst: connections run out and " +
+            "requests time out. Kafka puts a durable queue in front - producers append events to a topic, " +
+            "and a small bridge drains them into POST /accounts at a steady pace, retrying while the backend " +
+            "is unavailable and committing an event only after it succeeded. Scenario 2 measures the " +
+            "difference under the same load. Kafka comes up again in the other scenarios: scaling out with " +
+            "Consul is the other answer to the same overload (Scenario 3), the bridge's requests are ordinary " +
+            "traffic in the traces and dashboards (Scenario 4), it logs in to the backend like any client " +
+            "(Scenario 5), and its writes reach MySQL through the credential Vault issued (Scenario 6).",
+        ],
+      },
+      {
+        heading: "Consul: finding the healthy instances",
+        body: [
+          "With one backend, an address in a config file is enough. With several, someone has to know " +
+            "which exist and which are healthy, and spread the calls. Consul health-checks every backend " +
+            "instance and MySQL and keeps the list of the healthy ones; the frontend's server asks it on " +
+            "each request instead of using a fixed address, so an instance can be added or stopped with " +
+            "nothing to edit. Scenario 3 lets you flip the frontend between a fixed address and Consul and " +
+            "watch the difference.",
+        ],
+      },
+      {
+        heading: "Keycloak: someone else checks the password",
+        body: [
+          "The app should not be the thing that stores passwords and decides who someone is. With " +
+            "Keycloak the frontend sends the user to the identity provider, gets back a signed token, and " +
+            "the backend verifies the signature against Keycloak's public keys - it never sees the password " +
+            "and does not call Keycloak per request. The flow below is what Scenario 5 sets up.",
+        ],
+        sequence: sequenceOf(scenarioKeycloak, "en"),
+      },
+      {
+        heading: "Vault: no password in the config",
+        body: [
+          "The backend needs a database credential, and a password in a config file or an environment " +
+            "variable is the classic leak. With Vault the backend holds only a token that may ask for a " +
+            "credential; Vault creates a fresh, limited MySQL user with a lease and drops it when the " +
+            "lease ends. The flow below is what Scenario 6 sets up.",
+        ],
+        sequence: sequenceOf(scenarioVault, "en"),
+      },
+      {
+        heading: "Observability: seeing it work, and fail",
+        body: [
+          "The backend and both gateways send traces, metrics and logs over OpenTelemetry to a Collector, " +
+            "which fans them out to Tempo, Prometheus and Loki, all read in Grafana. An alert rule in " +
+            "Prometheus becomes a notification through Alertmanager, and a log line links to the trace of " +
+            "the request that produced it. Scenario 4 runs an overload and watches it happen live.",
+        ],
+      },
+      {
+        heading: "Specmatic and Microcks: the contract is the source of truth",
+        body: [
+          "openapi.yaml is written by hand, so it can genuinely disagree with the code - which makes " +
+            "checking it worthwhile. Specmatic verifies the real backend against it and serves a stub so the " +
+            "frontend can be tested without a backend; Microcks turns the same file into a second, " +
+            "independent mock; Kong can route the frontend to either. The Testing page has the reports.",
+        ],
       },
       {
         heading: "Data model: an event-sourced ledger",
@@ -65,10 +166,10 @@ export const overview: LocalizedDocsPage = {
       {
         heading: "Where to go next",
         body: [
-          "Getting Started covers the basic make apps:up / down / restart / reset commands and the " +
-            "one-shot test tools. The seven scenarios each take one module from the table above and wire " +
-            "it into this same running apps stack, with the exact commands and what to expect at every " +
-            "step.",
+          "Getting Started covers the basic make apps:up / down / restart / reset commands. The seven " +
+            "scenarios each take one concern from the table above and wire its tool into this same running " +
+            "apps stack, with the exact commands and what to expect at every step. The Testing page, last " +
+            "in the sidebar, shows how the whole thing is checked, with sample reports.",
         ],
       },
     ],
@@ -76,29 +177,116 @@ export const overview: LocalizedDocsPage = {
   ja: {
     title: "概要",
     description:
-      "appsは、nb-quickstartsがNASEBANAL Stackを検証するために使うテスト対象そのものです。Next.jsの" +
-      "frontendと、REST・GraphQL・MCPを提供するFastAPIのbackendが、MySQLを使ったイベントソーシング型の" +
-      "会計台帳の上に構成されています。ツールキットの他のすべてのモジュールは、この同じ稼働中のスタックを" +
-      "それぞれ異なる角度から検証対象にしています — 下の図は、それらがapps-network上でどう繋がっているかの" +
-      "鳥瞰図です。",
+      "nb-quickstartsはマイクロサービスのリファレンスアーキテクチャで、自分で動かせるオープンソースの部品だけで" +
+      "作られています: クローンしてmakeを実行すれば、下のすべての部品が手元のマシンで立ち上がります。" +
+      "中心のアプリケーションは会計台帳という意図的に小さなものにして、見てほしいのはその周りのすべてにしています — " +
+      "トラフィックをどうルーティングするか、負荷をどう吸収するか、誰を通すか、シークレットをどこに置くか、" +
+      "何が起きているかをどう見るか、そしてそのすべてが今も動くことをどう確かめるか。図は、それらが共通の" +
+      "apps-network上でどう繋がっているかの鳥瞰図です。",
     sections: [
       {
-        heading: "構成モジュール一覧",
+        heading: "何のためのものか",
+        body: [
+          "マイクロサービスのシステムを作るときは、いつも同じ少数の問いに答えることになり、その答えはどれも" +
+            "別のソフトウェアです: リクエストはどう入るのか、バーストにどう耐えるのか、インスタンス同士はどう" +
+            "見つけ合うのか、誰が呼んでいるとどう分かるのか、パスワードはどこに置くのか、遅いリクエストを" +
+            "どう見つけるのか、変更で誰も壊れていないとどう確かめるのか。ここの各モジュールは、そのうちのちょうど" +
+            "1つに、よく知られたオープンソースのツールで答え、同じ稼働中のアプリに組み込み、試すコマンドと" +
+            "比較できる実際の出力を付けています。",
+          "目的は、個々の部品を単独で見せることではなく、部品が一緒に働く姿を見せることです — そしてすべてが" +
+            "オープンソースでDockerで動くので、自分で動かし、変え、壊せます。デモ用のリファレンスであり" +
+            "(デモ用のパスワード、すべて単一ノード)、本番用のテンプレートではありません。デモ用の近道がどこにあるかは、" +
+            "各シナリオに書いています。",
+        ],
+      },
+      {
+        heading: "関心事と、それぞれに答えるツール",
         table: {
-          headers: ["モジュール", "役割"],
+          headers: ["関心事", "ツール", "ここでの役割", "シナリオ"],
           rows: [
-            ["apps", "テスト対象のスタックそのもの — frontend・backend・MySQL。"],
-            ["Kong", "backendの前段に立つAPIゲートウェイ。向き先を契約モックに切り替えられる。"],
-            ["Kafka + kafka-bridge", "非同期のイベント取り込み — トピックをPOST /accountsへ流し込む。"],
-            ["Consul", "サービスディスカバリ — 実際のbackend(最大3インスタンス)とMySQLを登録・ヘルスチェックし、クライアントはそこから健全なインスタンスを見つける。"],
-            ["Keycloak", "OIDC IDプロバイダー — backendが検証する本物のJWTを発行する。"],
-            ["Vault", "シークレットストア — backendが接続に使うMySQL認証情報を供給できる。"],
-            ["Specmatic", "openapi.yamlに対する契約テスト(Provider/Consumer)と、同じ契約由来のスタブ。"],
-            ["Microcks", "同じOpenAPIスキーマから作られる、もう一つの独立したモックサーバー。"],
-            ["agentgateway", "backendをMCPツールとして公開するもう一つの経路 — コードではなくOpenAPI由来。"],
-            ["Observability", "OTel Collector + Prometheus + Alertmanager + Tempo + Loki + Grafana。backendからトレース・メトリクス・ログをOTLPで受信。"],
+            ["アプリケーション", "apps: Next.js・FastAPI・MySQL", "REST・GraphQL・MCPを備えた、小さなイベントソーシング型の会計台帳 — 他のすべてが周りを包む対象。", "Getting Started"],
+            ["入口とルーティング", "Kong", "/api/*をbackendへルーティングし、frontendに手を入れずに契約モックへ向け直せる。", "1"],
+            ["バーストの吸収", "Kafka + kafka-bridge", "書き込みをトピックで受け、backendのペースで流し込む。過負荷はエラーではなくキューになる。", "2"],
+            ["インスタンスの発見と分散", "Consul", "複数のbackendインスタンスとMySQLをヘルスチェックし、frontendのサーバーが健全なものを尋ねて、リクエストを振り分ける。", "3"],
+            ["何が起きているかを見る", "OpenTelemetry・Prometheus・Alertmanager・Tempo・Loki・Grafana", "backendとゲートウェイのトレース・メトリクス・ログ、通知に届くアラート、ログ行からそのトレースへのジャンプ。", "4"],
+            ["誰が呼んでいるか", "Keycloak", "本物のIDプロバイダー: ユーザーはそこでログインし、backendは発行されたトークンを検証する。", "5"],
+            ["シークレットの置き場所", "Vault", "backendに、短命なMySQLユーザーをその場で発行するので、設定にデータベースのパスワードが残らない。", "6"],
+            ["AIエージェントからのアクセス", "agentgateway", "backendをMCPツールとして公開する。コードではなくOpenAPI契約から作る。", "7"],
+            ["契約とモック", "Specmatic・Microcks", "1つのOpenAPIファイルを、実際のbackendに対して検証し、独立した2つのモックサーバーにする。", "1とテスト"],
+            ["動くことの確認", "pytest・Vitest・Playwright・Locust・ZAP", "ユニット・E2E・負荷・セキュリティのテスト。それぞれHTMLレポート付き。", "テスト"],
           ],
         },
+      },
+      {
+        heading: "Kong と agentgateway: 入口",
+        body: [
+          "KongはREST APIのゲートウェイです。backendの前段にあるので、横断的な振る舞い(ルーティング、レート制限、" +
+            "そしてシナリオ1では向き先を契約モックに切り替えること)を、アプリのコードではなく入口に置けます。" +
+            "agentgatewayはAIエージェント向けの同じ発想です: OpenAPI契約をMCPツールに変えるので、エージェントも" +
+            "ゲートウェイ経由でbackendを呼びます — そのアカウント作成ツールは、ブラウザやKafkaブリッジが使うのと" +
+            "同じPOST /accountsです。どちらもトレースを送るので、どちらを通ったリクエストも、backendのスパンが" +
+            "下に連なる1本のトレースとしてTempoに現れます(シナリオ4)。",
+        ],
+      },
+      {
+        heading: "Kafka: バーストをキューに変える",
+        body: [
+          "データベースに直接書き込む経路は、バーストで壊れます: 接続が尽き、リクエストがタイムアウトします。" +
+            "Kafkaは手前に永続的なキューを置きます — プロデューサーはトピックにイベントを追記し、小さなブリッジが" +
+            "一定のペースでPOST /accountsへ流し込み、backendが使えない間は再試行し、成功したあとにだけイベントを" +
+            "コミットします。シナリオ2は、同じ負荷での違いを測ります。Kafkaは他のシナリオにも顔を出します: " +
+            "Consulでスケールアウトするのは同じ過負荷へのもう1つの答えで(シナリオ3)、ブリッジのリクエストは" +
+            "トレースやダッシュボードでは普通のトラフィックであり(シナリオ4)、ブリッジも他のクライアントと" +
+            "同じようにbackendへログインし(シナリオ5)、その書き込みはVaultが発行した認証情報でMySQLに届きます(シナリオ6)。",
+        ],
+      },
+      {
+        heading: "Consul: 健全なインスタンスを見つける",
+        body: [
+          "backendが1つなら、設定ファイルのアドレスで足ります。複数になると、どれが存在し、どれが健全かを誰かが" +
+            "知り、呼び出しを振り分けなければなりません。Consulはbackendの各インスタンスとMySQLをヘルスチェックして、" +
+            "健全なものの一覧を保持します。frontendのサーバーは、固定アドレスの代わりに、リクエストのたびにそれを" +
+            "尋ねるので、インスタンスを増やしたり止めたりしても、編集するものはありません。シナリオ3では、frontendを" +
+            "固定アドレスとConsulで切り替えて、違いを見られます。",
+        ],
+      },
+      {
+        heading: "Keycloak: パスワードの確認を他に任せる",
+        body: [
+          "アプリ自身がパスワードを保存し、その人が誰かを決める役であるべきではありません。Keycloakを使うと、" +
+            "frontendはユーザーをIDプロバイダーへ送り、署名付きのトークンを受け取り、backendはKeycloakの公開鍵で" +
+            "その署名を検証します — パスワードは見ず、リクエストごとにKeycloakを呼ぶこともありません。" +
+            "下の流れが、シナリオ5で構築するものです。",
+        ],
+        sequence: sequenceOf(scenarioKeycloak, "ja"),
+      },
+      {
+        heading: "Vault: 設定にパスワードを置かない",
+        body: [
+          "backendにはデータベースの認証情報が必要ですが、設定ファイルや環境変数のパスワードは、典型的な漏洩の" +
+            "原因です。Vaultを使うと、backendが持つのは認証情報を要求できるトークンだけで、Vaultがリース付きの" +
+            "限定されたMySQLユーザーをその場で作り、リースが終わると削除します。下の流れが、シナリオ6で" +
+            "構築するものです。",
+        ],
+        sequence: sequenceOf(scenarioVault, "ja"),
+      },
+      {
+        heading: "オブザーバビリティ: 動くところも、壊れるところも見る",
+        body: [
+          "backendと両方のゲートウェイは、OpenTelemetryでトレース・メトリクス・ログをCollectorへ送り、Collectorが" +
+            "Tempo・Prometheus・Lokiへ振り分け、すべてをGrafanaで見ます。Prometheusのアラートルールは" +
+            "Alertmanager経由で通知になり、ログ行はそれを生んだリクエストのトレースへリンクします。" +
+            "シナリオ4では、過負荷を起こして、その様子をライブで観察します。",
+        ],
+      },
+      {
+        heading: "Specmatic と Microcks: 契約が唯一の正解",
+        body: [
+          "openapi.yamlは手で書いているので、コードと本当に食い違い得ます — だから確認する意味があります。" +
+            "Specmaticはそれに対して実際のbackendを検証し、backendなしでfrontendをテストできるようスタブを提供します。" +
+            "Microcksは同じファイルから、もう1つの独立したモックを作り、Kongはfrontendをどちらへも向けられます。" +
+            "レポートは「テスト」ページにあります。",
+        ],
       },
       {
         heading: "データモデル:イベントソーシング型の台帳",
@@ -135,9 +323,10 @@ export const overview: LocalizedDocsPage = {
       {
         heading: "次に読むもの",
         body: [
-          "Getting Startedでは、基本のmake apps:up / down / restart / resetコマンドと、一発実行のテスト" +
-            "ツール群を扱います。7つのシナリオは、それぞれ上の表のモジュールを1つずつ取り上げて、この同じ" +
-            "稼働中のappsスタックに組み込みます — 実際のコマンドと、各ステップで何が起きるかを添えて。",
+          "Getting Startedでは、基本のmake apps:up / down / restart / resetコマンドを扱います。7つのシナリオは、" +
+            "それぞれ上の表の関心事を1つずつ取り上げ、そのツールをこの同じ稼働中のappsスタックに組み込みます — " +
+            "実際のコマンドと、各ステップで何が起きるかを添えて。サイドバーの最後にある「テスト」ページでは、" +
+            "全体をどう確かめるかを、サンプルレポート付きで見られます。",
         ],
       },
     ],

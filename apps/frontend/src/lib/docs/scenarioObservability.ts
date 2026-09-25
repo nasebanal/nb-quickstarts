@@ -11,6 +11,9 @@ export const scenarioObservability: LocalizedDocsPage = {
     sections: [
       {
         heading: "Why OpenTelemetry, Prometheus, Alertmanager, Tempo, Loki and Grafana",
+        body: [
+          "The requests the Kafka bridge (Scenario 2) makes are ordinary traffic to the backend, so they show up in the same traces, metrics and dashboard as any other client's.",
+        ],
         bullets: [
           "OpenTelemetry: a vendor-neutral standard for traces and metrics - instrument once, and switch the backend that receives them (here a local stack, in production e.g. New Relic) without touching app code.",
           "Prometheus, Tempo and Loki: purpose-built stores for metrics, traces and logs, all open source with no license cost.",
@@ -196,6 +199,62 @@ export const scenarioObservability: LocalizedDocsPage = {
         ],
       },
       {
+        heading: "5. Gateways send telemetry too: Kong and agentgateway",
+        body: [
+          "Kong and agentgateway can export their own traces to the same Collector, so a request that " +
+            "goes through a gateway shows up as one trace: the gateway's span with the backend's spans " +
+            "underneath. Both are on apps-network, so they reach the Collector at otel-collector:4318.",
+          "Kong: the opentelemetry plugin on the apps_backend service (kong/conf/declarative.yml) plus " +
+            "KONG_TRACING_INSTRUMENTATIONS=request (kong/docker-compose.yml). Kong runs in DB mode by " +
+            "default, so re-import the declarative config with make kong:reset. agentgateway: a tracing " +
+            "block in agentgateway/config.yaml with otlpEndpoint, otlpProtocol: http and randomSampling: " +
+            "true - sampling defaults to false, and with it nothing is exported unless the request already " +
+            "carries a trace. In this run agentgateway picked the tracing block up after a container " +
+            "restart, not on the config file's live reload. The dashboard's Gateway traces panel (bottom) lists " +
+            "them; click a trace ID to open it.",
+        ],
+        code: [
+          {
+            code:
+              "make kong:reset            # re-import the config with the opentelemetry plugin\n" +
+              "make agentgateway:up       # (docker restart nb-agentgateway after editing config.yaml)\n" +
+              "curl localhost:8000/api/accounts/balances   # through Kong\n" +
+              "make agentgateway:tools                     # MCP initialize + tools/list",
+          },
+        ],
+        images: [
+          {
+            src: "/docs/screenshots/grafana-gateway-traces.png",
+            alt: "The Grafana dashboard's Gateway traces panel: a table of recent traces, each row a Kong ('kong') or agentgateway ('initialize', 'tools/list') root span with its start time and duration",
+            caption:
+              "The dashboard's Gateway traces panel (bottom of the Apps backend dashboard): every Kong and agentgateway request, newest first. Click a trace ID to open it.",
+          },
+          {
+            src: "/docs/screenshots/tempo-kong-trace.png",
+            alt: "Grafana Explore on Tempo showing one trace: an nb-kong span 'kong' of 60 ms with the nb-backend span GET /accounts/balances and its connect, SELECT demo and http send spans nested underneath",
+            caption:
+              "A request through Kong: Kong's span on top, the backend's request and its SQL query inside it - one trace across two services.",
+          },
+          {
+            src: "/docs/screenshots/tempo-agentgateway-trace.png",
+            alt: "Grafana Explore on Tempo showing one trace: an agentgateway span tools/call, then tools/call apps-backend_list_balances_accounts_balances_get, with the nb-backend span GET /accounts/balances and its SQL query underneath",
+            caption:
+              "An MCP tool call through agentgateway: tools/call, the tool it resolved to, then the backend's REST request and query - the MCP call and the REST call in one trace.",
+          },
+        ],
+        note:
+          "Real runs. Every Kong trace of /api/accounts/balances that was checked contained both nb-kong " +
+          "and nb-backend spans, so the trace context is passed on to the backend (the plugin's " +
+          "header_type is preserve, the default). Kong 3.6's opentelemetry plugin exports traces only (its " +
+          "schema has no log or metric export), so Kong's logs and metrics are not in Loki or Prometheus: " +
+          "metrics would come from its prometheus plugin, scraped by Prometheus, which is not set up. " +
+          "agentgateway also exports its access logs over OTLP (frontendPolicies.accessLog.otlp in " +
+          "config.yaml, to the Collector's /v1/logs): in Grafana Explore on Loki, {service_name=\"agentgateway\"} " +
+          "returns one record per request, with the method, path, status and MCP method as labels, and the " +
+          "trace_id/span_id that link it to the trace above (the record's body is empty; the fields are its " +
+          "labels). Sampling every request is fine for a demo, not for production.",
+      },
+      {
         heading: "Beyond the local stack",
         body: [
           "The instrumentation itself is standard OTel SDK code (app/telemetry.py) that honors the " +
@@ -225,6 +284,9 @@ export const scenarioObservability: LocalizedDocsPage = {
     sections: [
       {
         heading: "OpenTelemetry・Prometheus・Alertmanager・Tempo・Loki・Grafanaを使うメリット",
+        body: [
+          "Kafkaブリッジ(シナリオ2)が送るリクエストは、backendへの普通のトラフィックなので、他のクライアントと同じトレース・メトリクス・ダッシュボードに現れます。",
+        ],
         bullets: [
           "OpenTelemetry: トレースとメトリクスのベンダー中立な標準規格で、一度計装すればアプリのコードを変えずに送信先を切り替えられます(ここではローカル構成、本番ではNew Relicなど)。",
           "Prometheus・Tempo・Loki: それぞれメトリクス・トレース・ログに特化した保存先で、いずれもOSSのためライセンス費用がかかりません。",
@@ -408,6 +470,62 @@ export const scenarioObservability: LocalizedDocsPage = {
               "過負荷実行中のLokiでのGrafana Explore: 5xxのスパイクの原因となった例外の全文 — 「QueuePool limit of size 5 overflow 10 reached, connection timed out, timeout 30.00」、つまりステップ2のDBプールの枯渇が、トレースバック付きで見えます。",
           },
         ],
+      },
+      {
+        heading: "5. ゲートウェイからもトレースを送る: Kong と agentgateway",
+        body: [
+          "KongとagentgatewayもCollectorへ自分のトレースを送れるので、ゲートウェイを通ったリクエストは、" +
+            "ゲートウェイのスパンの下にbackendのスパンが連なる1本のトレースとして見えます。どちらもapps-networkに" +
+            "参加しているので、otel-collector:4318でCollectorに届きます。",
+          "Kong: apps_backendサービスへのopentelemetryプラグイン(kong/conf/declarative.yml)と、" +
+            "KONG_TRACING_INSTRUMENTATIONS=request(kong/docker-compose.yml)です。KongはデフォルトでDBモード" +
+            "なので、declarativeの設定はmake kong:resetで再インポートします。agentgateway: " +
+            "agentgateway/config.yamlのtracingブロックに、otlpEndpoint・otlpProtocol: http・randomSampling: true" +
+            "を指定します — サンプリングのデフォルトはfalseで、リクエストがすでにトレースを持っていない限り何も" +
+            "送られません。今回の実行では、agentgatewayはtracingブロックを、設定ファイルのライブリロードでは" +
+            "なく、コンテナの再起動後に読み込みました。ダッシュボード最下部の「Gateway traces」パネルに一覧されるので、" +
+            "トレースIDをクリックすると開きます。",
+        ],
+        code: [
+          {
+            code:
+              "make kong:reset            # opentelemetryプラグイン入りの設定を再インポート\n" +
+              "make agentgateway:up       # (config.yamlを編集した後はdocker restart nb-agentgateway)\n" +
+              "curl localhost:8000/api/accounts/balances   # Kong経由\n" +
+              "make agentgateway:tools                     # MCPのinitialize + tools/list",
+          },
+        ],
+        images: [
+          {
+            src: "/docs/screenshots/grafana-gateway-traces.png",
+            alt: "Grafanaダッシュボードの「Gateway traces」パネル。最近のトレースの表で、各行がKong(kong)またはagentgateway(initialize、tools/list)のルートスパンと、その開始時刻・所要時間を示している",
+            caption:
+              "ダッシュボードの「Gateway traces」パネル(Apps backendダッシュボードの最下部): KongとagentgatewayのリクエストとMCP呼び出しを新しい順に一覧します。トレースIDをクリックすると開きます。",
+          },
+          {
+            src: "/docs/screenshots/tempo-kong-trace.png",
+            alt: "GrafanaのExploreでTempoの1本のトレースを表示。60msのnb-kongのスパン「kong」の下に、nb-backendのスパンGET /accounts/balancesと、そのconnect・SELECT demo・http sendが入れ子で並んでいる",
+            caption:
+              "Kong経由のリクエスト: 一番上がKongのスパンで、その中にbackendのリクエストとSQLクエリが入る — 2つのサービスにまたがる1本のトレース。",
+          },
+          {
+            src: "/docs/screenshots/tempo-agentgateway-trace.png",
+            alt: "GrafanaのExploreでTempoの1本のトレースを表示。agentgatewayのスパンtools/call、続いてtools/call apps-backend_list_balances_accounts_balances_get、その下にnb-backendのスパンGET /accounts/balancesとSQLクエリが並んでいる",
+            caption:
+              "agentgateway経由のMCPツール呼び出し: tools/call、解決されたツール、そしてbackendのRESTリクエストとクエリ — MCP呼び出しとREST呼び出しが1本のトレースに入る。",
+          },
+        ],
+        note:
+          "実際の実行結果です。確認したKong経由の/api/accounts/balancesのトレースはすべて、nb-kongとnb-backendの" +
+          "両方のスパンを含んでいたので、トレースコンテキストはbackendへ引き継がれています(プラグインの" +
+          "header_typeはデフォルトのpreserve)。Kong 3.6のopentelemetryプラグインが送れるのはトレースだけ(スキーマに" +
+          "ログやメトリクスの送信設定がありません)なので、KongのログとメトリクスはLokiにもPrometheusにも入りません: " +
+          "メトリクスはprometheusプラグインをPrometheusにスクレイプさせる形になりますが、設定していません。" +
+          "agentgatewayはアクセスログもOTLPで送れます(config.yamlのfrontendPolicies.accessLog.otlp、宛先は" +
+          "Collectorの/v1/logs): GrafanaのExploreでLokiに{service_name=\"agentgateway\"}を問い合わせると、" +
+          "リクエストごとに1件、メソッド・パス・ステータス・MCPメソッドがラベルとして、上のトレースへつながる" +
+          "trace_id/span_idとともに返ります(レコードの本文は空で、項目はラベルに入っています)。" +
+          "全リクエストをサンプリングするのはデモ用で、本番向けではありません。",
       },
       {
         heading: "ローカルスタックの先へ",
