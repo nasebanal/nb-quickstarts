@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioVault: LocalizedDocsPage = {
   en: {
-    title: "Scenario 6: Use Vault",
+    title: "Scenario 5: Use Vault",
     description:
       "The backend logs in to MySQL with a password from .env. This scenario takes that password out " +
       "of the backend's configuration altogether: the backend asks Vault for a database credential " +
@@ -203,7 +203,7 @@ export const scenarioVault: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ6: Vaultの利用",
+    title: "シナリオ5: Vaultの利用",
     description:
       "backendは、.envのパスワードでMySQLにログインしています。このシナリオでは、そのパスワードをbackendの" +
       "設定から完全に取り除きます: backendは起動時にVaultへデータベースの認証情報を要求し、Vaultがその場で" +

@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioKeycloak: LocalizedDocsPage = {
   en: {
-    title: "Scenario 5: Use Keycloak",
+    title: "Scenario 4: Use Keycloak",
     description:
       "POST /accounts is protected by app/auth.py's get_current_username - until now, only " +
       "satisfiable with a mock token from POST /auth/login. This scenario turns on a real login: the " +
@@ -210,7 +210,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ5: Keycloakの利用",
+    title: "シナリオ4: Keycloakの利用",
     description:
       "POST /accountsは、app/auth.pyのget_current_usernameによって保護されています — これまでは" +
       "POST /auth/loginが発行するモックトークンでしか満たせませんでした。このシナリオでは本物のログインを" +

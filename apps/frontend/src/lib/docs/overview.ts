@@ -45,11 +45,10 @@ export const overview: LocalizedDocsPage = {
             ["The application", "apps: Next.js, FastAPI, MySQL", "A small event-sourced accounting ledger with REST, GraphQL and MCP interfaces - the thing everything else is wrapped around.", "Getting Started"],
             ["Front door and routing", "Kong", "Routes /api/* to the backend, and can be repointed at a contract mock without touching the frontend.", "1"],
             ["Absorbing bursts", "Kafka + kafka-bridge", "Takes writes into a topic and drains them into the backend at its own pace, so an overload becomes a queue instead of errors.", "2"],
-            ["Finding and balancing instances", "Consul", "Health-checks several backend instances and MySQL; the frontend's server asks it who is healthy and spreads requests across them.", "3"],
-            ["Seeing what is happening", "OpenTelemetry, Prometheus, Alertmanager, Tempo, Loki, Grafana", "Traces, metrics and logs from the backend and the gateways, alerts that reach a notification, and jumps from a log line to its trace.", "4"],
-            ["Who is calling", "Keycloak", "A real identity provider: the user logs in there, and the backend verifies the token it issues.", "5"],
-            ["Where the secrets live", "Vault", "Issues the backend a short-lived MySQL user on demand, so its config holds no database password.", "6"],
-            ["Access for AI agents", "agentgateway", "Exposes the backend as MCP tools, built from the OpenAPI contract rather than from code.", "7"],
+            ["Seeing what is happening", "OpenTelemetry, Prometheus, Alertmanager, Tempo, Loki, Grafana", "Traces, metrics and logs from the backend and the gateways, alerts that reach a notification, and jumps from a log line to its trace.", "3"],
+            ["Who is calling", "Keycloak", "A real identity provider: the user logs in there, and the backend verifies the token it issues.", "4"],
+            ["Where the secrets live", "Vault", "Issues the backend a short-lived MySQL user on demand, so its config holds no database password.", "5"],
+            ["Access for AI agents", "agentgateway", "Exposes the backend as MCP tools, built from the OpenAPI contract rather than from code.", "6"],
             ["Contracts and mocks", "Specmatic, Microcks", "One OpenAPI file checked against the real backend, and turned into two independent mock servers.", "1 and Testing"],
             ["Checking it works", "pytest, Vitest, Playwright, Locust, ZAP", "Unit, end-to-end, load and security tests, each with an HTML report.", "Testing"],
           ],
@@ -64,7 +63,7 @@ export const overview: LocalizedDocsPage = {
             "agents: it turns the OpenAPI contract into MCP tools, so an agent calls the backend through a " +
             "gateway too - and its create-account tool is the same POST /accounts a browser or the Kafka " +
             "bridge uses. Both export traces, so a request through either shows up in Tempo as one trace with " +
-            "the backend's spans under it (Scenario 4).",
+            "the backend's spans under it (Scenario 3).",
         ],
       },
       {
@@ -74,21 +73,9 @@ export const overview: LocalizedDocsPage = {
             "requests time out. Kafka puts a durable queue in front - producers append events to a topic, " +
             "and a small bridge drains them into POST /accounts at a steady pace, retrying while the backend " +
             "is unavailable and committing an event only after it succeeded. Scenario 2 measures the " +
-            "difference under the same load. Kafka comes up again in the other scenarios: scaling out with " +
-            "Consul is the other answer to the same overload (Scenario 3), the bridge's requests are ordinary " +
-            "traffic in the traces and dashboards (Scenario 4), it logs in to the backend like any client " +
-            "(Scenario 5), and its writes reach MySQL through the credential Vault issued (Scenario 6).",
-        ],
-      },
-      {
-        heading: "Consul: finding the healthy instances",
-        body: [
-          "With one backend, an address in a config file is enough. With several, someone has to know " +
-            "which exist and which are healthy, and spread the calls. Consul health-checks every backend " +
-            "instance and MySQL and keeps the list of the healthy ones; the frontend's server asks it on " +
-            "each request instead of using a fixed address, so an instance can be added or stopped with " +
-            "nothing to edit. Scenario 3 lets you flip the frontend between a fixed address and Consul and " +
-            "watch the difference.",
+            "difference under the same load. Kafka comes up again in the other scenarios: the bridge's requests are ordinary " +
+            "traffic in the traces and dashboards (Scenario 3), it logs in to the backend like any client " +
+            "(Scenario 4), and its writes reach MySQL through the credential Vault issued (Scenario 5).",
         ],
       },
       {
@@ -97,7 +84,7 @@ export const overview: LocalizedDocsPage = {
           "The app should not be the thing that stores passwords and decides who someone is. With " +
             "Keycloak the frontend sends the user to the identity provider, gets back a signed token, and " +
             "the backend verifies the signature against Keycloak's public keys - it never sees the password " +
-            "and does not call Keycloak per request. The flow below is what Scenario 5 sets up.",
+            "and does not call Keycloak per request. The flow below is what Scenario 4 sets up.",
         ],
         sequence: sequenceOf(scenarioKeycloak, "en"),
       },
@@ -107,7 +94,7 @@ export const overview: LocalizedDocsPage = {
           "The backend needs a database credential, and a password in a config file or an environment " +
             "variable is the classic leak. With Vault the backend holds only a token that may ask for a " +
             "credential; Vault creates a fresh, limited MySQL user with a lease and drops it when the " +
-            "lease ends. The flow below is what Scenario 6 sets up.",
+            "lease ends. The flow below is what Scenario 5 sets up.",
         ],
         sequence: sequenceOf(scenarioVault, "en"),
       },
@@ -117,7 +104,7 @@ export const overview: LocalizedDocsPage = {
           "The backend and both gateways send traces, metrics and logs over OpenTelemetry to a Collector, " +
             "which fans them out to Tempo, Prometheus and Loki, all read in Grafana. An alert rule in " +
             "Prometheus becomes a notification through Alertmanager, and a log line links to the trace of " +
-            "the request that produced it. Scenario 4 runs an overload and watches it happen live.",
+            "the request that produced it. Scenario 3 runs an overload and watches it happen live.",
         ],
       },
       {
@@ -159,14 +146,14 @@ export const overview: LocalizedDocsPage = {
             "(one seeded user: demo, with the password demo), and returns an " +
             "opaque bearer token that unlocks the protected write path (POST /accounts) and the profile " +
             "(GET /me, PUT /me/profile - email, display name and language, edited on the app's Profile " +
-            "page). Scenarios 5 and 6 replace pieces of this with real infrastructure: Keycloak for the " +
+            "page). Scenarios 4 and 5 replace pieces of this with real infrastructure: Keycloak for the " +
             "identity check itself, Vault for the credential the backend's own database connection uses.",
         ],
       },
       {
         heading: "Where to go next",
         body: [
-          "Getting Started covers the basic make apps:up / down / restart / reset commands. The seven " +
+          "Getting Started covers the basic make apps:up / down / restart / reset commands. The six " +
             "scenarios each take one concern from the table above and wire its tool into this same running " +
             "apps stack, with the exact commands and what to expect at every step. The Testing page, last " +
             "in the sidebar, shows how the whole thing is checked, with sample reports.",
@@ -207,11 +194,10 @@ export const overview: LocalizedDocsPage = {
             ["アプリケーション", "apps: Next.js・FastAPI・MySQL", "REST・GraphQL・MCPを備えた、小さなイベントソーシング型の会計台帳 — 他のすべてが周りを包む対象。", "Getting Started"],
             ["入口とルーティング", "Kong", "/api/*をbackendへルーティングし、frontendに手を入れずに契約モックへ向け直せる。", "1"],
             ["バーストの吸収", "Kafka + kafka-bridge", "書き込みをトピックで受け、backendのペースで流し込む。過負荷はエラーではなくキューになる。", "2"],
-            ["インスタンスの発見と分散", "Consul", "複数のbackendインスタンスとMySQLをヘルスチェックし、frontendのサーバーが健全なものを尋ねて、リクエストを振り分ける。", "3"],
-            ["何が起きているかを見る", "OpenTelemetry・Prometheus・Alertmanager・Tempo・Loki・Grafana", "backendとゲートウェイのトレース・メトリクス・ログ、通知に届くアラート、ログ行からそのトレースへのジャンプ。", "4"],
-            ["誰が呼んでいるか", "Keycloak", "本物のIDプロバイダー: ユーザーはそこでログインし、backendは発行されたトークンを検証する。", "5"],
-            ["シークレットの置き場所", "Vault", "backendに、短命なMySQLユーザーをその場で発行するので、設定にデータベースのパスワードが残らない。", "6"],
-            ["AIエージェントからのアクセス", "agentgateway", "backendをMCPツールとして公開する。コードではなくOpenAPI契約から作る。", "7"],
+            ["何が起きているかを見る", "OpenTelemetry・Prometheus・Alertmanager・Tempo・Loki・Grafana", "backendとゲートウェイのトレース・メトリクス・ログ、通知に届くアラート、ログ行からそのトレースへのジャンプ。", "3"],
+            ["誰が呼んでいるか", "Keycloak", "本物のIDプロバイダー: ユーザーはそこでログインし、backendは発行されたトークンを検証する。", "4"],
+            ["シークレットの置き場所", "Vault", "backendに、短命なMySQLユーザーをその場で発行するので、設定にデータベースのパスワードが残らない。", "5"],
+            ["AIエージェントからのアクセス", "agentgateway", "backendをMCPツールとして公開する。コードではなくOpenAPI契約から作る。", "6"],
             ["契約とモック", "Specmatic・Microcks", "1つのOpenAPIファイルを、実際のbackendに対して検証し、独立した2つのモックサーバーにする。", "1とテスト"],
             ["動くことの確認", "pytest・Vitest・Playwright・Locust・ZAP", "ユニット・E2E・負荷・セキュリティのテスト。それぞれHTMLレポート付き。", "テスト"],
           ],
@@ -225,7 +211,7 @@ export const overview: LocalizedDocsPage = {
             "agentgatewayはAIエージェント向けの同じ発想です: OpenAPI契約をMCPツールに変えるので、エージェントも" +
             "ゲートウェイ経由でbackendを呼びます — そのアカウント作成ツールは、ブラウザやKafkaブリッジが使うのと" +
             "同じPOST /accountsです。どちらもトレースを送るので、どちらを通ったリクエストも、backendのスパンが" +
-            "下に連なる1本のトレースとしてTempoに現れます(シナリオ4)。",
+            "下に連なる1本のトレースとしてTempoに現れます(シナリオ3)。",
         ],
       },
       {
@@ -235,19 +221,8 @@ export const overview: LocalizedDocsPage = {
             "Kafkaは手前に永続的なキューを置きます — プロデューサーはトピックにイベントを追記し、小さなブリッジが" +
             "一定のペースでPOST /accountsへ流し込み、backendが使えない間は再試行し、成功したあとにだけイベントを" +
             "コミットします。シナリオ2は、同じ負荷での違いを測ります。Kafkaは他のシナリオにも顔を出します: " +
-            "Consulでスケールアウトするのは同じ過負荷へのもう1つの答えで(シナリオ3)、ブリッジのリクエストは" +
-            "トレースやダッシュボードでは普通のトラフィックであり(シナリオ4)、ブリッジも他のクライアントと" +
-            "同じようにbackendへログインし(シナリオ5)、その書き込みはVaultが発行した認証情報でMySQLに届きます(シナリオ6)。",
-        ],
-      },
-      {
-        heading: "Consul: 健全なインスタンスを見つける",
-        body: [
-          "backendが1つなら、設定ファイルのアドレスで足ります。複数になると、どれが存在し、どれが健全かを誰かが" +
-            "知り、呼び出しを振り分けなければなりません。Consulはbackendの各インスタンスとMySQLをヘルスチェックして、" +
-            "健全なものの一覧を保持します。frontendのサーバーは、固定アドレスの代わりに、リクエストのたびにそれを" +
-            "尋ねるので、インスタンスを増やしたり止めたりしても、編集するものはありません。シナリオ3では、frontendを" +
-            "固定アドレスとConsulで切り替えて、違いを見られます。",
+            "ブリッジのリクエストはトレースやダッシュボードでは普通のトラフィックであり(シナリオ3)、ブリッジも他のクライアントと" +
+            "同じようにbackendへログインし(シナリオ4)、その書き込みはVaultが発行した認証情報でMySQLに届きます(シナリオ5)。",
         ],
       },
       {
@@ -256,7 +231,7 @@ export const overview: LocalizedDocsPage = {
           "アプリ自身がパスワードを保存し、その人が誰かを決める役であるべきではありません。Keycloakを使うと、" +
             "frontendはユーザーをIDプロバイダーへ送り、署名付きのトークンを受け取り、backendはKeycloakの公開鍵で" +
             "その署名を検証します — パスワードは見ず、リクエストごとにKeycloakを呼ぶこともありません。" +
-            "下の流れが、シナリオ5で構築するものです。",
+            "下の流れが、シナリオ4で構築するものです。",
         ],
         sequence: sequenceOf(scenarioKeycloak, "ja"),
       },
@@ -265,7 +240,7 @@ export const overview: LocalizedDocsPage = {
         body: [
           "backendにはデータベースの認証情報が必要ですが、設定ファイルや環境変数のパスワードは、典型的な漏洩の" +
             "原因です。Vaultを使うと、backendが持つのは認証情報を要求できるトークンだけで、Vaultがリース付きの" +
-            "限定されたMySQLユーザーをその場で作り、リースが終わると削除します。下の流れが、シナリオ6で" +
+            "限定されたMySQLユーザーをその場で作り、リースが終わると削除します。下の流れが、シナリオ5で" +
             "構築するものです。",
         ],
         sequence: sequenceOf(scenarioVault, "ja"),
@@ -276,7 +251,7 @@ export const overview: LocalizedDocsPage = {
           "backendと両方のゲートウェイは、OpenTelemetryでトレース・メトリクス・ログをCollectorへ送り、Collectorが" +
             "Tempo・Prometheus・Lokiへ振り分け、すべてをGrafanaで見ます。Prometheusのアラートルールは" +
             "Alertmanager経由で通知になり、ログ行はそれを生んだリクエストのトレースへリンクします。" +
-            "シナリオ4では、過負荷を起こして、その様子をライブで観察します。",
+            "シナリオ3では、過負荷を起こして、その様子をライブで観察します。",
         ],
       },
       {
@@ -316,14 +291,14 @@ export const overview: LocalizedDocsPage = {
           "POST /auth/loginはユーザー名とパスワードを受け取り、MySQLのusersテーブルと照合して(demoユーザー1人が" +
             "シード済みで、パスワードはdemo)、保護された書き込み(POST /accounts)とプロフィール" +
             "(GET /me・PUT /me/profile — メール・表示名・言語。アプリのプロフィール画面で編集)を使える不透明な" +
-            "bearerトークンを返します。シナリオ5と6は、この一部を本物のインフラに置き換えます: 本人確認そのものを" +
+            "bearerトークンを返します。シナリオ4と5は、この一部を本物のインフラに置き換えます: 本人確認そのものを" +
             "Keycloakに、backend自身のデータベース接続の認証情報をVaultに。",
         ],
       },
       {
         heading: "次に読むもの",
         body: [
-          "Getting Startedでは、基本のmake apps:up / down / restart / resetコマンドを扱います。7つのシナリオは、" +
+          "Getting Startedでは、基本のmake apps:up / down / restart / resetコマンドを扱います。6つのシナリオは、" +
             "それぞれ上の表の関心事を1つずつ取り上げ、そのツールをこの同じ稼働中のappsスタックに組み込みます — " +
             "実際のコマンドと、各ステップで何が起きるかを添えて。サイドバーの最後にある「テスト」ページでは、" +
             "全体をどう確かめるかを、サンプルレポート付きで見られます。",

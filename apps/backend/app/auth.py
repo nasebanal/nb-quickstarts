@@ -19,7 +19,7 @@ from app.passwords import verify_password
 # TOKEN_SECRET env var - a fixed demo default, since this is a local demo, so
 # instances agree without configuring anything). Any backend instance can
 # verify it on its own, with no shared store and no database query - which is
-# what running several instances behind Consul needs, and what keeps login as
+# what running several instances behind a load balancer needs, and what keeps login as
 # cheap as it always was for the load-test scenarios (login must not compete
 # with POST /accounts for the DB connection pool). It also survives restarts
 # for free. There is no expiry and no revocation, by design: it is the demo

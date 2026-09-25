@@ -17,10 +17,6 @@ export default function DocsOverviewPage() {
             label={locale === "ja" ? "nb-quickstartsのアーキテクチャ図" : "nb-quickstarts architecture diagram"}
           />
           <ArchitectureDiagram
-            variant="consul"
-            label={locale === "ja" ? "Consul(サービス検出)の図" : "Consul service discovery diagram"}
-          />
-          <ArchitectureDiagram
             variant="mcp"
             label={locale === "ja" ? "MCPアクセス経路の図" : "MCP access path diagram"}
           />

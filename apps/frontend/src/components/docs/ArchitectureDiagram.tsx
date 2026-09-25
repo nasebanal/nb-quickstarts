@@ -15,16 +15,12 @@ import { LightboxOverlay, useLightbox } from "./Lightbox";
 //    column is simply empty - MCP doesn't go through it), with agentgateway
 //    attached like Kong and Keycloak / Vault in the same upper-right group.
 //    Its protocol is MCP, drawn in the accent color.
-//  - "consul": service discovery. Browser -> Frontend (server) -> Backend
-//    instances -> MySQL on the same columns, with Consul above: it health-
-//    checks the backends and MySQL, and the Frontend asks it which are healthy.
 // Edges are routed at right angles, each with its own column so none of them
 // cross a node or one another. Arrows point from the caller to what it calls.
-type Variant = "stack" | "mcp" | "consul";
+type Variant = "stack" | "mcp";
 const DIMENSIONS: Record<Variant, { width: number; height: number }> = {
   stack: { width: 880, height: 610 },
   mcp: { width: 880, height: 560 },
-  consul: { width: 880, height: 400 },
 };
 
 // Lightbox chrome: .nb-docs-lightbox's own
@@ -225,7 +221,7 @@ function StackDiagram({ labels, style }: { labels: Record<string, string>; style
   const cx = (b: Box) => b.x + b.w / 2;
   const bottom = (b: Box) => b.y + b.h;
 
-  // MySQL cylinder, centred under Consul so their edge is a straight drop.
+  // MySQL cylinder.
   const dbW = 110;
   const dbX = 650;
   const dbTop = 292;
@@ -412,86 +408,6 @@ function McpDiagram({ labels, style }: { labels: Record<string, string>; style?:
   );
 }
 
-function ConsulDiagram({ labels, style }: { labels: Record<string, string>; style?: React.CSSProperties }) {
-  const { width, height } = DIMENSIONS.consul;
-  const marker = `arrow-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
-
-  const browser: Box = { x: 20, y: 200, w: 110, h: NODE_H };
-  const fe: Box = { x: 200, y: 200, w: 110, h: NODE_H };
-  const consul: Box = { x: 320, y: 30, w: 110, h: NODE_H };
-  // Backend instances, apps' own (backend-1, the fixed address's target) in the middle.
-  const group: Box = { x: 470, y: 80, w: 170, h: 270 };
-  const b2: Box = { x: 500, y: 110, w: 110, h: NODE_H };
-  const b1: Box = { x: 500, y: 200, w: 110, h: NODE_H };
-  const b3: Box = { x: 500, y: 290, w: 110, h: NODE_H };
-  const dbX = 720;
-  const dbW = 110;
-  const dbTop = 200;
-  const dbH = 56;
-
-  const cy = (b: Box) => b.y + b.h / 2;
-  const cx = (b: Box) => b.x + b.w / 2;
-  const R = 6;
-
-  // FE -> an instance off the FE-to-b1 line: out to the bus column, then up/down to the instance's left side.
-  const fan = (target: Box, up: boolean) =>
-    `M${fe.x + fe.w},${cy(fe)} H384 Q390,${cy(fe)} 390,${cy(fe) + (up ? -R : R)} V${cy(target) + (up ? R : -R)} Q390,${cy(target)} 396,${cy(target)} H${target.x}`;
-  // an instance -> MySQL: out to the bus column, then to MySQL's left side.
-  const toDb = (from: Box) => {
-    const up = cy(from) < 228;
-    return from === b1
-      ? `M${from.x + from.w},${cy(from)} H${dbX}`
-      : `M${from.x + from.w},${cy(from)} H659 Q665,${cy(from)} 665,${cy(from) + (up ? R : -R)} V${228 + (up ? -R : R)} Q665,228 671,228 H${dbX}`;
-  };
-
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} style={style} xmlns="http://www.w3.org/2000/svg">
-      <ArrowDefs id={marker} />
-
-      <Group box={group} title={labels.backendGroup} />
-
-      {/* Browser -> Frontend (server) -> the instances -> MySQL */}
-      <Edge marker={marker} main d={`M${browser.x + browser.w},${cy(browser)} H${fe.x}`} />
-      <EdgeLabel x={153} y={cy(browser) - 10} text="HTTP" />
-      <Edge marker={marker} main d={`M${fe.x + fe.w},${cy(fe)} H${b1.x}`} />
-      <Edge marker={marker} main d={fan(b2, true)} />
-      <Edge marker={marker} main d={fan(b3, false)} />
-      <EdgeLabel x={352} y={cy(fe) - 10} text="REST" />
-      <Edge marker={marker} main d={toDb(b2)} />
-      <Edge marker={marker} main d={toDb(b1)} />
-      <Edge marker={marker} main d={toDb(b3)} />
-      <text x={cx(b1)} y={b1.y + b1.h + 16} textAnchor="middle" className="nb-arch-label" style={{ stroke: "none" }}>
-        {labels.fixedTarget}
-      </text>
-
-      {/* Consul: the Frontend asks it which backends are healthy (and gets the list back); it health-checks the backends and MySQL. */}
-      <Edge marker={marker} dashed both d={`M${cx(fe)},${fe.y} V${cy(consul) + R} Q${cx(fe)},${cy(consul)} ${cx(fe) + R},${cy(consul)} H${consul.x}`} />
-      <EdgeLabel x={cx(fe) - 6} y={cy(consul) - 16} text={labels.consulAsk} anchor="middle" />
-      <Edge marker={marker} dashed d={`M${consul.x + consul.w},${cy(consul) - 6} H${cx_(dbX, dbW) - R} Q${cx_(dbX, dbW)},${cy(consul) - 6} ${cx_(dbX, dbW)},${cy(consul) - 6 + R} V${dbTop}`} />
-      <Edge marker={marker} dashed d={`M${consul.x + consul.w},${cy(consul) + 6} H${cx(group) - R} Q${cx(group)},${cy(consul) + 6} ${cx(group)},${cy(consul) + 6 + R} V${group.y}`} />
-      <EdgeLabel x={(consul.x + consul.w + cx(group)) / 2 - 4} y={cy(consul) + 22} text={labels.healthEvery2s} />
-      <EdgeLabel x={(cx(group) + cx_(dbX, dbW)) / 2 + 20} y={cy(consul) - 16} text={labels.healthChecks} />
-
-      <Node box={browser} label={labels.browser} />
-      <Node box={fe} label={labels.frontendServer} />
-      <Node box={consul} label={labels.consul} />
-      <Node box={b2} label="backend-2" />
-      <Node box={b1} label="backend-1" />
-      <Node box={b3} label="backend-3" />
-      <Cylinder x={dbX} top={dbTop} w={dbW} h={dbH} label={labels.mysql} />
-
-      <Legend
-        x={20}
-        y={340}
-        rows={[
-          { label: labels.legendRest, kind: "rest" },
-          { label: labels.legendConsul, kind: "optional" },
-        ]}
-      />
-    </svg>
-  );
-}
-
 // x of the centre of something `w` wide starting at `x` (a Box-free helper for the cylinder).
 function cx_(x: number, w: number): number {
   return x + w / 2;
@@ -503,7 +419,7 @@ export function ArchitectureDiagram({ label, variant = "stack" }: { label: strin
   const { width, height } = DIMENSIONS[variant];
   const { open, setOpen, close } = useLightbox();
   const [scale, setScale] = useState(1);
-  const Diagram = variant === "mcp" ? McpDiagram : variant === "consul" ? ConsulDiagram : StackDiagram;
+  const Diagram = variant === "mcp" ? McpDiagram : StackDiagram;
 
   // The lightbox's flex layout gives a percentage width nothing to resolve
   // against, so the enlarged SVG gets concrete pixel dimensions scaled to
@@ -525,7 +441,7 @@ export function ArchitectureDiagram({ label, variant = "stack" }: { label: strin
       <div className="nb-docs-diagram-zoomable" role="img" aria-label={label} onClick={() => setOpen(true)}>
         <Diagram labels={labels} />
       </div>
-      <p className="nb-docs-diagram-caption">{variant === "mcp" ? labels.captionMcp : variant === "consul" ? labels.captionConsul : labels.captionStack}</p>
+      <p className="nb-docs-diagram-caption">{variant === "mcp" ? labels.captionMcp : labels.captionStack}</p>
       {open && (
         <LightboxOverlay label={label} onClose={close}>
           <div className="nb-docs-lightbox-diagram">

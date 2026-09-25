@@ -45,7 +45,7 @@ def wait_for_database(max_attempts: int = 30, retry_wait: float = 2.0) -> None:
 def startup_lock():
     """Runs the code inside one instance at a time, across every backend instance.
 
-    With several instances (the Consul scenario) starting at once - or all
+    With several instances (APPS_BACKEND_INSTANCES > 1) starting at once - or all
     reloading after one code change - each would run `create_all` and the seed
     together and race ("Table already exists", duplicate seed rows). MySQL's
     GET_LOCK is a named lock held by a connection, visible to every instance

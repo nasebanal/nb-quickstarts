@@ -19,7 +19,7 @@ export const testing: LocalizedDocsPage = {
             ["End to end", "Playwright", "9 tests in a real browser: login and logout, profile, a wrong password, the frontend server's resolver API.", "Yes", "make playwright:test"],
             ["Contract (provider)", "Specmatic", "18 scenarios: does the real backend honour openapi.yaml? 100% of paths, methods and response codes covered.", "Yes", "make specmatic:test"],
             ["Contract (consumer)", "Vitest + Specmatic stub", "Does the frontend's own API usage hold up against a mock built from the same contract?", "Yes, plus the stub", "make specmatic:stub-up, then make vitest:contract-test"],
-            ["Load", "Locust", "HTTP, GraphQL and MySQL scenarios, an overload scenario, the same overload spread over several backends (Consul) and pushed through Kafka.", "Yes", "make locust:test LOCUST_FILE=..."],
+            ["Load", "Locust", "HTTP, GraphQL and MySQL scenarios, an overload scenario, and the same overload pushed through Kafka.", "Yes", "make locust:test LOCUST_FILE=..."],
             ["Security", "OWASP ZAP", "A passive scan of the frontend, an active scan, and an OpenAPI-driven scan of every backend route.", "Yes", "make zap:baseline, zap:api-scan"],
           ],
         },
@@ -66,7 +66,7 @@ export const testing: LocalizedDocsPage = {
         body: [
           "pytest swaps MySQL for an in-memory database, so it runs anywhere in under a second. Vitest " +
             "tests the frontend's logic without a browser - the API client, the login redirect's PKCE " +
-            "handling, and the server-side resolver that chooses between a fixed address and Consul.",
+            "handling, and the server-side resolver that picks the backend to forward to.",
         ],
         images: [
           {
@@ -105,8 +105,8 @@ export const testing: LocalizedDocsPage = {
       {
         heading: "Load and security: Locust and ZAP",
         body: [
-          "Locust reports response times and failures per endpoint; Scenarios 2, 3 and 4 " +
-            "use it to show what an overload does and how Kafka, several backends and observability each " +
+          "Locust reports response times and failures per endpoint; Scenarios 2 and 3 " +
+            "use it to show what an overload does and how Kafka and observability each " +
             "respond. ZAP scans for vulnerabilities: the OpenAPI-driven scan sends real attack payloads to " +
             "every backend route, so it only ever targets apps.",
         ],
@@ -160,7 +160,7 @@ export const testing: LocalizedDocsPage = {
             ["E2E", "Playwright", "実ブラウザで9件: ログイン・ログアウト、プロフィール、誤ったパスワード、frontendサーバーのresolver API。", "必要", "make playwright:test"],
             ["コントラクト(プロバイダー)", "Specmatic", "18シナリオ: 実際のbackendがopenapi.yamlどおりに応答するか。パス・メソッド・レスポンスコードの100%をカバー。", "必要", "make specmatic:test"],
             ["コントラクト(コンシューマー)", "Vitest + Specmaticのstub", "frontend自身のAPI利用が、同じコントラクトから作ったモックに対して成立するか。", "必要(+stub)", "make specmatic:stub-up のあと make vitest:contract-test"],
-            ["負荷", "Locust", "HTTP・GraphQL・MySQLのシナリオ、overloadシナリオ、同じ負荷を複数backend(Consul)へ分散、Kafka経由にしたもの。", "必要", "make locust:test LOCUST_FILE=..."],
+            ["負荷", "Locust", "HTTP・GraphQL・MySQLのシナリオ、overloadシナリオ、同じ負荷をKafka経由にしたもの。", "必要", "make locust:test LOCUST_FILE=..."],
             ["セキュリティ", "OWASP ZAP", "frontendのパッシブスキャン、アクティブスキャン、backendの全ルートを対象にしたOpenAPI駆動のスキャン。", "必要", "make zap:baseline、zap:api-scan"],
           ],
         },
@@ -205,7 +205,7 @@ export const testing: LocalizedDocsPage = {
         body: [
           "pytestはMySQLをインメモリDBに差し替えるので、どこでも1秒未満で動きます。Vitestはブラウザなしで" +
             "frontendのロジックをテストします — APIクライアント、ログインのリダイレクトにおけるPKCEの扱い、" +
-            "固定アドレスとConsulを選ぶサーバー側のresolverです。",
+            "転送先のbackendを選ぶサーバー側のresolverです。",
         ],
         images: [
           {
@@ -243,8 +243,8 @@ export const testing: LocalizedDocsPage = {
       {
         heading: "負荷とセキュリティ: LocustとZAP",
         body: [
-          "Locustはエンドポイントごとの応答時間と失敗を報告します。シナリオ2・3・4は、これを使って、過負荷が何を起こし、" +
-            "Kafka・複数のbackend・オブザーバビリティがそれぞれどう応えるかを示します。ZAPは脆弱性をスキャンします: " +
+          "Locustはエンドポイントごとの応答時間と失敗を報告します。シナリオ2と3は、これを使って、過負荷が何を起こし、" +
+            "Kafkaとオブザーバビリティがそれぞれどう応えるかを示します。ZAPは脆弱性をスキャンします: " +
             "OpenAPI駆動のスキャンは、backendの全ルートへ実際の攻撃ペイロードを送るため、対象は常にappsだけです。",
         ],
         images: [

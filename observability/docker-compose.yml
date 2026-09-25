@@ -36,7 +36,7 @@ services:
     networks:
       - observability-net
       # Also on apps-network so prometheus.yml can scrape modules' own
-      # /metrics endpoints (Kong, Consul, ...) by container name.
+      # /metrics endpoints (Kong, ...) by container name.
       - apps-network
 
   tempo:

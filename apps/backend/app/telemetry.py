@@ -83,7 +83,7 @@ def setup_telemetry(app: FastAPI, engine: Engine) -> bool:
         logging.getLogger(name).addHandler(handler)
     logging.getLogger().setLevel(logging.INFO)
 
-    # Health checks (Consul every 10s, compose healthchecks) would otherwise
+    # Health checks (compose healthchecks) would otherwise
     # drown out real traffic in every panel.
     FastAPIInstrumentor.instrument_app(app, excluded_urls="health")
     SQLAlchemyInstrumentor().instrument(engine=engine)

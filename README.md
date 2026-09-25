@@ -17,7 +17,6 @@ Supported OSS, one module per technology:
 - **[apps](#apps)** — the test-target stack itself: [FastAPI](https://fastapi.tiangolo.com/) (REST + GraphQL via [Strawberry](https://strawberry.rocks/) + an [MCP](https://modelcontextprotocol.io/) server via [fastapi-mcp](https://github.com/tadata-org/fastapi_mcp)), [Next.js](https://nextjs.org/), [MySQL](https://www.mysql.com/)
 - **[Kong](https://konghq.com/products/kong-gateway)** — API gateway
 - **[Kafka](https://kafka.apache.org/)** — event streaming
-- **[Consul](https://www.consul.io/)** — service registry/discovery: three backend instances, health checks, and a client that finds the healthy ones
 - **[Keycloak](https://www.keycloak.org/)** — OIDC identity provider: a real login (with sign-up) on the login page, issuing JWTs the real backend validates
 - **[Vault](https://www.vaultproject.io/)** — issues the real backend a fresh, short-lived MySQL user on demand, so it has no database password of its own
 - **[Vitest](https://vitest.dev/)** — `apps/frontend` unit tests
@@ -52,8 +51,6 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Kafka | kafka-bridge health | http://localhost:8090/health | `kafka-bridge:8090/health` | Only once `kafka:bridge-up` has run; `KAFKA_BRIDGE_HEALTH_PORT` |
 | Specmatic | Mock server | http://localhost:9091 | `specmatic-stub:9091` | `SPECMATIC_STUB_PORT`; needs `apps:up` first (`make specmatic:stub-up`) |
 | Microcks | UI / mock API | http://localhost:9090 | `microcks:8080` | `MICROCKS_PORT` maps to a *different* in-network port (`8080`) - see `microcks/docker-compose.yml` |
-| Consul | HTTP API / UI | http://localhost:8500 | `consul:8500` | `CONSUL_HTTP_PORT` |
-| Consul | DNS | localhost:8600 | `consul:8600` | `CONSUL_DNS_PORT` |
 | Keycloak | Admin console | http://localhost:8180/admin | `keycloak:8080/admin` | `KEYCLOAK_PORT`; realm `nasebanal`, admin/admin by default |
 | Keycloak | Token endpoint (realm `nasebanal`) | http://localhost:8180/realms/nasebanal/... | `keycloak:8080/realms/nasebanal/...` | Client `apps-demo`, user `keycloak-demo` / `nasebanal-demo` - see [Keycloak: a real login, and a real token the backend verifies](#keycloak-a-real-login-and-a-real-token-the-backend-verifies) |
 | Vault | UI / API | http://localhost:8200 | `vault:8200` | `VAULT_PORT`; dev-mode root token `VAULT_ROOT_TOKEN` |
@@ -108,14 +105,6 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
    # Locust Load Testing (configure in .env, then run)
    make locust:up
    make locust:open
-
-   # Consul (register apps' backend/mysql - needs apps:up)
-   make consul:up
-   make consul:register-apps   # every running backend instance + MySQL, each with a health check
-   make consul:verify-apps
-   # several backends: APPS_BACKEND_INSTANCES=3 make apps:up, then register again
-   make consul:lb-demo         # a client that finds the healthy ones through Consul
-   make consul:open
 
    # Keycloak (a real login with sign-up, and JWTs the real backend verifies -
    # needs apps:up, plus KEYCLOAK_ISSUER set + apps:restart to turn it on)
@@ -285,30 +274,11 @@ make observability:verify  # each component ready + nb-backend metrics/traces ar
 make observability:open    # Grafana -> NASEBANAL -> "Apps backend (OpenTelemetry)"
 ```
 
-The dashboard shows request rate per path, 5xx ratio, p50/p95/p99 latency, active requests / DB connections in use, and recent traces (click through to the span waterfall, including each SQL query). `/health` is excluded from instrumentation, since Consul and healthchecks would otherwise dominate every panel.
+The dashboard shows request rate per path, 5xx ratio, p50/p95/p99 latency, active requests / DB connections in use, and recent traces (click through to the span waterfall, including each SQL query). `/health` is excluded from instrumentation, since healthchecks would otherwise dominate every panel.
 
 The instrumentation is standard OTel SDK code (`apps/backend/app/telemetry.py`) that honors the usual `OTEL_*` env vars, so pointing `OTEL_EXPORTER_OTLP_ENDPOINT` (plus `OTEL_EXPORTER_OTLP_HEADERS`) at another OTLP backend such as NewRelic - which the real NASEBANAL apps use - works without code changes. Only the Collector's config (`observability/otel-collector.yaml`) is specific to the local stack.
 
-Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't export to Destinations, and Cloudflare can't reach a `localhost` collector), and Consul/Kafka metrics, and Kong's/agentgateway's metrics (each has its own Prometheus/OTel integration that could be added to `observability/prometheus.yml` / their own config). Kong and agentgateway do export **traces** to the same Collector (`opentelemetry` plugin on Kong's `apps_backend` service; `config.tracing` in `agentgateway/config.yaml`), and the trace context is passed on, so a request through either gateway is one trace with the backend's spans under the gateway's - see Scenario 4. The Grafana dashboard's bottom panel, "Gateway traces", lists them.
-
-### Consul: several backends, health checks, and a client that finds them
-
-With one backend, a name in a config file (`backend:8080`) is enough. With several it isn't: who lists them, who notices one died, who spreads the calls? How many backends run is an **apps** setting, `APPS_BACKEND_INSTANCES` (default 1; `.env` or the command line): apps' own `backend` is instance 1 and `backend-2`, `backend-3`, ... come from a compose file that `apps/bin/compose.sh` generates (`apps/.backends.generated.yml`) by extending apps' own service. `consul:register-apps` registers whatever is running under one service name, `apps-backend`, each with its own 2s health check (and deregisters instances that no longer run). Consul's agent runs the checks; a client asks Consul who is healthy.
-
-```bash
-make consul:up
-APPS_BACKEND_INSTANCES=3 make apps:up
-make consul:register-apps
-make consul:instances     # what Consul sees, and each one's health
-make consul:lb-demo       # a client: per request, ask Consul for the healthy ones, call one in turn
-docker stop nb-backend-2  # ...and watch it drop out of the client's list within ~2s, no request failing
-docker start nb-backend-2 # ...and come back by itself
-APPS_BACKEND_INSTANCES=1 make apps:up && make consul:deregister-apps   # back to one
-```
-
-`consul/bin/lb_demo.py` holds no backend address at all - only "ask Consul for `apps-backend`" - and reports who really answered from the `X-Served-By` header every backend response carries (`INSTANCE_ID`). For several instances to coexist, the mock login's token is signed and self-contained (an HMAC over the username, secret shared by every instance - `TOKEN_SECRET`, with a demo default), so any instance can verify a token another one issued.
-
-**The frontend can use Consul too**, through its own server: with `NEXT_PUBLIC_API_BASE=/api/backend` the browser calls the Next.js route handler `app/api/backend`, which forwards to the backend it resolves either from a **fixed address** (`BACKEND_DIRECT_URL`, default `http://backend:8080`) or from **Consul** (`CONSUL_HTTP_ADDR`, healthy `apps-backend` instances in turn, the next one if one does not answer). The mode is switched at runtime on the accounts page (or `PUT /api/resolver` with `{"mode": "direct"|"consul"}`; `BACKEND_RESOLVER` sets the starting mode), and the page shows which instance answered. Responses carry `x-resolved-via` and `x-upstream`. `make locust:test LOCUST_FILE=locustfile_http_overload_consul.py` spreads the overload scenario over every healthy instance. Not done: balancing MySQL, or a gateway (Kong) resolving its upstream through Consul.
+Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't export to Destinations, and Cloudflare can't reach a `localhost` collector), and Kafka metrics, and Kong's/agentgateway's metrics (each has its own Prometheus/OTel integration that could be added to `observability/prometheus.yml` / their own config). Kong and agentgateway do export **traces** to the same Collector (`opentelemetry` plugin on Kong's `apps_backend` service; `config.tracing` in `agentgateway/config.yaml`), and the trace context is passed on, so a request through either gateway is one trace with the backend's spans under the gateway's - see Scenario 3. The Grafana dashboard's bottom panel, "Gateway traces", lists them.
 
 ### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
 
@@ -483,13 +453,6 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 | `KAFKA_BRIDGE_TARGET_URL` | `http://backend:8080` | Where kafka-bridge forwards events via `POST /accounts` - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
 | `KAFKA_BRIDGE_HEALTH_PORT` | `8090` | kafka-bridge's own `/health` port |
 
-### Consul
-
-| Variable | Default | Description |
-|---|---|---|
-| `CONSUL_HTTP_PORT` | `8500` | HTTP API / UI |
-| `CONSUL_DNS_PORT` | `8600` | DNS interface |
-
 ### Keycloak
 
 | Variable | Default | Description |
@@ -587,10 +550,10 @@ Every `make <module>:test` run leaves a browsable report behind. These are all g
 
 ### Persistent state / reset
 
-`apps`, `kong`, `kafka`, `consul`, and `observability` each keep their data in a named
+`apps`, `kong`, `kafka`, and `observability` each keep their data in a named
 Docker volume, so a plain `down`/`restart` preserves it. Each has its own
 `reset` command that wipes that volume and starts fresh (`make all:reset`
-runs all five, plus a plain restart for `microcks`/`locust`, which hold no
+runs all four, plus a plain restart for `microcks`/`locust`, which hold no
 persistent state to begin with):
 
 | Module | What persists | Docker volume | Reset command |
@@ -598,7 +561,6 @@ persistent state to begin with):
 | `apps` | MySQL data (`demo`) | `apps_apps-db-data` | `make apps:reset` |
 | `kong` | Gateway services/routes (`KONG_DB=postgres` mode only) | `kong_kong-db-data` | `make kong:reset` |
 | `kafka` | Topics and their messages | `kafka_kafka-data` | `make kafka:reset` |
-| `consul` | Service catalog/registrations | `consul_consul-data`, `consul_consul-config` | `make consul:reset` |
 | `observability` | Prometheus metrics, Tempo traces, Loki logs, Alertmanager state, Grafana state | `observability_prometheus-data`, `observability_tempo-data`, `observability_loki-data`, `observability_alertmanager-data`, `observability_grafana-data` | `make observability:reset` |
 
 These are Docker-managed volumes, not host directories — there's no
