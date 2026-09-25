@@ -5,7 +5,7 @@ import type { LocalizedDocsPage } from "./types";
 // an overview, then one section per test tool with "how to check the result" and "evaluation"
 // subsections, then a cleanup section - the same closing every scenario page has - and, last, a
 // reference comparison of Specmatic and Microcks (facts only).
-export const testing: LocalizedDocsPage = {
+export const scenarioTesting: LocalizedDocsPage = {
   en: {
     title: "Scenario 1: Verify the demo app",
     description:
