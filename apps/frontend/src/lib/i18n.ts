@@ -99,7 +99,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       description:
         "A minimal REST + GraphQL backend (FastAPI, MySQL) fronted by this Next.js app — " +
         "the test target nb-quickstarts uses to verify the NASEBANAL Stack (vitest, pytest, " +
-        "Playwright, Specmatic, Microcks, Locust, ...). Log in to post transactions against " +
+        "Playwright, Specmatic, Locust, ...). Log in to post transactions against " +
         "an accounting ledger.",
       usernameLabel: "Username",
       passwordLabel: "Password",
@@ -168,8 +168,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
           title: "Verify It",
           description:
             "make vitest:test / pytest:test / playwright:test / specmatic:test / " +
-            "microcks:up / locust:up — unit tests, browser E2E, a contract test, a mock " +
-            "server, and a load test, all against this same running stack.",
+            "locust:up — unit tests, browser E2E, a contract test, " +
+            "and a load test, all against this same running stack.",
         },
         {
           title: "Tear It Down",
@@ -215,7 +215,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       title: "NASEBANAL Quickstarts",
       description:
         "FastAPI + MySQLの最小限のREST/GraphQLバックエンドを、このNext.jsアプリがフロントエンドとして提供します。" +
-        "nb-quickstartsがNASEBANAL Stack(vitest・pytest・Playwright・Specmatic・Microcks・Locustなど)を" +
+        "nb-quickstartsがNASEBANAL Stack(vitest・pytest・Playwright・Specmatic・Locustなど)を" +
         "検証するためのテスト対象です。ログインすると会計台帳に取引を記帳できます。",
       usernameLabel: "ユーザー名",
       passwordLabel: "パスワード",
@@ -284,7 +284,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
           title: "動作確認する",
           description:
             "make vitest:test / pytest:test / playwright:test / specmatic:test / " +
-            "microcks:up / locust:up — ユニットテスト・ブラウザE2E・契約テスト・モックサーバー・" +
+            "locust:up — ユニットテスト・ブラウザE2E・契約テスト・" +
             "負荷テストを、同じ起動中のスタックに対して実行します。",
         },
         {

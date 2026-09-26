@@ -110,10 +110,9 @@ export const gettingStarted: LocalizedDocsPage = {
         heading: "One-shot test tools",
         body: [
           "pytest and vitest are self-contained (no apps:up needed - they swap in an in-memory " +
-            "database / mock fetch respectively). playwright, specmatic:test and microcks:test exercise " +
-            "the real, running apps, so start it first; microcks:test also needs the Microcks server " +
-            "(make microcks:up). specmatic:test and microcks:test both check the backend against " +
-            "openapi.yaml - [Scenario 1](/docs/scenario-testing) explains how they differ and when to use which.",
+            "database / mock fetch respectively). playwright and specmatic:test exercise " +
+            "the real, running apps, so start it first. specmatic:test checks the backend against " +
+            "openapi.yaml - see [Scenario 1](/docs/scenario-testing).",
         ],
         code: [
           {
@@ -122,8 +121,7 @@ export const gettingStarted: LocalizedDocsPage = {
               "make pytest:test             # backend unit tests\n" +
               "make vitest:test             # frontend unit tests\n" +
               "make playwright:test         # E2E against the running frontend\n" +
-              "make specmatic:test          # provider contract test against openapi.yaml\n" +
-              "make microcks:up && make microcks:test   # second provider check with Microcks (6 of 9 pass - see Scenario 1)",
+              "make specmatic:test          # provider contract test against openapi.yaml",
           },
         ],
         note:
@@ -135,8 +133,7 @@ export const gettingStarted: LocalizedDocsPage = {
         body: [
           "Each test command leaves an HTML report behind. [Scenario 1](/docs/scenario-testing) covers every one of them: " +
             "how to check the results, real screenshots, and the evaluation of the results from this " +
-            "repository - including the Microcks run (microcks/report/latest.json, plus its page in the " +
-            "Microcks UI) and the findings it made that Specmatic did not.",
+            "repository.",
         ],
       },
       {
@@ -256,10 +253,9 @@ export const gettingStarted: LocalizedDocsPage = {
         heading: "一発実行のテストツール",
         body: [
           "pytestとvitestは自己完結しています(それぞれインメモリDB・モックfetchに差し替えるため、" +
-            "apps:up不要)。playwright、specmatic:test、microcks:testは実際に稼働中のappsを対象にするため、" +
-            "先に起動してください。microcks:testにはMicrocksサーバー(make microcks:up)も必要です。" +
-            "specmatic:testとmicrocks:testはどちらもbackendをopenapi.yamlに照らして確認します。違いと" +
-            "使い分けは、[シナリオ1](/docs/scenario-testing)で説明しています。",
+            "apps:up不要)。playwrightとspecmatic:testは実際に稼働中のappsを対象にするため、" +
+            "先に起動してください。specmatic:testはbackendをopenapi.yamlに照らして確認します。" +
+            "詳しくは、[シナリオ1](/docs/scenario-testing)を参照してください。",
         ],
         code: [
           {
@@ -268,8 +264,7 @@ export const gettingStarted: LocalizedDocsPage = {
               "make pytest:test             # backendの単体テスト\n" +
               "make vitest:test             # frontendの単体テスト\n" +
               "make playwright:test         # 稼働中のfrontendに対するE2Eテスト\n" +
-              "make specmatic:test          # openapi.yamlに対するProvider契約テスト\n" +
-              "make microcks:up && make microcks:test   # Microcksによる2つ目のProvider確認(9件中6件が成功 — シナリオ1を参照)",
+              "make specmatic:test          # openapi.yamlに対するProvider契約テスト",
           },
         ],
         note:
@@ -280,9 +275,7 @@ export const gettingStarted: LocalizedDocsPage = {
         heading: "レポート",
         body: [
           "各テストコマンドは、HTMLレポートを残します。[シナリオ1](/docs/scenario-testing)では、すべてのテストについて、" +
-            "結果の確認方法、実際のスクリーンショット、本リポジトリでの結果の評価を記載しています。" +
-            "Microcksの実行(microcks/report/latest.jsonと、MicrocksのUIにある実行結果のページ)と、Specmaticが" +
-            "検出しなかった発見事項も含みます。",
+            "結果の確認方法、実際のスクリーンショット、本リポジトリでの結果の評価を記載しています。",
         ],
       },
       {

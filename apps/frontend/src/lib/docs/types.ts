@@ -15,6 +15,8 @@ export interface DocsCodeBlock {
 export interface DocsTable {
   headers: string[];
   rows: string[][];
+  /** Indexes of short columns (a name, a yes/no) whose cells stay on one line, so the room goes to the wide column. */
+  nowrapColumns?: number[];
 }
 
 export interface DocsTerminalLine {

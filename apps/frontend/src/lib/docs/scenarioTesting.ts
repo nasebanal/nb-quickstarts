@@ -3,8 +3,7 @@ import type { LocalizedDocsPage } from "./types";
 // Scenario 1: verification of the demo app. Unlike the other scenarios it does not switch on a module;
 // it runs the repository's test tools against the running apps stack. Structure, in both locales:
 // an overview, then one section per test tool with "how to check the result" and "evaluation"
-// subsections, then a cleanup section - the same closing every scenario page has - and, last, a
-// reference comparison of Specmatic and Microcks (facts only).
+// subsections, then a cleanup section - the same closing every scenario page has.
 export const scenarioTesting: LocalizedDocsPage = {
   en: {
     title: "Scenario 1: Verify the demo app",
@@ -23,24 +22,23 @@ export const scenarioTesting: LocalizedDocsPage = {
             "from the implementation, which is what makes checking it worthwhile. Specmatic verifies the provider " +
             "side (the real backend answers as the contract specifies) and serves a mock for the consumer side " +
             "(the frontend's calls are made against a mock built from the same file, with no real backend). " +
-            "Microcks builds a second, independent mock from the same file and can also send the file's examples " +
-            "to the real backend as a second provider check. Kong can route the frontend to either mock without a " +
+            "Kong can route the frontend to that mock without a " +
             "frontend change ([Scenario 2](/docs/scenario-kong)); agentgateway builds its MCP tools from the same " +
             "file ([Scenario 7](/docs/scenario-agentgateway)).",
           "Every test command leaves an HTML report (git-ignored, regenerated on each run). Open the file " +
             "directly in a browser, or serve its folder with python3 -m http.server.",
         ],
         table: {
-          headers: ["Layer", "Tool", "What it checks", "Needs apps:up?", "Command"],
+          headers: ["Layer", "Tool", "What it checks"],
+          nowrapColumns: [0, 1],
           rows: [
-            ["Unit (backend)", "pytest", "22 tests: accounts and balances, password login, profile, Keycloak JWT validation (including forged and tampered tokens). Uses an in-memory database.", "No", "make pytest:test"],
-            ["Unit (frontend)", "Vitest", "20 tests: the API client, the OIDC PKCE flow, and the backend resolver (round robin, fallback to the next instance).", "No", "make vitest:test"],
-            ["End to end", "Playwright", "9 tests in a real browser: login and logout, profile, a wrong password, the frontend server's resolver API.", "Yes", "make playwright:test"],
-            ["Contract (provider)", "Specmatic", "18 scenarios: does the real backend honour openapi.yaml? 100% of paths, methods and response codes covered.", "Yes", "make specmatic:test"],
-            ["Contract (provider, second check)", "Microcks", "9 examples from openapi.yaml sent to the real backend and checked against the schema. 6 pass; the 3 failures are findings, described below.", "Yes, plus Microcks", "make microcks:up, then make microcks:test"],
-            ["Contract (consumer)", "Vitest + Specmatic mock", "Does the frontend's own API usage hold up against a mock built from the same contract?", "Yes, plus the mock", "make specmatic:stub-up, then make vitest:contract-test"],
-            ["Load", "Locust", "HTTP, GraphQL and MySQL scenarios, an overload scenario, and the same overload sent through Kafka.", "Yes", "make locust:test LOCUST_FILE=..."],
-            ["Security", "OWASP ZAP", "A passive scan of the frontend, an active scan, and an OpenAPI-driven scan of every backend route.", "Yes", "make zap:baseline, make zap:api-scan"],
+            ["Unit (backend)", "pytest", "22 tests: accounts and balances, password login, profile, Keycloak JWT validation (including forged and tampered tokens). Uses an in-memory database."],
+            ["Unit (frontend)", "Vitest", "20 tests: the API client, the OIDC PKCE flow, and the backend resolver (round robin, fallback to the next instance)."],
+            ["End to end", "Playwright", "9 tests in a real browser: login and logout, profile, a wrong password, the frontend server's resolver API."],
+            ["Contract (provider)", "Specmatic", "18 scenarios: does the real backend honour openapi.yaml? 100% of paths, methods and response codes covered."],
+            ["Contract (consumer)", "Vitest + Specmatic mock", "Does the frontend's own API usage hold up against a mock built from the same contract?"],
+            ["Load", "Locust", "HTTP, GraphQL and MySQL scenarios, an overload scenario, and the same overload sent through Kafka."],
+            ["Security", "OWASP ZAP", "A passive scan of the frontend, an active scan, and an OpenAPI-driven scan of every backend route."],
           ],
         },
         note:
@@ -84,8 +82,8 @@ export const scenarioTesting: LocalizedDocsPage = {
             heading: "Checking the results",
             body: [
               "Vitest tests the frontend's logic without a browser: the API client, the PKCE handling of the login " +
-                "redirect, and the server-side resolver that selects the backend to forward to. The report is " +
-                "vitest/report/index.html.",
+                "redirect, and the server-side resolver that selects the backend to forward to. It replaces fetch, " +
+                "so apps:up is not needed. The report is vitest/report/index.html.",
             ],
             code: [{ code: "make vitest:test" }],
             images: [
@@ -139,15 +137,16 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "Checking the results",
             body: [
-              "Specmatic reads openapi.yaml and sends requests to the running backend, then reports coverage per " +
+              "Specmatic reads openapi.yaml and sends requests to the running backend (run make apps:up first), then reports coverage per " +
                 "path, method and response code, including the error responses (401, 404, 422) that the normal " +
                 "flow does not reach. The report is specmatic/report/html/index.html (HTML and JUnit files).",
               "The consumer side is checked against a mock built from the same contract: the frontend's own API " +
-                "calls run against it. Its report is vitest/report-contract/index.html.",
+                "calls run against it; the mock reads the live schema from the backend, so start the apps stack first, " +
+                "then the mock. Its report is vitest/report-contract/index.html.",
             ],
             code: [
-              { label: "Provider", code: "make specmatic:test" },
-              { label: "Consumer", code: "make specmatic:stub-up\nmake vitest:contract-test" },
+              { label: "Provider", code: "make apps:up\nmake specmatic:test" },
+              { label: "Consumer", code: "make apps:up\nmake specmatic:stub-up\nmake vitest:contract-test" },
             ],
             images: [
               {
@@ -168,63 +167,17 @@ export const scenarioTesting: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "Microcks: contract conformance test",
-        subsections: [
-          {
-            heading: "Checking the results",
-            body: [
-              "make microcks:test imports the contract that the backend serves at /openapi.json (openapi.yaml, " +
-                "verbatim), then asks Microcks to run its conformance test (runner OPEN_API_SCHEMA). For every " +
-                "named example in the contract, Microcks builds the request, sends it to the real backend, and " +
-                "checks the status code and the body against the example's response and the operation's schema. " +
-                "Nothing is generated: what is tested is exactly what the contract's examples specify. The command " +
-                "exits with 1 when an example fails. The raw result is microcks/report/latest.json, and the run " +
-                "has a page in the Microcks UI (http://localhost:9090).",
-            ],
-            code: [{ code: "make apps:up\nmake microcks:up\nmake microcks:test    # raw result: microcks/report/latest.json" }],
-            images: [
-              {
-                src: "/docs/screenshots/report-microcks.png",
-                alt: "Microcks UI, test #1 of nb-quickstarts apps backend with the OPEN API SCHEMA runner: 5 of 8 operations passed, POST /auth/login, GET /accounts and GET /accounts/{account_id} failed",
-                caption: "Microcks: the run's page. Each row is an operation; 6 of the 9 examples passed, and the three failing ones are in POST /auth/login, GET /accounts and GET /accounts/{account_id}.",
-              },
-              {
-                src: "/docs/screenshots/report-microcks-detail.png",
-                alt: "Microcks UI, GET /accounts/{account_id} opened: the request Microcks sent, and the backend's 200 response with createdAt 2026-09-23T07:00:26, flagged as not a valid RFC 3339 date-time",
-                caption: "A failed row shows the request Microcks sent and the response it received: createdAt has no time zone offset, so it is not a valid date-time.",
-              },
-            ],
-          },
-          {
-            heading: "Evaluation",
-            body: ["6 of the 9 examples pass. The 3 failures are findings about the contract and the backend, not test defects:"],
-            bullets: [
-              "createdAt is not RFC 3339 (GET /accounts and GET /accounts/{account_id}): the contract specifies format date-time, and the backend answers 2026-09-23T07:00:26, with no offset. Specmatic passes all 18 scenarios against the same backend, whereas Microcks checks the format. Either the backend should answer 2026-09-23T07:00:26Z, or the contract should stop specifying date-time. This is a genuine discrepancy between the contract and the implementation.",
-              "bad_credentials expects 401 but receives 422 (POST /auth/login): the contract has a response example named bad_credentials but no request example with that key, so Microcks sends an empty body. This is a gap in the examples, not a backend defect; adding a request example with the same key and a wrong password lets Microcks test it.",
-            ],
-            note:
-              "Why no bearer token is sent: the contract's 401 examples describe a call without a token, and Microcks " +
-              "adds an operationsHeaders value to every example of the operations it names. With an Authorization " +
-              "header on every request, 6 of the 9 examples failed instead of 3 - GET /me, PUT /me/profile and " +
-              "POST /accounts, which expect 401, no longer received one. The calls that need a token (a successful " +
-              "POST /accounts, GET /me) have no example in the contract, so Microcks does not run them; Specmatic " +
-              "covers them with examples that carry a live token. In CI the same run works with a token stored in " +
-              "a step output, but the contract would first need examples for those calls.",
-          },
-        ],
-      },
-      {
         heading: "Locust: load tests",
         subsections: [
           {
             heading: "Checking the results",
             body: [
-              "Locust reports response times and failures per endpoint. The available scenarios are HTTP, GraphQL " +
+              "Locust runs against the running apps stack (make apps:up first) and reports response times and failures per endpoint. The available scenarios are HTTP, GraphQL " +
                 "and MySQL, an overload scenario, and the same overload sent through Kafka; [Scenario 3](/docs/scenario-kafka) " +
                 "and [Scenario 4](/docs/scenario-observability) use it to show the effect of an overload and how " +
                 "Kafka and observability each respond. The report is locust/logs/<timestamp>/report.html.",
             ],
-            code: [{ code: "make locust:test LOCUST_FILE=locustfile_http.py LOCUST_USERS=10 LOCUST_SPAWN_RATE=5 LOCUST_RUN_TIME=20s" }],
+            code: [{ code: "make apps:up\nmake locust:test LOCUST_FILE=locustfile_http.py LOCUST_USERS=10 LOCUST_SPAWN_RATE=5 LOCUST_RUN_TIME=20s" }],
             images: [
               {
                 src: "/docs/screenshots/report-locust.png",
@@ -249,11 +202,11 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "Checking the results",
             body: [
-              "make zap:baseline runs a passive scan of the frontend. make zap:api-scan runs an OpenAPI-driven scan " +
+              "Both scans need the apps stack running (make apps:up first). make zap:baseline runs a passive scan of the frontend. make zap:api-scan runs an OpenAPI-driven scan " +
                 "that sends real attack payloads to every backend route, so it only ever targets the apps stack. " +
                 "Each scan writes zap/report/<scan>-report.html.",
             ],
-            code: [{ code: "make zap:baseline\nmake zap:api-scan" }],
+            code: [{ code: "make apps:up\nmake zap:baseline\nmake zap:api-scan" }],
             images: [
               {
                 src: "/docs/screenshots/report-zap.png",
@@ -281,48 +234,7 @@ export const scenarioTesting: LocalizedDocsPage = {
           "Stop the services started for the tests. The reports remain in each tool's report directory (git-ignored) " +
             "until they are regenerated.",
         ],
-        code: [{ code: "make microcks:down\nmake specmatic:stub-down\nmake apps:down" }],
-      },
-      {
-        heading: "Reference: Specmatic and Microcks compared",
-        body: ["The differences in functionality between the tools, as confirmed through the NASEBANAL Quickstarts verification, are described below."],
-        subsections: [
-          {
-            heading: "Implementation",
-            table: {
-              headers: ["", "Specmatic", "Microcks"],
-              rows: [
-                ["Implementation language", "Kotlin", "Java"],
-                ["Distribution", "Docker image ([specmatic/specmatic](https://hub.docker.com/r/specmatic/specmatic))", "[Helm chart](https://microcks.io/documentation/references/configuration/helm-chart-config/), [Kubernetes Operator](https://microcks.io/documentation/guides/installation/kubernetes-operator/) and Docker image (all official)"],
-                ["Execution form", "Run as a command (CLI or Docker image); tests and mocks are both run as commands.\n* No server needs to be started to run a test", "Run as a server (deployed with Docker Compose or to Kubernetes); tests and mocks are both run as server functions.\n* The server must be running (a test is requested through the server's API)"],
-                ["License", "[MIT](https://github.com/specmatic/specmatic) (open-source edition)", "[Apache-2.0](https://github.com/microcks/microcks)"],
-              ],
-            },
-          },
-          {
-            heading: "API tests",
-            table: {
-              headers: ["", "Specmatic", "Microcks"],
-              rows: [
-                ["Test scenarios", "Built from the spec file's definitions (paths, methods, response codes, schemas) and any examples supplied separately.\n* Without examples, requests are still generated from the spec file's definitions", "Built from the named examples in the spec file (request and response pairs).\n* Operations and cases without an example are not run"],
-                ["date-time (RFC 3339) conformance", "createdAt values with no time zone offset are not detected", "createdAt values with no time zone offset are detected"],
-                ["Authentication", "The bearer token is fetched at run time and written into the example's header, per case", "operationsHeaders adds one header to every example of an operation, so a valid token and an invalid one cannot be mixed"],
-                ["Report", "HTML and JUnit files", "A run page in the UI, and the raw JSON"],
-              ],
-            },
-          },
-          {
-            heading: "Mock features",
-            table: {
-              headers: ["", "Specmatic", "Microcks"],
-              rows: [
-                ["How specs are read", "Supplied at startup, as command-line arguments or in [specmatic.yaml](https://docs.specmatic.io/documentation/specmatic_json.html) (filesystem or Git); several can be listed. Listed specs share one port by default (separate ports or base URLs can be configured), and the mock paths are those of the API itself. The mock watches the files and restarts itself when they change", "Imported into the running server (upload API or UI); several can be imported. Each imported contract is served under /rest/<service>/<version>, and the imported contracts stay on the server"],
-                ["Response content", "The contract's examples for requests that match one, and schema-valid generated data otherwise", "The contract's own examples"],
-                ["Management console", "Provided by the paid [Enterprise products](https://specmatic.io/pricing/) ([Studio](https://specmatic.io/specmatic-studio/), [Insights](https://insights.specmatic.io/)); the open-source edition has none", "A UI and an API catalog"],
-              ],
-            },
-          },
-        ],
+        code: [{ code: "make specmatic:stub-down\nmake apps:down" }],
       },
     ],
   },
@@ -342,24 +254,23 @@ export const scenarioTesting: LocalizedDocsPage = {
           "apps/backend/openapi.yamlはコードから生成せず手で保守しているため、実装と食い違う可能性があり、" +
             "それが確認する意味を生みます。Specmaticはプロバイダー側(実際のbackendがコントラクトどおりに" +
             "応答するか)を検証し、コンシューマー側にはmockを提供します(frontendの呼び出しを、同じファイルから" +
-            "作ったモックに対して行い、実際のbackendは使いません)。Microcksは同じファイルから、もう1つの独立した" +
-            "モックを作り、ファイルのexampleを実際のbackendへ送って、プロバイダー側の2つ目の確認も行えます。" +
-            "Kongはfrontendを変更せずに、どちらのモックへも経路を切り替えられます([シナリオ2](/docs/scenario-kong))。" +
+            "作ったモックに対して行い、実際のbackendは使いません)。" +
+            "Kongはfrontendを変更せずに、そのモックへ経路を切り替えられます([シナリオ2](/docs/scenario-kong))。" +
             "agentgatewayも、同じファイルからMCPツールを作ります([シナリオ7](/docs/scenario-agentgateway))。",
           "どのテストコマンドも、HTMLレポートを出力します(gitignore対象で、実行のたびに再生成されます)。" +
             "ファイルをブラウザで直接開くか、フォルダをpython3 -m http.serverで配信して参照します。",
         ],
         table: {
-          headers: ["レイヤー", "ツール", "確認すること", "apps:upが必要?", "コマンド"],
+          headers: ["レイヤー", "ツール", "確認すること"],
+          nowrapColumns: [0, 1],
           rows: [
-            ["ユニット(backend)", "pytest", "22件: 口座と残高、パスワードログイン、プロフィール、KeycloakのJWT検証(偽造・改ざんトークンを含む)。インメモリDBを使う。", "不要", "make pytest:test"],
-            ["ユニット(frontend)", "Vitest", "20件: APIクライアント、OIDCのPKCEフロー、backend resolver(ラウンドロビンと次のインスタンスへのフォールバック)。", "不要", "make vitest:test"],
-            ["E2E", "Playwright", "実ブラウザで9件: ログイン・ログアウト、プロフィール、誤ったパスワード、frontendサーバーのresolver API。", "必要", "make playwright:test"],
-            ["コントラクト(プロバイダー)", "Specmatic", "18シナリオ: 実際のbackendがopenapi.yamlどおりに応答するか。パス・メソッド・レスポンスコードの100%をカバー。", "必要", "make specmatic:test"],
-            ["コントラクト(プロバイダー、2つ目の確認)", "Microcks", "openapi.yamlの9つのexampleを実際のbackendに送り、スキーマと照合。6件が成功し、失敗の3件は発見事項として後述します。", "必要(+Microcks)", "make microcks:up のあと make microcks:test"],
-            ["コントラクト(コンシューマー)", "Vitest + Specmaticのmock", "frontend自身のAPI利用が、同じコントラクトから作ったモックに対して成立するか。", "必要(+mock)", "make specmatic:stub-up のあと make vitest:contract-test"],
-            ["負荷", "Locust", "HTTP・GraphQL・MySQLのシナリオ、overloadシナリオ、同じ負荷をKafka経由にしたもの。", "必要", "make locust:test LOCUST_FILE=..."],
-            ["セキュリティ", "OWASP ZAP", "frontendのパッシブスキャン、アクティブスキャン、backendの全ルートを対象にしたOpenAPI駆動のスキャン。", "必要", "make zap:baseline、make zap:api-scan"],
+            ["ユニット(backend)", "pytest", "22件: 口座と残高、パスワードログイン、プロフィール、KeycloakのJWT検証(偽造・改ざんトークンを含む)。インメモリDBを使う。"],
+            ["ユニット(frontend)", "Vitest", "20件: APIクライアント、OIDCのPKCEフロー、backend resolver(ラウンドロビンと次のインスタンスへのフォールバック)。"],
+            ["E2E", "Playwright", "実ブラウザで9件: ログイン・ログアウト、プロフィール、誤ったパスワード、frontendサーバーのresolver API。"],
+            ["コントラクト(プロバイダー)", "Specmatic", "18シナリオ: 実際のbackendがopenapi.yamlどおりに応答するか。パス・メソッド・レスポンスコードの100%をカバー。"],
+            ["コントラクト(コンシューマー)", "Vitest + Specmaticのmock", "frontend自身のAPI利用が、同じコントラクトから作ったモックに対して成立するか。"],
+            ["負荷", "Locust", "HTTP・GraphQL・MySQLのシナリオ、overloadシナリオ、同じ負荷をKafka経由にしたもの。"],
+            ["セキュリティ", "OWASP ZAP", "frontendのパッシブスキャン、アクティブスキャン、backendの全ルートを対象にしたOpenAPI駆動のスキャン。"],
           ],
         },
         note:
@@ -404,7 +315,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             body: [
               "Vitestはブラウザなしでfrontendのロジックをテストします。対象は、APIクライアント、ログインの" +
                 "リダイレクトにおけるPKCEの扱い、転送先のbackendを選ぶサーバー側のresolverです。" +
-                "レポートは vitest/report/index.html です。",
+                "fetchを差し替えるため、apps:upは不要です。レポートは vitest/report/index.html です。",
             ],
             code: [{ code: "make vitest:test" }],
             images: [
@@ -459,15 +370,16 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "確認方法",
             body: [
-              "Specmaticはopenapi.yamlを読み、稼働中のbackendへリクエストを送って、パス・メソッド・レスポンスコード" +
+              "Specmaticはopenapi.yamlを読み、稼働中のbackendへ(先にmake apps:up)リクエストを送って、パス・メソッド・レスポンスコード" +
                 "ごとのカバレッジを報告します。正常系では届かないエラーレスポンス(401・404・422)も含みます。" +
                 "レポートは specmatic/report/html/index.html です(HTMLとJUnitのファイル)。",
               "コンシューマー側は、同じコントラクトから作ったmockに対して、frontend自身のAPI呼び出しを実行して" +
-                "確認します。レポートは vitest/report-contract/index.html です。",
+                "確認します。mockはbackendから稼働中のスキーマを取得するため、先にappsスタックを、次にmockを起動します。" +
+                "レポートは vitest/report-contract/index.html です。",
             ],
             code: [
-              { label: "プロバイダー", code: "make specmatic:test" },
-              { label: "コンシューマー", code: "make specmatic:stub-up\nmake vitest:contract-test" },
+              { label: "プロバイダー", code: "make apps:up\nmake specmatic:test" },
+              { label: "コンシューマー", code: "make apps:up\nmake specmatic:stub-up\nmake vitest:contract-test" },
             ],
             images: [
               {
@@ -488,63 +400,17 @@ export const scenarioTesting: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "Microcks: コントラクト適合テスト",
-        subsections: [
-          {
-            heading: "確認方法",
-            body: [
-              "make microcks:testは、backendが/openapi.jsonで配信しているコントラクト(openapi.yamlそのもの)を" +
-                "取り込み、Microcksに適合テスト(runnerはOPEN_API_SCHEMA)を実行させます。コントラクトにある" +
-                "名前つきexampleのそれぞれについて、Microcksがリクエストを組み立てて実際のbackendへ送り、" +
-                "ステータスコードとbodyを、exampleのレスポンスとオペレーションのスキーマに照らして確認します。" +
-                "何も生成しないため、テストされるのは、コントラクトのexampleが指定している内容そのものです。" +
-                "exampleが1つでも失敗すると、コマンドは1で終了します。生の結果は microcks/report/latest.json、" +
-                "実行結果はMicrocksのUI(http://localhost:9090)のページで確認できます。",
-            ],
-            code: [{ code: "make apps:up\nmake microcks:up\nmake microcks:test    # 生の結果: microcks/report/latest.json" }],
-            images: [
-              {
-                src: "/docs/screenshots/report-microcks.png",
-                alt: "MicrocksのUI、OPEN API SCHEMAのrunnerによるnb-quickstarts apps backendのテスト#1: 8つのオペレーションのうちPOST /auth/login、GET /accounts、GET /accounts/{account_id}が失敗",
-                caption: "Microcks: 実行結果のページ。1行が1つのオペレーションで、9つのexampleのうち6つが成功し、失敗した3つはPOST /auth/login、GET /accounts、GET /accounts/{account_id}にあります。",
-              },
-              {
-                src: "/docs/screenshots/report-microcks-detail.png",
-                alt: "MicrocksのUIでGET /accounts/{account_id}を開いた画面: Microcksが送ったリクエストと、createdAtが2026-09-23T07:00:26のbackendの200レスポンス。有効なRFC 3339のdate-timeではないと指摘されている",
-                caption: "失敗した行では、Microcksが送ったリクエストと返ってきたレスポンスを確認できます。createdAtにタイムゾーンのオフセットがないため、有効なdate-timeではありません。",
-              },
-            ],
-          },
-          {
-            heading: "評価結果",
-            body: ["9つのexampleのうち6つが成功しました。失敗した3つは、テストの不備ではなく、コントラクトとbackendに関する発見事項です。"],
-            bullets: [
-              "createdAtがRFC 3339ではない(GET /accountsとGET /accounts/{account_id}): コントラクトはformat date-timeと指定していますが、backendは2026-09-23T07:00:26とオフセットなしで返します。同じbackendに対して、Specmaticは18シナリオすべてに合格し、Microcksはformatを確認します。backendが2026-09-23T07:00:26Zと返すか、コントラクトがdate-timeの指定をやめるかのいずれかが必要です。コントラクトと実装の、実際の食い違いです。",
-              "bad_credentialsが401を期待するのに422になる(POST /auth/login): コントラクトにはbad_credentialsというレスポンスのexampleがありますが、同じキーのリクエストのexampleがないため、Microcksは空のbodyを送ります。backendの不具合ではなく、exampleの不足です。同じキーで、誤ったパスワードのリクエストexampleを追加すれば、Microcksがそれをテストします。",
-            ],
-            note:
-              "bearerトークンを送らない理由: コントラクトの401のexampleは、トークンなしの呼び出しを表しています。Microcksは、" +
-              "operationsHeadersの値を、指定したオペレーションのすべてのexampleに付けます。すべてのリクエストにAuthorization" +
-              "ヘッダーを付けると、失敗は3件ではなく9件中6件になりました。401を期待するGET /me、PUT /me/profile、" +
-              "POST /accountsが、401にならなくなったためです。トークンが必要な呼び出し(成功するPOST /accounts、GET /me)には、" +
-              "コントラクトにexampleがないので、Microcksは実行しません。Specmaticは、実際のトークンを載せたexampleでそれらを" +
-              "カバーします。CIでも、ステップの出力に保存したトークンで同じ実行はできますが、その前に、それらの呼び出しの" +
-              "exampleをコントラクトに追加する必要があります。",
-          },
-        ],
-      },
-      {
         heading: "Locust: 負荷テスト",
         subsections: [
           {
             heading: "確認方法",
             body: [
-              "Locustは、エンドポイントごとの応答時間と失敗を報告します。用意されているシナリオは、HTTP・GraphQL・MySQL、" +
+              "Locustは、稼働中のappsスタック(先にmake apps:up)に対して実行し、エンドポイントごとの応答時間と失敗を報告します。用意されているシナリオは、HTTP・GraphQL・MySQL、" +
                 "overloadシナリオ、同じ負荷をKafka経由にしたものです。[シナリオ3](/docs/scenario-kafka)と" +
                 "[シナリオ4](/docs/scenario-observability)は、これを使って、過負荷が何を起こし、Kafkaとオブザーバビリティが" +
                 "それぞれどう応えるかを示します。レポートは locust/logs/<タイムスタンプ>/report.html です。",
             ],
-            code: [{ code: "make locust:test LOCUST_FILE=locustfile_http.py LOCUST_USERS=10 LOCUST_SPAWN_RATE=5 LOCUST_RUN_TIME=20s" }],
+            code: [{ code: "make apps:up\nmake locust:test LOCUST_FILE=locustfile_http.py LOCUST_USERS=10 LOCUST_SPAWN_RATE=5 LOCUST_RUN_TIME=20s" }],
             images: [
               {
                 src: "/docs/screenshots/report-locust.png",
@@ -569,11 +435,11 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "確認方法",
             body: [
-              "make zap:baselineは、frontendのパッシブスキャンを実行します。make zap:api-scanは、OpenAPI駆動の" +
+              "どちらのスキャンも、稼働中のappsスタックが必要です(先にmake apps:up)。make zap:baselineは、frontendのパッシブスキャンを実行します。make zap:api-scanは、OpenAPI駆動の" +
                 "スキャンで、backendの全ルートへ実際の攻撃ペイロードを送るため、対象は常にappsスタックだけです。" +
                 "どちらのスキャンも zap/report/<スキャン名>-report.html を出力します。",
             ],
-            code: [{ code: "make zap:baseline\nmake zap:api-scan" }],
+            code: [{ code: "make apps:up\nmake zap:baseline\nmake zap:api-scan" }],
             images: [
               {
                 src: "/docs/screenshots/report-zap.png",
@@ -601,48 +467,7 @@ export const scenarioTesting: LocalizedDocsPage = {
           "テストのために起動したサービスを停止します。レポートは、再生成されるまで各ツールのレポートディレクトリに" +
             "残ります(gitignore対象)。",
         ],
-        code: [{ code: "make microcks:down\nmake specmatic:stub-down\nmake apps:down" }],
-      },
-      {
-        heading: "参考: SpecmaticとMicrocksの比較",
-        body: ["NASEBANAL Quickstartsの検証を通して確認されたツール間の機能差異を以下に記載します。"],
-        subsections: [
-          {
-            heading: "実装形態",
-            table: {
-              headers: ["", "Specmatic", "Microcks"],
-              rows: [
-                ["実装言語", "Kotlin", "Java"],
-                ["配布方法", "Dockerイメージ([specmatic/specmatic](https://hub.docker.com/r/specmatic/specmatic))", "[Helmチャート](https://microcks.io/documentation/references/configuration/helm-chart-config/)、[Kubernetes Operator](https://microcks.io/documentation/guides/installation/kubernetes-operator/)、Dockerイメージ(いずれも公式)"],
-                ["実行形態", "コマンドとして実行する(CLIまたはDockerイメージ)。テストもモックも、コマンドとして実行する。\n※テストの実行にサーバーの起動は不要", "サーバーとして実行する(Docker ComposeもしくはKubernetesへデプロイ)。テストもモックも、サーバーの機能として実行する。\n※サーバーの起動が必要(テストはサーバーのAPIで依頼する)"],
-                ["ライセンス", "[MIT](https://github.com/specmatic/specmatic)(オープンソース版)", "[Apache-2.0](https://github.com/microcks/microcks)"],
-              ],
-            },
-          },
-          {
-            heading: "APIテスト",
-            table: {
-              headers: ["", "Specmatic", "Microcks"],
-              rows: [
-                ["テストシナリオ", "Specファイルの定義(パス・メソッド・レスポンスコード・スキーマ)と、別途与えたexampleから組む。\n※exampleがなくても、Specファイルの定義から生成して実行する", "Specファイルに記載された名前つきexample(リクエストとレスポンスの組)から組む。\n※exampleがない操作・ケースは実行されない"],
-                ["date-time型(RFC 3339)の準拠性", "タイムゾーンのオフセットがないcreatedAtが検知されない", "タイムゾーンのオフセットがないcreatedAtを検知"],
-                ["認証", "bearerトークンを実行時に取得し、ケースごとにexampleのヘッダーへ書き込む", "operationsHeadersは、操作のすべてのexampleに同じヘッダーを付けるので、有効なトークンと無効なトークンは混ぜられない"],
-                ["レポート", "HTMLとJUnitのファイル", "UIの実行結果のページと、生のJSON"],
-              ],
-            },
-          },
-          {
-            heading: "提供Mock機能",
-            table: {
-              headers: ["", "Specmatic", "Microcks"],
-              rows: [
-                ["Specの読み取り方法", "起動時に、コマンドライン引数または[specmatic.yaml](https://docs.specmatic.io/documentation/specmatic_json.html)(ファイルシステムまたはGit)で与える。複数を列挙でき、列挙したSpecは既定で同じポートを共有する(ポートやbase URLは個別に設定できる)。モックのパスはAPI自身のパス。mockはファイルを監視し、変更があると自動で再起動する", "稼働中のサーバーへ取り込む(アップロードAPIまたはUI)。複数を取り込める。取り込んだSpecファイルごとに /rest/<service>/<version> で配信し、取り込んだSpecファイルはサーバーに残る"],
-                ["レスポンス内容", "リクエストが一致するSpecファイルのexampleにはそのexample、それ以外にはスキーマに合う生成データ", "Specファイル自身のexample"],
-                ["管理画面", "有償製品([Enterprise](https://specmatic.io/pricing/))の[Studio](https://specmatic.io/specmatic-studio/)・[Insights](https://insights.specmatic.io/)で提供。オープンソース版にはない", "UIとAPIカタログあり"],
-              ],
-            },
-          },
-        ],
+        code: [{ code: "make specmatic:stub-down\nmake apps:down" }],
       },
     ],
   },

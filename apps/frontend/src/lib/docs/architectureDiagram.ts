@@ -24,7 +24,6 @@ export const ARCHITECTURE_LABELS: Record<Locale, Record<string, string>> = {
     gatewayGroup: "Gateway & mocks",
     kong: "Kong",
     specmatic: "Specmatic",
-    microcks: "Microcks",
     asyncGroup: "Async",
     kafka: "Kafka",
     kafkaBridge: "kafka-bridge",
@@ -56,7 +55,7 @@ export const ARCHITECTURE_LABELS: Record<Locale, Record<string, string>> = {
     dbUsers: "creates DB users",
     captionStack:
       "The shared apps-network and the modules around it, over REST. Arrows point from the caller to what " +
-      "it calls (the label says what comes back); dashed lines are integrations that are off by default. Frontend <-> Keycloak (login) is " +
+      "it calls (the label says what comes back); dashed lines are optional integrations (off by default, or used only while that module is running). Frontend <-> Keycloak (login) is " +
       "drawn in Scenario 5's sequence diagram; the MCP path (agentgateway) is the diagram below.",
     captionMcp:
       "The MCP access path, on the same columns as the diagram above so the two read one over the other: " +
@@ -64,7 +63,8 @@ export const ARCHITECTURE_LABELS: Record<Locale, Record<string, string>> = {
       "Frontend, or optionally through agentgateway (dashed, like Kong), which builds MCP tools from the " +
       "OpenAPI contract and calls the REST API. Keycloak and Vault sit in the same place: the client logs in " +
       "at Keycloak and its JWT is verified at the Backend (agentgateway can verify it at the gateway too - " +
-      "supported, not configured in Scenario 7), and the Backend gets its DB credential from Vault.",
+      "supported, not configured in Scenario 7), and the Backend gets its DB credential from Vault. Both the " +
+      "Backend and agentgateway push OTLP to Observability (agentgateway sends traces and access logs).",
   },
   ja: {
     appsNetwork: "apps-network",
@@ -76,7 +76,6 @@ export const ARCHITECTURE_LABELS: Record<Locale, Record<string, string>> = {
     gatewayGroup: "ゲートウェイ & モック",
     kong: "Kong",
     specmatic: "Specmatic",
-    microcks: "Microcks",
     asyncGroup: "非同期",
     kafka: "Kafka",
     kafkaBridge: "kafka-bridge",
@@ -108,7 +107,7 @@ export const ARCHITECTURE_LABELS: Record<Locale, Record<string, string>> = {
     dbUsers: "DBユーザーを作成",
     captionStack:
       "共通のapps-networkと周辺モジュール(通信はREST)。矢印は呼び出す側から呼び出される側へ向かい、点線は" +
-      "既定ではオフの連携です。Frontend<->Keycloak(ログイン)のやりとりはシナリオ5のシーケンス図に、" +
+      "任意の連携(既定ではオフ、またはそのモジュールの起動中だけ使う連携)です。Frontend<->Keycloak(ログイン)のやりとりはシナリオ5のシーケンス図に、" +
       "MCPの経路(agentgateway)は下の図に描いています。",
     captionMcp:
       "MCPアクセスの経路を、上の図と同じ列位置で描いているので、上下で見比べられます: MCPクライアント" +
@@ -116,6 +115,7 @@ export const ARCHITECTURE_LABELS: Record<Locale, Record<string, string>> = {
       "Kongと同じ位置づけ)経由でbackendに到達します。agentgatewayはOpenAPI契約からMCPツールを作ってREST APIを" +
       "呼びます。KeycloakとVaultも同じ位置で連携します: クライアントはKeycloakでログインし、そのJWTは" +
       "backendで検証されます(agentgatewayのゲートウェイ側でも検証できますが、シナリオ7では未設定です)。" +
-      "backendのDB接続情報はVaultから取得します。",
+      "backendのDB接続情報はVaultから取得します。backendとagentgatewayはどちらも、OTLPを" +
+      "Observabilityへ送ります(agentgatewayはトレースとアクセスログ)。",
   },
 };

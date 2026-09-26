@@ -4,7 +4,7 @@ import { recordServed } from "./servedBy";
 // browser, so it must use the host-published URL, not the container name.
 // Exported read-only so the UI can show what it's actually talking to
 // (see accounts/page.tsx) - useful since this can be repointed at Kong, a
-// Specmatic stub, or a Microcks mock via NEXT_PUBLIC_API_BASE (see
+// Specmatic stub via NEXT_PUBLIC_API_BASE (see
 // AGENTS.md's Kong section) without any other visible difference.
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 

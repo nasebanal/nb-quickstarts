@@ -27,7 +27,7 @@ export const overview: LocalizedDocsPage = {
           "In the middle is the [apps stack](/docs/getting-started) on the shared apps-network: a Next.js frontend, a FastAPI backend " +
             "(REST, GraphQL and MCP) and MySQL, driven by a browser and, for load, by Locust. Everything else is a " +
             "module around it, each with its own directory and its own [make <module>:up](/docs/getting-started).",
-          "Around it sit the gateway and contract mocks ([Kong](/docs/scenario-kong), with [Specmatic and Microcks](/docs/scenario-kong)), the async path " +
+          "Around it sit the gateway and contract mocks ([Kong](/docs/scenario-kong), with [Specmatic](/docs/scenario-kong)), the async path " +
             "([Kafka and kafka-bridge](/docs/scenario-kafka)), identity and secrets ([Keycloak](/docs/scenario-keycloak) and [Vault](/docs/scenario-vault)), [observability](/docs/scenario-observability) (an " +
             "OpenTelemetry Collector feeding Tempo, Prometheus and Loki, read in Grafana, with Alertmanager " +
             "sending the alerts) and the agent gateway ([agentgateway](/docs/scenario-agentgateway)).",
@@ -48,14 +48,14 @@ export const overview: LocalizedDocsPage = {
             heading: "Scenario 1: Verify the demo app",
             href: "/docs/scenario-testing",
             body: [
-              "Verifies the operation of the demo app with the repository's test tools: pytest and Vitest (unit), Playwright (end-to-end), Specmatic and Microcks (contract), Locust (load) and OWASP ZAP (security). For each tool, the scenario describes how to check the results and how the results are evaluated.",
+              "Verifies the operation of the demo app with the repository's test tools: pytest and Vitest (unit), Playwright (end-to-end), Specmatic (contract), Locust (load) and OWASP ZAP (security). For each tool, the scenario describes how to check the results and how the results are evaluated.",
             ],
           },
           {
             heading: "Scenario 2: Switch to Kong",
             href: "/docs/scenario-kong",
             body: [
-              "Routes the frontend through Kong: the gateway proxies /api/* on port 8000 to the real backend. The same gateway service is then repointed at a contract mock (Specmatic's mock or Microcks) instead of the backend, with no frontend code change in either case.",
+              "Routes the frontend through Kong: the gateway proxies /api/* on port 8000 to the real backend. The same gateway service is then repointed at a contract mock (Specmatic's mock) instead of the backend, with no frontend code change.",
             ],
           },
           {
@@ -117,7 +117,7 @@ export const overview: LocalizedDocsPage = {
           "中心にあるのは、共通のapps-network上の[appsスタック](/docs/getting-started)です: Next.jsのfrontend、FastAPIのbackend" +
             "(REST・GraphQL・MCP)、MySQL。ブラウザと、負荷をかけるLocustがこれを呼びます。それ以外はすべて周りの" +
             "モジュールで、モジュールごとに専用のディレクトリと [make <モジュール名>:up](/docs/getting-started) があります。",
-          "周りにあるのは、ゲートウェイとモック([Kong](/docs/scenario-kong)、[SpecmaticとMicrocks](/docs/scenario-kong))、非同期の経路([Kafkaとkafka-bridge](/docs/scenario-kafka))、" +
+          "周りにあるのは、ゲートウェイとモック([Kong](/docs/scenario-kong)、[Specmatic](/docs/scenario-kong))、非同期の経路([Kafkaとkafka-bridge](/docs/scenario-kafka))、" +
             "認証とシークレット([Keycloak](/docs/scenario-keycloak)と[Vault](/docs/scenario-vault))、[オブザーバビリティ](/docs/scenario-observability)(OpenTelemetry Collectorが" +
             "Tempo・Prometheus・Lokiへ振り分け、Grafanaで見て、Alertmanagerがアラートを通知する)、" +
             "そしてエージェント向けのゲートウェイ([agentgateway](/docs/scenario-agentgateway))です。",
@@ -137,14 +137,14 @@ export const overview: LocalizedDocsPage = {
             heading: "シナリオ1: デモアプリの動作検証",
             href: "/docs/scenario-testing",
             body: [
-              "本リポジトリのテストツールで、デモアプリの動作を検証します。pytestとVitest(ユニット)、Playwright(E2E)、SpecmaticとMicrocks(コントラクト)、Locust(負荷)、OWASP ZAP(セキュリティ)について、ツールごとに、結果の確認方法と結果の評価を記載します。",
+              "本リポジトリのテストツールで、デモアプリの動作を検証します。pytestとVitest(ユニット)、Playwright(E2E)、Specmatic(コントラクト)、Locust(負荷)、OWASP ZAP(セキュリティ)について、ツールごとに、結果の確認方法と結果の評価を記載します。",
             ],
           },
           {
             heading: "シナリオ2: Kong経由への切り替え",
             href: "/docs/scenario-kong",
             body: [
-              "frontendをKong経由にします。ゲートウェイがポート8000の/api/*を実際のbackendへプロキシします。続いて、同じゲートウェイのサービスの向き先を、backendではなく、Specファイルから作ったモック(SpecmaticのモックまたはMicrocks)に切り替えます。どちらの場合も、frontendのコードは変更しません。",
+              "frontendをKong経由にします。ゲートウェイがポート8000の/api/*を実際のbackendへプロキシします。続いて、同じゲートウェイのサービスの向き先を、backendではなく、Specファイルから作ったモック(Specmaticのモック)に切り替えます。frontendのコードは変更しません。",
             ],
           },
           {

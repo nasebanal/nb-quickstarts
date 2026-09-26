@@ -674,6 +674,12 @@ h1 {
   font-weight: 600;
 }
 
+/* A table's short columns (DocsTable.nowrapColumns): a name or a yes/no stays on one line. */
+.nb-docs-section table th.nb-docs-nowrap,
+.nb-docs-section table td.nb-docs-nowrap {
+  white-space: nowrap;
+}
+
 /* Wraps the diagram in its own bordered panel, distinct from the plain
    prose around it - passed to DocsArticle as `extra`, so it renders
    between the description and the first section regardless of page. */
@@ -1133,7 +1139,7 @@ h1 {
 /* Read-only debug info, not a setting - but deliberately styled as a
    labeled field (not just muted text) so it's easy to spot at a glance,
    since NEXT_PUBLIC_API_BASE can silently point at the real backend,
-   Kong, a Specmatic stub, or a Microcks mock with no other visible
+   Kong, or a Specmatic stub with no other visible
    difference in the UI. The input itself uses `.nb-api-base input` (not
    `:where(.container) input`'s zero-specificity reset) to override its
    background to a muted tone, signaling "not editable" the way a

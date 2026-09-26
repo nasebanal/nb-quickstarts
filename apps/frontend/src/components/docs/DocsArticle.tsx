@@ -93,8 +93,10 @@ function BlockMedia({ block }: { block: DocsBlock }) {
         <table className={block.table.headers[0] === "" ? "nb-docs-table-rowlabels" : undefined}>
           <thead>
             <tr>
-              {block.table.headers.map((header) => (
-                <th key={header}>{header}</th>
+              {block.table.headers.map((header, headerIndex) => (
+                <th key={header} className={block.table?.nowrapColumns?.includes(headerIndex) ? "nb-docs-nowrap" : undefined}>
+                  {header}
+                </th>
               ))}
             </tr>
           </thead>
@@ -102,7 +104,9 @@ function BlockMedia({ block }: { block: DocsBlock }) {
             {block.table.rows.map((row) => (
               <tr key={row.join("|")}>
                 {row.map((cell, cellIndex) => (
-                  <td key={cellIndex}>{cellLines(cell)}</td>
+                  <td key={cellIndex} className={block.table?.nowrapColumns?.includes(cellIndex) ? "nb-docs-nowrap" : undefined}>
+                    {cellLines(cell)}
+                  </td>
                 ))}
               </tr>
             ))}

@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 .DEFAULT_GOAL := default
-.PHONY: apps pytest vitest playwright specmatic microcks kong kafka locust keycloak vault zap agentgateway observability all default
+.PHONY: apps pytest vitest playwright specmatic kong kafka locust keycloak vault zap agentgateway observability all default
 
 # Load environment variables from .env file if it exists
 -include .env
@@ -16,7 +16,6 @@ include vitest/Makefile
 include pytest/Makefile
 include playwright/Makefile
 include specmatic/Makefile
-include microcks/Makefile
 include locust/Makefile
 include zap/Makefile
 include agentgateway/Makefile
@@ -25,7 +24,7 @@ include observability/Makefile
 #################### ALL (every long-running module at once) ###################
 # Deliberately excludes pytest/vitest/playwright/specmatic (one-shot `test`
 # runs, no `up`/`down` concept). apps goes first (up) / last (down) since
-# kong/microcks resolve its containers by name over apps-network.
+# kong resolves its containers by name over apps-network.
 # keycloak:up/vault:up alone do NOT make apps/backend trust them either -
 # they need KEYCLOAK_ISSUER/VAULT_ADDR/VAULT_TOKEN set (or, for Vault,
 # `make vault:verify-apps` to recreate backend with them) - same
@@ -36,7 +35,7 @@ include observability/Makefile
 
 all:
 	@echo "🚀 All"
-	@echo "Start/stop/test every long-running module together: apps, kong, kafka, keycloak, vault, microcks, locust, agentgateway, observability."
+	@echo "Start/stop/test every long-running module together: apps, kong, kafka, keycloak, vault, locust, agentgateway, observability."
 	@echo ""
 	@echo "  all:up      - Start them all (apps first)"
 	@echo "  all:down    - Stop them all (apps last)"
@@ -54,7 +53,6 @@ all-up:
 	@$(MAKE) kafka-up
 	@$(MAKE) keycloak-up
 	@$(MAKE) vault-up
-	@$(MAKE) microcks-up
 	@$(MAKE) locust-up
 	@$(MAKE) agentgateway-up
 	@$(MAKE) observability-up
@@ -63,7 +61,6 @@ all-down:
 	@$(MAKE) observability-down
 	@$(MAKE) agentgateway-down
 	@$(MAKE) locust-down
-	@$(MAKE) microcks-down
 	@$(MAKE) vault-down
 	@$(MAKE) keycloak-down
 	@$(MAKE) kafka-down
@@ -90,9 +87,6 @@ all-status:
 	@echo "=== vault ==="
 	@$(MAKE) vault-status
 	@echo ""
-	@echo "=== microcks ==="
-	@$(MAKE) microcks-status
-	@echo ""
 	@echo "=== locust ==="
 	@$(MAKE) locust-status
 	@echo ""
@@ -103,7 +97,7 @@ all-status:
 	@$(MAKE) observability-status
 
 # Runs the one-shot `test` modules (pytest/vitest/playwright/specmatic) in
-# sequence - NOT microcks/locust, which aren't a `test` verb (see AGENTS.md
+# sequence - NOT locust, which isn't a `test` verb (see AGENTS.md
 # "Test/verification tool modules"), and NOT zap, deliberately: zap:baseline
 # alone takes noticeably longer than the four below combined, and
 # zap:full-scan/zap:api-scan send real attack payloads - not something to
@@ -119,7 +113,7 @@ all-test: apps-up
 
 # apps/kong/kafka each have a named Docker volume worth wiping
 # (apps_apps-db-data, kong_kong-db-data, kafka_kafka-data -
-# see AGENTS.md "Anonymous volumes"/module bullets) and get their own `reset`. microcks/locust/
+# see AGENTS.md "Anonymous volumes"/module bullets) and get their own `reset`. locust/
 # keycloak/vault hold no persistent state at all (keycloak re-imports its
 # fixed realm file, vault's dev server is in-memory only), so a plain
 # `restart` already leaves them as fresh as a "reset" would.
@@ -128,7 +122,6 @@ all-reset:
 	@$(MAKE) kong-reset
 	@$(MAKE) kafka-reset
 	@$(MAKE) observability-reset
-	@$(MAKE) microcks-restart
 	@$(MAKE) locust-restart
 	@$(MAKE) keycloak-restart
 	@$(MAKE) vault-restart
@@ -149,7 +142,6 @@ default:
 	@echo "  pytest       Show Pytest (apps/backend unit tests) commands"
 	@echo "  playwright   Show Playwright (E2E) commands"
 	@echo "  specmatic    Show Specmatic (contract test) commands"
-	@echo "  microcks     Show Microcks (mock server) commands"
 	@echo "  locust       Show Locust Load Testing commands"
 	@echo "  zap          Show OWASP ZAP (web vulnerability scanning) commands"
 	@echo "  agentgateway Show agentgateway (MCP/A2A gateway) commands"
