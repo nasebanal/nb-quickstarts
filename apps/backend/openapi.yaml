@@ -58,9 +58,8 @@ paths:
             schema:
               $ref: "#/components/schemas/LoginRequest"
             examples:
-              # Named to match the response example below - Microcks pairs
-              # request/response examples by matching key, not by content
-              # (see AGENTS.md's Microcks section).
+              # Named to match the response example below - request and
+              # response examples are paired by matching key, not by content.
               demo_login:
                 summary: Log in as the seeded demo user
                 value:
@@ -100,7 +99,7 @@ paths:
       summary: Get Me
       operationId: get_me_me_get
       # Like POST /accounts: needs a bearer token, which an OpenAPI example
-      # can't carry - so no inline examples (Microcks can't mock it);
+      # can't carry - so no inline examples;
       # specmatic:test covers it with externalized examples that send a real
       # token (see specmatic/bin/prepare_contract.sh).
       security:
@@ -201,9 +200,7 @@ paths:
       # token fetched at test time (see specmatic/bin/prepare_contract.sh);
       # an inline example here would give Specmatic a second, competing
       # scenario for the same operation with no way to authenticate it,
-      # always failing with 401. Microcks can't mock this one as a result -
-      # see README's Microcks section for why that's an accepted scope
-      # boundary, not an oversight.
+      # always failing with 401.
       security:
         - HTTPBearer: []
       requestBody:

@@ -35,5 +35,5 @@ networks:
 # implicit mode from VAULT_DEV_ROOT_TOKEN_ID) stores everything in-memory
 # and starts pre-unsealed with a fixed root token - restarting always means
 # starting empty, so there's nothing to persist (see AGENTS.md "Persistent
-# state and `reset` targets" - vault, like microcks/locust, has no reset
+# state and `reset` targets" - vault, like locust, has no reset
 # target beyond a plain restart).

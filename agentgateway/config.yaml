@@ -1,10 +1,10 @@
 # yaml-language-server: $schema=https://agentgateway.dev/schema/config
 #
 # Exposes apps/backend's REST API as MCP tools, built straight from its live
-# OpenAPI schema (apps/backend/openapi.yaml) - the same contract Specmatic,
-# Microcks and Kong's apps_backend route already build against. `schema.url`
+# OpenAPI schema (apps/backend/openapi.yaml) - the same contract Specmatic
+# and Kong's apps_backend route already build against. `schema.url`
 # fetches it live (agentgateway supports file/inline/url sources for this;
-# url means no separate fetch step, unlike Specmatic/Microcks which pull a
+# url means no separate fetch step, unlike Specmatic which pulls a
 # local copy first) - so nothing here needs to change if the contract does.
 #
 # POST /accounts needs a real bearer token (issued by the login tool below),

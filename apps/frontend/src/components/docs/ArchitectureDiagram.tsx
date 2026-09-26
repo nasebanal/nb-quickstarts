@@ -197,7 +197,7 @@ function StackDiagram({ labels, style }: { labels: Record<string, string>; style
   // Groups
   const net: Box = { x: 175, y: 235, w: 615, h: 170 };
   const asyncG: Box = { x: 200, y: 30, w: 275, h: 100 };
-  const gw: Box = { x: 170, y: 430, w: 320, h: 170 };
+  const gw: Box = { x: 170, y: 430, w: 280, h: 170 };
   const identity: Box = { x: 620, y: 40, w: 170, h: 130 };
   const agent: Box = { x: 620, y: 430, w: 170, h: 84 };
 
@@ -212,7 +212,6 @@ function StackDiagram({ labels, style }: { labels: Record<string, string>; style
   const bridge: Box = { x: 365, y: 68, w: 100, h: NODE_H };
   const kong: Box = { x: 230, y: 470, w: 100, h: NODE_H };
   const specmatic: Box = { x: 185, y: 550, w: 105, h: NODE_H };
-  const microcks: Box = { x: 370, y: 550, w: 105, h: NODE_H };
   const keycloak: Box = { x: 650, y: 72, w: 110, h: 36 };
   const vault: Box = { x: 650, y: 120, w: 110, h: 36 };
   const obs: Box = { x: 650, y: 462, w: 110, h: 36 };
@@ -220,6 +219,8 @@ function StackDiagram({ labels, style }: { labels: Record<string, string>; style
   const cy = (b: Box) => b.y + b.h / 2;
   const cx = (b: Box) => b.x + b.w / 2;
   const bottom = (b: Box) => b.y + b.h;
+  // y of the gateways' OTLP lines: 16px under the gateway -> Backend route, and just under Observability's bottom edge.
+  const OTLP_Y = 504;
 
   // MySQL cylinder.
   const dbW = 110;
@@ -270,13 +271,11 @@ function StackDiagram({ labels, style }: { labels: Record<string, string>; style
       <Edge marker={marker} d={`M${topPorts.bridge},${bottom(bridge)} V${be.y}`} />
       <EdgeLabel x={topPorts.bridge + 8} y={185} text="REST" anchor="start" />
 
-      {/* Gateway & mocks: Kong -> Backend, and Kong's swap targets */}
+      {/* Gateway & mocks: Kong -> Backend, and Kong's swap target */}
       <Edge marker={marker} d={rightThenUp(kong.x + kong.w, cy(kong), bottomPorts.kong, bottom(be))} />
       <EdgeLabel x={380} y={cy(kong) - 9} text="/api/*" onGroup />
       <Edge marker={marker} dashed d={`M${kong.x + 25},${bottom(kong)} C${kong.x + 25},${specmatic.y - 15} ${cx(specmatic)},${specmatic.y - 25} ${cx(specmatic)},${specmatic.y}`} />
-      <Edge marker={marker} dashed d={`M${kong.x + 75},${bottom(kong)} C${kong.x + 75},${microcks.y - 15} ${cx(microcks)},${microcks.y - 25} ${cx(microcks)},${microcks.y}`} />
       <EdgeLabel x={cx(specmatic) - 8} y={536} text={labels.swapTarget} anchor="end" onGroup />
-      <EdgeLabel x={cx(microcks) + 8} y={536} text={labels.swapTarget} anchor="start" onGroup />
 
       {/* Identity & secrets. Backend calls Keycloak (fetches the public keys that verify a JWT) and Vault (fetches its DB credential); Vault also calls MySQL (creates that DB user); The arrow is the call, the label is what comes back. Ports on Backend's top run left to right in the order the nodes run top to bottom, so the routes nest instead of crossing. */}
       <Edge marker={marker} dashed reverse d={leftThenDown(keycloak.x, cy(keycloak), topPorts.keycloak, be.y)} />
@@ -290,13 +289,16 @@ function StackDiagram({ labels, style }: { labels: Record<string, string>; style
       <Edge marker={marker} dashed reverse d={leftThenUp(obs.x, cy(obs), bottomPorts.obs, bottom(be))} />
       <EdgeLabel x={580} y={cy(obs)} text={labels.otlp} />
 
+      {/* Kong -> Observability: the gateway exports its own traces (the opentelemetry plugin). Runs below the Kong -> Backend route and enters Observability from underneath, so it crosses nothing. */}
+      <Edge marker={marker} dashed d={`M${kong.x + kong.w},${OTLP_Y} H${cx(obs) - 6} Q${cx(obs)},${OTLP_Y} ${cx(obs)},${bottom(obs)}`} />
+      <EdgeLabel x={470} y={OTLP_Y - 9} text={labels.otlp} />
+
       <Node box={browser} label={labels.browser} />
       <Node box={fe} label={labels.frontend} />
       <Node box={be} label={labels.backend} />
       <Cylinder x={dbX} top={dbTop} w={dbW} h={dbH} label={labels.mysql} />
       <Node box={kong} label={labels.kong} />
       <Node box={specmatic} label={labels.specmatic} />
-      <Node box={microcks} label={labels.microcks} />
       <Node box={locust} label={labels.locust} />
       <Node box={kafka} label={labels.kafka} />
       <Node box={bridge} label={labels.kafkaBridge} />
@@ -324,6 +326,7 @@ function McpDiagram({ labels, style }: { labels: Record<string, string>; style?:
   const net: Box = { x: 175, y: 235, w: 615, h: 170 };
   const identity: Box = { x: 620, y: 40, w: 170, h: 130 };
   const gwG: Box = { x: 170, y: 430, w: 320, h: 110 };
+  const agent: Box = { x: 620, y: 430, w: 170, h: 84 };
 
   // The spine, on the stack diagram's columns: the Frontend's column is empty.
   const client: Box = { x: 20, y: 300, w: 110, h: NODE_H };
@@ -337,14 +340,17 @@ function McpDiagram({ labels, style }: { labels: Record<string, string>; style?:
   const ag: Box = { x: 220, y: 470, w: 120, h: NODE_H };
   const keycloak: Box = { x: 650, y: 72, w: 110, h: 36 };
   const vault: Box = { x: 650, y: 120, w: 110, h: 36 };
+  const obs: Box = { x: 650, y: 462, w: 110, h: 36 };
 
   const cy = (b: Box) => b.y + b.h / 2;
   const cx = (b: Box) => b.x + b.w / 2;
   const bottom = (b: Box) => b.y + b.h;
+  const OTLP_Y = 504;
 
   // Same Backend ports as the stack diagram for the same integrations.
   const topPorts = { keycloak: 505, vault: 525 };
   const kongPort = 430;
+  const obsPort = 505;
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} style={style} xmlns="http://www.w3.org/2000/svg">
@@ -353,6 +359,7 @@ function McpDiagram({ labels, style }: { labels: Record<string, string>; style?:
       <Group box={net} title={labels.appsNetwork} titleAtBottomRight />
       <Group box={identity} title={labels.identityGroup} />
       <Group box={gwG} title={labels.agentGatewayGroup} />
+      <Group box={agent} title={labels.agentGroup} />
 
       {/* The spine: MCP client -> Backend (its built-in /mcp, from fastapi-mcp) -> MySQL */}
       <Edge marker={marker} mcp d={`M${client.x + client.w},${cy(client)} H${be.x}`} />
@@ -388,16 +395,23 @@ function McpDiagram({ labels, style }: { labels: Record<string, string>; style?:
       <Edge marker={marker} dashed d={`M${cx(vault)},${bottom(vault)} V${dbTop}`} />
       <EdgeLabel x={cx(vault) + 8} y={226} text={labels.dbUsers} anchor="start" />
 
+      {/* Observability: the Backend pushes OTLP (same route as the stack diagram), and so does agentgateway - traces, plus its access logs. */}
+      <Edge marker={marker} dashed reverse d={leftThenUp(obs.x, cy(obs), obsPort, bottom(be))} />
+      <EdgeLabel x={580} y={cy(obs)} text={labels.otlp} />
+      <Edge marker={marker} dashed d={`M${ag.x + ag.w},${OTLP_Y} H${cx(obs) - 6} Q${cx(obs)},${OTLP_Y} ${cx(obs)},${bottom(obs)}`} />
+      <EdgeLabel x={470} y={OTLP_Y - 9} text={labels.otlp} />
+
       <Node box={client} label={labels.mcpClient} />
       <Node box={be} label={labels.backend} />
       <Cylinder x={dbX} top={dbTop} w={dbW} h={dbH} label={labels.mysql} />
       <Node box={ag} label={labels.agentgateway} />
       <Node box={keycloak} label={labels.keycloak} />
       <Node box={vault} label={labels.vault} />
+      <Node box={obs} label={labels.observability} />
 
       <Legend
-        x={640}
-        y={476}
+        x={20}
+        y={506}
         rows={[
           { label: labels.legendMcp, kind: "mcp" },
           { label: labels.legendRest, kind: "rest" },

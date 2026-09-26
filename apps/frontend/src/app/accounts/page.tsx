@@ -101,7 +101,7 @@ export default function AccountsPage() {
         {/* readOnly, not disabled - selectable/copyable, but the value
             can't be typed into. Not a setting, just visibility into what
             NEXT_PUBLIC_API_BASE currently resolves to (direct backend,
-            Kong, a Specmatic stub, a Microcks mock - see AGENTS.md's Kong
+            Kong, a Specmatic stub - see AGENTS.md's Kong
             section). Nothing here lets you change it from the UI. */}
         <div className="nb-api-base" data-testid="api-base">
           <label htmlFor="api-base-input">{t.app.apiBaseLabel}</label>

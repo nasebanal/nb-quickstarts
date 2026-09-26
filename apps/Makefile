@@ -10,7 +10,7 @@ endif
 # apps is the actual test target itself: MySQL + backend (Python/FastAPI,
 # REST+GraphQL) + frontend (TypeScript/Next.js).
 #   - backend reads/writes accounts in MySQL. No OpenAPI schema is checked
-#     in - Specmatic, Microcks, and the frontend's /api-specs page all fetch
+#     in - Specmatic and the frontend's /api-specs page both fetch
 #     the backend's live /openapi.json at the point of use instead (this is
 #     a demo app with no real schema-change workflow to keep a separately
 #     exported copy in sync with).
@@ -18,8 +18,8 @@ endif
 #     (see kafka/docker-compose.yml + kafka/bridge/), which consumes the
 #     topic and calls POST /accounts over REST - not an in-process consumer
 #     here, so apps/backend has zero Kafka dependency.
-# Locust/Playwright/Vitest/Pytest/Specmatic and Kong (gateway)/Microcks
-# (contract mock) are added as modules separate from apps, connecting to
+# Locust/Playwright/Vitest/Pytest/Specmatic and Kong (gateway)
+# are added as modules separate from apps, connecting to
 # apps-network. Test tools read their target host from env vars only (never
 # a hardcoded container name), so the same commands work whether apps is
 # running or you're pointing at an external host instead.

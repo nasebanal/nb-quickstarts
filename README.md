@@ -23,7 +23,6 @@ Supported OSS, one module per technology:
 - **[pytest](https://docs.pytest.org/)** — `apps/backend` unit tests
 - **[Playwright](https://playwright.dev/)** — E2E browser tests
 - **[Specmatic](https://specmatic.io/)** — OpenAPI contract tests
-- **[Microcks](https://microcks.io/)** — API mocking, seeded from `apps/backend`'s OpenAPI schema, and a conformance test of the real backend against it
 - **[Locust](https://locust.io/)** — load testing
 - **[OWASP ZAP](https://www.zaproxy.org/)** — web app vulnerability scanning (DAST)
 - **[agentgateway](https://agentgateway.dev/)** — MCP/A2A gateway for AI agent connectivity
@@ -50,7 +49,6 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Kafka | Broker | localhost:9092 | `kafka:29092` | `KAFKA_PORT`; the in-network listener is a *different* port (`29092`, `PLAINTEXT_INTERNAL`) than the host-published one (`9092`, `PLAINTEXT`) - see `kafka/docker-compose.yml`'s `KAFKA_LISTENERS` comment |
 | Kafka | kafka-bridge health | http://localhost:8090/health | `kafka-bridge:8090/health` | Only once `kafka:bridge-up` has run; `KAFKA_BRIDGE_HEALTH_PORT` |
 | Specmatic | Mock server | http://localhost:9091 | `specmatic-stub:9091` | `SPECMATIC_STUB_PORT`; needs `apps:up` first (`make specmatic:stub-up`) |
-| Microcks | UI / mock API | http://localhost:9090 | `microcks:8080` | `MICROCKS_PORT` maps to a *different* in-network port (`8080`) - see `microcks/docker-compose.yml` |
 | Keycloak | Admin console | http://localhost:8180/admin | `keycloak:8080/admin` | `KEYCLOAK_PORT`; realm `nasebanal`, admin/admin by default |
 | Keycloak | Token endpoint (realm `nasebanal`) | http://localhost:8180/realms/nasebanal/... | `keycloak:8080/realms/nasebanal/...` | Client `apps-demo`, user `keycloak-demo` / `nasebanal-demo` - see [Keycloak: a real login, and a real token the backend verifies](#keycloak-a-real-login-and-a-real-token-the-backend-verifies) |
 | Vault | UI / API | http://localhost:8200 | `vault:8200` | `VAULT_PORT`; dev-mode root token `VAULT_ROOT_TOKEN` |
@@ -91,8 +89,6 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
    make vitest:test
    make playwright:test
    make specmatic:test
-   make microcks:up
-   make microcks:test           # conformance test: the contract's examples against the running backend (6 of 9 pass - see below)
 
    # Kong API Gateway
    make kong:up
@@ -169,38 +165,6 @@ make vitest:contract-test    # Consumer: apps/frontend's real api.ts calls again
 
 `specmatic/bin/prepare_contract.sh` (shared by both `specmatic:test` and `specmatic:stub-up`) fetches the live schema and builds 7 externalized examples fresh on every run — a real bearer token, an id that actually exists, and deliberately-invalid requests covering every documented non-2xx response — so Specmatic's own coverage report reaches 100%. See `AGENTS.md`'s Specmatic section for the full story, including a dead end (Specmatic's own security-token config parses correctly but has no effect on generated requests) and why `SPECMATIC_GENERATIVE_TESTS` was tried and rejected in favor of explicit negative examples.
 
-`openapi.yaml` also carries its own inline `examples:` (named, matching keys between request and response) for the read operations — separate from `prepare_contract.sh`'s dynamically-generated ones, and there for a different consumer: Microcks, below.
-
-### Microcks: a second provider check, and how it differs from Specmatic
-
-Microcks also tests the real backend against the contract: `make microcks:test` imports the contract, then runs Microcks's conformance test (runner `OPEN_API_SCHEMA`). For every named example in `openapi.yaml` it builds the request, sends it to the backend, and checks the status code and the body against the example's response and the schema. Nothing is generated, so it only runs what the contract's examples say. It exits 1 when an example fails; the raw result is `microcks/report/latest.json`, and the run's page in the Microcks UI (the command prints its URL) shows each request and response.
-
-```bash
-make apps:up
-make microcks:up
-make microcks:test
-```
-
-Result against this repository's backend: **6 of 9 examples pass**, and the 3 failures are findings, not flakiness:
-
-- **`createdAt` is not RFC 3339** (`GET /accounts`, `GET /accounts/{account_id}`): the contract says `format: date-time`, the backend answers `2026-09-23T07:00:26` with no offset. Specmatic passes 18 of 18 against the same backend; Microcks checks the format. Either the backend should answer `...Z`, or the contract should stop claiming `date-time`.
-- **`bad_credentials` expects 401 but gets 422** (`POST /auth/login`): the contract has a response example `bad_credentials` but no request example with that key, so Microcks sends an empty body. A gap in the examples, not a backend bug.
-
-No bearer token is sent, on purpose: the contract's 401 examples describe a call without one, and Microcks's `operationsHeaders` adds a header to *every* example of the operations it names. Measured: with an `Authorization` header on every request, 6 of 9 fail instead of 3, because `GET /me`, `PUT /me/profile` and `POST /accounts` no longer get their expected 401. The calls that do need a token have no example in the contract, so Microcks doesn't run them; Specmatic covers them with examples that carry a live token (`prepare_contract.sh`). Specmatic's own `specmatic.yaml` bearer configuration was also tried and had no effect on the generated requests, which is why the token goes into the example files.
-
-| | Specmatic | Microcks |
-|---|---|---|
-| Main job | Contract testing, driven from the file | A long-running mock server and API catalog with a UI; also a conformance test |
-| Provider test | Requests built from the contract plus 7 generated examples: 18 scenarios | Runs each named example in `openapi.yaml`: 9 examples |
-| Coverage | Per path, method and response code (100% here) | Pass/fail per example only |
-| Error cases (401, 404, 422) | Explicit examples with live expected bodies | Only where the contract has a request example under the same key |
-| Authentication | Token fetched at run time, written into each example | `operationsHeaders` on every example of an operation |
-| Format strictness | Let the timezone-less `createdAt` through | Flagged it |
-| Consumer side | A stub, plus `vitest:contract-test` | A mock consumers can use; no check of their calls |
-| Report | HTML + JUnit | Run page in the UI + JSON |
-
-Suggested split: **Specmatic as the gate** (it decides whether the backend keeps its contract, including authentication and every error response, and it is the only one that tests the consumer side); **Microcks for the shared mock** the frontend, Kong or a teammate points at, with its test as a **second opinion** that is stricter about formats.
-
 ### Kong: routing to the real backend, or to a contract mock instead
 
 `apps_backend` (Kong Manager → **Gateway Services**) proxies `http://localhost:8000/api/*` to `apps/backend`'s own root (`strip_path: true`, so `/api/accounts` reaches `backend:8080/accounts`). `apps/frontend` can go through it instead of calling the backend directly:
@@ -220,14 +184,11 @@ make apps:restart   # frontend needs recreating - Next.js dev mode bakes NEXT_PU
    |---|---|---|---|
    | Real backend (default) | `backend` | `8080` | *(empty)* |
    | Specmatic's stub (`make specmatic:stub-up` first) | `specmatic-stub` | `9091` | *(empty)* |
-   | Microcks (`make microcks:up` + `make microcks:import-openapi` first) | `microcks` | `8080` | `/rest/nb-quickstarts+apps+backend/0.1.0` |
 
 3. `curl http://localhost:8000/api/accounts/balances` (or reload `apps/frontend`, if it's routed through Kong) to confirm - allow a couple of seconds for the change to propagate to Kong's own worker processes.
 4. To go back to the real backend: edit `apps_backend` again, Host `backend` / Port `8080` / Path empty, **Save**.
 
-Microcks can't mock `POST /accounts` - it needs a real bearer token, which an OpenAPI example has no way to carry (a header, not part of the request body) - but its read endpoints (`/health`, `/auth/login`, `GET /accounts`, `GET /accounts/balances`, `GET /accounts/{account_id}`) work fine, serving `openapi.yaml`'s inline examples.
-
-Verified this way, not just described: every request during a real `make playwright:test` run against a Kong-routed frontend showed up in Kong's own access log going to `/api/*`, and pointing `apps_backend` at each mock in turn returned exactly the example values from `openapi.yaml`, confirmed via `curl` and Microcks'/Specmatic's own request logs.
+Verified this way, not just described: every request during a real `make playwright:test` run against a Kong-routed frontend showed up in Kong's own access log going to `/api/*`, and pointing `apps_backend` at Specmatic's mock returned exactly the example values from `openapi.yaml`, confirmed via `curl` and Specmatic's own request log.
 
 There's only ever one `apps_backend` service to edit — no separate service per backend/mock to flip between. (An earlier attempt registered three services, one per target, meant to be toggled by an "enabled" flag - that doesn't work: Kong's `Route` object has no `enabled` field, only `Service` does, and disabling a `Service` behind an already-matched `Route` doesn't fail over to another route.) If Kong Manager's edit doesn't seem to stick, or you just want a clean slate regardless of what got changed live, `make kong:reset` reloads everything straight from `kong/conf/declarative.yml`, which defaults `apps_backend` back to the real backend.
 
@@ -266,7 +227,7 @@ Vault's dev server is in-memory only — everything written to it is gone on `va
 
 ### agentgateway: exposing apps/backend as MCP tools
 
-`apps/backend` already mounts its own MCP server natively at `/mcp` (via `fastapi-mcp`, auto-derived from its REST routes - see [Endpoints](#endpoints)). agentgateway is a different way to get there: instead of backend-side MCP code, it builds MCP tools *entirely from the OpenAPI contract* (`apps/backend/openapi.yaml`) - the same contract Specmatic/Microcks/Kong already build against, fetched live from `/openapi.json` (`agentgateway/config.yaml`'s `schema.url`, no separate fetch step needed).
+`apps/backend` already mounts its own MCP server natively at `/mcp` (via `fastapi-mcp`, auto-derived from its REST routes - see [Endpoints](#endpoints)). agentgateway is a different way to get there: instead of backend-side MCP code, it builds MCP tools *entirely from the OpenAPI contract* (`apps/backend/openapi.yaml`) - the same contract Specmatic/Kong already build against, fetched live from `/openapi.json` (`agentgateway/config.yaml`'s `schema.url`, no separate fetch step needed).
 
 ```bash
 make apps:up
@@ -498,12 +459,11 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 | `VAULT_ROOT_TOKEN` | `nb-vault-root-token` | Dev-mode root token |
 | `VAULT_ADDR` / `VAULT_TOKEN` (`apps` variables - see [Apps](#apps) below) | *(both empty = off)* | Where `apps/backend` asks for a Vault-issued MySQL credential - `http://vault:8200` / `nb-vault-root-token` to turn it on (plus `apps:restart`); `make vault:verify-apps` sets them for one recreate instead |
 
-### Specmatic, Microcks & Playwright
+### Specmatic & Playwright
 
 | Variable | Default | Description |
 |---|---|---|
 | `SPECMATIC_STUB_PORT` | `9091` | `specmatic:stub-up`'s mock server port |
-| `MICROCKS_PORT` | `9090` | Microcks UI / mock API port |
 | `PLAYWRIGHT_BASE_URL` | `http://localhost:5173` | URL Playwright navigates to (runs on the host network, not `apps-network`) |
 
 ### Locust
@@ -548,7 +508,7 @@ No target-host variable, unlike every module above - see [OWASP ZAP: scanning ap
 |---|---|---|
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | *(empty = off)* | Where `apps/backend` exports OTLP. Set to `http://otel-collector:4318` for the local stack (needs `apps:restart`) |
 | `GRAFANA_PORT` | `3030` | Host-published Grafana port - defaults away from Grafana's own `3000`, a common Node/React dev-server port |
-| `PROMETHEUS_PORT` | `9094` | Host-published Prometheus port (`9090`/`9091` are taken by Microcks/Specmatic) |
+| `PROMETHEUS_PORT` | `9094` | Host-published Prometheus port (`9091` is taken by Specmatic) |
 | `TEMPO_PORT` | `3200` | Host-published Tempo query API port |
 | `OTEL_GRPC_PORT` / `OTEL_HTTP_PORT` | `4317` / `4318` | Host-published OTLP ports |
 | `PROMETHEUS_RETENTION` | `7d` | How long Prometheus keeps metrics |
@@ -566,7 +526,6 @@ Every `make <module>:test` run leaves a browsable report behind. These are all g
 | `playwright` | `playwright/report/index.html` |
 | `specmatic` | `specmatic/report/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml` |
 | `locust` | `locust/logs/<timestamp>/report.html`, plus the files below |
-| `microcks` | `microcks/report/latest.json` (also the run's page in the Microcks UI) - `microcks:test`, overwritten each run |
 | `zap` | `zap/report/<scan>-report.html` (also `.json`) - `baseline`/`full-scan`/`api-scan`, overwritten each run |
 
 **Locust** writes a whole timestamped directory per run, `locust/logs/YYYYMMDD_HHMMSS/`:
@@ -583,7 +542,7 @@ Every `make <module>:test` run leaves a browsable report behind. These are all g
 `apps`, `kong`, `kafka`, and `observability` each keep their data in a named
 Docker volume, so a plain `down`/`restart` preserves it. Each has its own
 `reset` command that wipes that volume and starts fresh (`make all:reset`
-runs all four, plus a plain restart for `microcks`/`locust`, which hold no
+runs all four, plus a plain restart for `locust`, which holds no
 persistent state to begin with):
 
 | Module | What persists | Docker volume | Reset command |
@@ -615,10 +574,6 @@ make specmatic:test         # Provider contract test: does the backend honor app
 make specmatic:stub-up      # mock server built from the same contract (requires apps:up)
 make vitest:contract-test   # Consumer contract test: does the frontend's API usage hold up against it?
 
-make microcks:up            # long-running mock server
-make microcks:import-openapi # fetches the backend's live OpenAPI schema and loads it (requires apps:up)
-make microcks:open
-make microcks:test            # Provider test: import the contract, run its examples against the real backend (requires apps:up + microcks:up)
 ```
 
 ## 📝 License
