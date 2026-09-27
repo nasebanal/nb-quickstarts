@@ -1,7 +1,7 @@
 #!/bin/sh
-# Shared by both the specmatic (test) and specmatic-stub (mock) services -
+# Shared by both the specmatic (test) and specmatic-mock (mock) services -
 # both need the same contract and the same externalized examples, just
-# handed to a different specmatic subcommand (test vs stub). Run from /app
+# handed to a different specmatic subcommand (test vs mock). Run from /app
 # inside the specmatic container, with `backend` reachable.
 #
 # apps/backend/openapi.yaml is the contract (see that file's header

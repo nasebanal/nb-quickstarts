@@ -28,31 +28,31 @@ Source-code comments (Python/TypeScript `#`/`//`/docstrings, and comments inside
 
 Every module's ports are chosen so it can run at the same time as any other module (no published host port collides with another). For example, `kong:up` and `kafka:up` can both be running while `apps:up` is also up, with no conflicts.
 
-| Module | Service | Host port |
-| --- | --- | --- |
-| apps | mysql-server | 3306 |
-| apps | backend (REST/GraphQL) | 8080 |
-| apps | frontend | 5173 |
-| apps | sql-client (phpMyAdmin) | 8081 |
-| kong | proxy (HTTP/HTTPS) | 8000 / 8443 |
-| kong | admin API (HTTP/HTTPS) | 8001 / 8444 |
-| kong | manager (HTTP/HTTPS) | 8002 / 8445 |
-| kafka | broker | 9092 |
-| kafka | controller | 9093 |
-| kafka | kafka-bridge health (`kafka:bridge-up`, `GET /health`) | 8090 |
-| locust | master UI | 8089 |
-| locust | master-worker traffic | 5557 / 5558 |
-| keycloak | HTTP (admin console + realm) | 8180 |
-| vault | HTTP API / UI | 8200 |
-| specmatic | stub (mock server, `specmatic:stub-up`) | 9091 |
-| observability | Grafana | 3030 |
-| observability | Prometheus | 9094 |
-| observability | Tempo query API | 3200 |
-| observability | Loki | 3100 |
-| observability | Alertmanager | 9095 |
-| observability | OTLP gRPC / HTTP | 4317 / 4318 |
+| Module        | Service                                                | Host port   |
+|---------------|--------------------------------------------------------|-------------|
+| apps          | mysql-server                                           | 3306        |
+| apps          | backend (REST/GraphQL)                                 | 8080        |
+| apps          | frontend                                               | 5173        |
+| apps          | sql-client (phpMyAdmin)                                | 8081        |
+| kong          | proxy (HTTP/HTTPS)                                     | 8000 / 8443 |
+| kong          | admin API (HTTP/HTTPS)                                 | 8001 / 8444 |
+| kong          | manager (HTTP/HTTPS)                                   | 8002 / 8445 |
+| kafka         | broker                                                 | 9092        |
+| kafka         | controller                                             | 9093        |
+| kafka         | kafka-bridge health (`kafka:bridge-up`, `GET /health`) | 8090        |
+| locust        | master UI                                              | 8089        |
+| locust        | master-worker traffic                                  | 5557 / 5558 |
+| keycloak      | HTTP (admin console + realm)                           | 8180        |
+| vault         | HTTP API / UI                                          | 8200        |
+| specmatic     | mock (mock server, `specmatic:mock-up`)                | 9091        |
+| observability | Grafana                                                | 3030        |
+| observability | Prometheus                                             | 9094        |
+| observability | Tempo query API                                        | 3200        |
+| observability | Loki                                                   | 3100        |
+| observability | Alertmanager                                           | 9095        |
+| observability | OTLP gRPC / HTTP                                       | 4317 / 4318 |
 
-pytest, vitest, playwright, and specmatic's own `specmatic:test` don't publish a port (they run once and don't leave anything listening), so they don't appear in this table - only `specmatic:stub-up` does, since that one's a long-running server.
+pytest, vitest, playwright, and specmatic's own `specmatic:test` don't publish a port (they run once and don't leave anything listening), so they don't appear in this table - only `specmatic:mock-up` does, since that one's a long-running server.
 
 When adding a new module, pick a port that isn't already in this table.
 
@@ -124,8 +124,8 @@ Two more Kafka gotchas, both found the same way as the `log.dirs` one above — 
 Test and verification tools are added as modules separate from `apps`. Which verb they use depends on their lifecycle:
 
 - **Long-running services** (the `build`/`up`/`down`/`status`/`restart`/`open` pattern): Kong (gateway), agentgateway (MCP/A2A gateway), Keycloak (OIDC identity provider), Vault (secret storage). These run `docker compose up -d`, so they follow the same convention as every other module.
-  - Kong is joined to `apps-network` (in addition to its own `kong-net`) and `kong/conf/declarative.yml` declares just two services: `example_service` (httpbin-backed `/mock` and `/echo` demo routes, with a `rate-limiting` plugin, no dependency on apps) and `apps_backend` (`/api/*`, `strip_path: true`, proxying to the real backend's own root - `http://localhost:8000/api/accounts` reaches `backend:8080/accounts`). `apps_backend` needs `make apps:up` to actually resolve `backend` by container name; Kong itself still starts fine without it - the route just proxies a connection error until apps is up. There used to be a third, catch-all `apps_frontend` service proxying `/` straight to the frontend; removed, since routing to a REST/GraphQL/MCP backend through a gateway is the more useful demo of what Kong is actually for, and it's also the seam a future Consumer-side E2E test could use to swap in a mock backend (e.g. Specmatic's stub, `specmatic:stub-up`) without `apps/frontend` needing to know the difference - just repoint `apps_backend`'s `url` and re-import, no frontend changes needed (see `specmatic:test`'s Provider vs `vitest:contract-test`'s Consumer distinction above for why that'd be a different, complementary check from what already exists). In `KONG_DB=postgres` mode, changing `declarative.yml` requires `make kong:reset` to re-import — a plain `kong:up` on an already-bootstrapped DB skips the import (see `kong-up`'s "Existing database found" branch).
-  - **Routing `apps/frontend` itself through Kong**: `apps/docker-compose.yml`'s `NEXT_PUBLIC_API_BASE` is `.env`-overridable (`${NEXT_PUBLIC_API_BASE:-http://localhost:8080}`) - set it to `http://localhost:8000/api` and the frontend calls the backend through `apps_backend` instead of directly. Needs `make kong:up` and a frontend recreate (`apps:restart`) to pick up the change, since Next.js dev mode bakes `NEXT_PUBLIC_*` into the client bundle at server start, not per-request. Verified end-to-end: ran `make playwright:test` against a Kong-routed frontend and confirmed via Kong's own access log that every request (`/api/auth/login`, `POST /api/accounts`, `/api/accounts/balances`) actually went through the gateway, not straight to the backend - all 5 tests passed unchanged. This is the concrete version of the "swap `apps_backend`'s `url` at a mock, no frontend changes needed" idea above: point `apps_backend` at `specmatic-stub:9091` instead of `backend:8080` and the exact same `NEXT_PUBLIC_API_BASE=http://localhost:8000/api` setup runs Playwright against a contract mock instead of the real backend - a from-the-browser Consumer test complementing `vitest:contract-test`'s Node-side one. Not built out as its own `make` target (yet) - this is the reconnaissance, not the feature.
+  - Kong is joined to `apps-network` (in addition to its own `kong-net`) and `kong/conf/declarative.yml` declares just two services: `example_service` (httpbin-backed `/mock` and `/echo` demo routes, with a `rate-limiting` plugin, no dependency on apps) and `apps_backend` (`/api/*`, `strip_path: true`, proxying to the real backend's own root - `http://localhost:8000/api/accounts` reaches `backend:8080/accounts`). `apps_backend` needs `make apps:up` to actually resolve `backend` by container name; Kong itself still starts fine without it - the route just proxies a connection error until apps is up. There used to be a third, catch-all `apps_frontend` service proxying `/` straight to the frontend; removed, since routing to a REST/GraphQL/MCP backend through a gateway is the more useful demo of what Kong is actually for, and it's also the seam a future Consumer-side E2E test could use to swap in a mock backend (e.g. Specmatic's mock, `specmatic:mock-up`) without `apps/frontend` needing to know the difference - just repoint `apps_backend`'s `url` and re-import, no frontend changes needed (see `specmatic:test`'s Provider vs `vitest:contract-test`'s Consumer distinction above for why that'd be a different, complementary check from what already exists). In `KONG_DB=postgres` mode, changing `declarative.yml` requires `make kong:reset` to re-import — a plain `kong:up` on an already-bootstrapped DB skips the import (see `kong-up`'s "Existing database found" branch).
+  - **Routing `apps/frontend` itself through Kong**: `apps/docker-compose.yml`'s `NEXT_PUBLIC_API_BASE` is `.env`-overridable (`${NEXT_PUBLIC_API_BASE:-http://localhost:8080}`) - set it to `http://localhost:8000/api` and the frontend calls the backend through `apps_backend` instead of directly. Needs `make kong:up` and a frontend recreate (`apps:restart`) to pick up the change, since Next.js dev mode bakes `NEXT_PUBLIC_*` into the client bundle at server start, not per-request. Verified end-to-end: ran `make playwright:test` against a Kong-routed frontend and confirmed via Kong's own access log that every request (`/api/auth/login`, `POST /api/accounts`, `/api/accounts/balances`) actually went through the gateway, not straight to the backend - all 5 tests passed unchanged. This is the concrete version of the "swap `apps_backend`'s `url` at a mock, no frontend changes needed" idea above: point `apps_backend` at `specmatic-mock:9091` instead of `backend:8080` and the exact same `NEXT_PUBLIC_API_BASE=http://localhost:8000/api` setup runs Playwright against a contract mock instead of the real backend - a from-the-browser Consumer test complementing `vitest:contract-test`'s Node-side one. Not built out as its own `make` target (yet) - this is the reconnaissance, not the feature.
   - **Gateway traces (Kong, agentgateway)**: both export traces to the observability Collector (`http://otel-collector:4318`, reachable because both are on `apps-network`). Kong: the `opentelemetry` plugin on the `apps_backend` service in `declarative.yml` (endpoint `.../v1/traces`, `service.name: nb-kong`) plus `KONG_TRACING_INSTRUMENTATIONS=request` / `KONG_TRACING_SAMPLING_RATE=1.0` in `kong/docker-compose.yml`; in DB mode (the default) it takes effect only after `make kong:reset`. With the Collector down, requests still succeed (Kong logs `[otel] failed to send request`) - verified. agentgateway: `config.tracing` (`otlpEndpoint`, `otlpProtocol: http`, `randomSampling: true` - the default is false, which exports nothing unless the request already carries a trace); the block was picked up only after a container restart, not by the live reload of the file. Verified in Tempo: Kong -> backend and agentgateway `tools/call` -> backend are each one trace (context is passed on; Kong's `header_type` is the default `preserve`). agentgateway also exports access logs over OTLP (`frontendPolicies.accessLog.otlp` -> `otel-collector:4318/v1/logs`): they reach Loki as `service_name="agentgateway"` with the request fields as labels and `trace_id`/`span_id` (the record body is empty). Kong 3.6.1's `opentelemetry` plugin is traces-only (no log/metric export in its schema), so Kong's logs are not in Loki. Not done: Kong's `prometheus` plugin / agentgateway's stats port (15020) as Prometheus targets, Kong logs to Loki.
   - **Kong defaults to DB mode** (`KONG_DB` falls back to `postgres` in `kong/docker-compose.yml`, `kong/Makefile` and `kong/bin/reset_config.sh`; `.env.example` agrees), so Kong Manager can save edits; `KONG_DB=off` gives DB-less mode (reads `declarative.yml` only, read-only Admin API).
   - **Keycloak** and **Vault** are the only two test/verification modules that reach into `apps/backend`'s own Python code rather than treating it as a black box the way Kong/agentgateway do - a deliberate exception, since "does the real backend accept a token from a real IdP" and "does the real backend actually source its DB credential from a real secret store at startup" can't be demonstrated any other way. Both default to fully off (`KEYCLOAK_ISSUER`/`VAULT_ADDR`+`VAULT_TOKEN` all empty), so a checkout with neither module ever started behaves byte-for-byte as before either existed.
@@ -142,7 +142,7 @@ Current breakdown:
 | --- | --- | --- | --- |
 | `pytest` | Unit tests for `apps/backend` | No | Swaps the DB for an in-memory SQLite database. Lives in `apps/backend/tests/`. |
 | `vitest` | Unit tests for `apps/frontend` | No | Mocks `fetch` to test the logic in `api.ts`. |
-| `vitest:contract-test` | Consumer contract test of `apps/frontend`'s own API usage | Yes, plus `specmatic:stub-up` | Runs `src/lib/contract/api.consumer.test.ts` against Specmatic's stub instead of a mocked `fetch` or the real backend - see the Specmatic section below. |
+| `vitest:contract-test` | Consumer contract test of `apps/frontend`'s own API usage | Yes, plus `specmatic:mock-up` | Runs `src/lib/contract/api.consumer.test.ts` against Specmatic's mock instead of a mocked `fetch` or the real backend - see the Specmatic section below. |
 | `playwright` | E2E browser tests against the running frontend | Yes | Uses the `data-testid` attributes in `apps/frontend` as selectors. |
 | `specmatic:test` | Provider contract test of the running backend against `apps/backend/openapi.yaml` | Yes | Runs `specmatic/bin/prepare_contract.sh` (fetches the live schema + builds examples), then `specmatic test`. |
 | `zap:baseline` | Passive DAST scan of `apps/frontend` | Yes | Never sends an attack payload - spiders + observes only. |
@@ -158,20 +158,20 @@ specmatic, also a `junit/`) directory back onto the host, so every `make
 <module>:test` (or `make zap:<scan>`) run leaves a browsable HTML report behind without needing to
 `docker cp` anything out of a stopped container:
 
-| Module | Report file |
-| --- | --- |
-| `pytest` | `pytest/report/report.html` (`pytest-html`, self-contained) |
-| `vitest` | `vitest/report/index.html` (Vitest's built-in `html` reporter) |
-| `vitest:contract-test` | `vitest/report-contract/index.html` (same reporter, separate output dir) |
-| `playwright` | `playwright/report/index.html` (Playwright's built-in `html` reporter) |
-| `specmatic` | `specmatic/report/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml` |
+| Module | Report file                                                                                                              |
+| --- |--------------------------------------------------------------------------------------------------------------------------|
+| `pytest` | `pytest/report/report.html` (`pytest-html`, self-contained)                                                              |
+| `vitest` | `vitest/report/index.html` (Vitest's built-in `html` reporter)                                                           |
+| `vitest:contract-test` | `vitest/report-contract/index.html` (same reporter, separate output dir)                                                 |
+| `playwright` | `playwright/report/index.html` (Playwright's built-in `html` reporter)                                                   |
+| `specmatic` | `specmatic/report/test/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml`                                   |
 | `zap:baseline`/`zap:full-scan`/`zap:api-scan` | `zap/report/<scan>-report.html` (also `.json`) - each scan's own filename, overwritten on the next run of that same scan |
 
 These directories are gitignored — they're regenerated on every run, not
 checked in.
 
 **Provider verification (`specmatic:test`) vs Consumer verification
-(`specmatic:stub-up` + `vitest:contract-test`)** - Specmatic can check the
+(`specmatic:mock-up` + `vitest:contract-test`)** - Specmatic can check the
 contract (`apps/backend/openapi.yaml`, see the "OpenAPI: contract-first, not
 code-first" bullet above) from both directions, and this repo demonstrates
 both:
@@ -182,7 +182,7 @@ both:
 - **Consumer**: does `apps/frontend`'s own API usage - the paths it calls,
   the request shapes it sends, the response shapes it expects to parse -
   hold up against the contract, independent of whatever the real backend
-  happens to be doing right now? `specmatic:stub-up` starts a mock server
+  happens to be doing right now? `specmatic:mock-up` starts a mock server
   built from that same contract (schema + examples - anything that matches
   an example gets that example's exact response; anything else gets a
   schema-valid response with *randomly generated* values, confirmed
@@ -191,16 +191,16 @@ both:
   `apps/frontend/src/lib/contract/api.consumer.test.ts` - real HTTP calls
   through `api.ts`, not a mocked `fetch` (that's `vitest:test`, a different,
   unrelated suite) and not the real backend (that's Playwright) - against
-  that stub, and checks the responses parse into the shapes `api.ts`'s
+  that mock, and checks the responses parse into the shapes `api.ts`'s
   TypeScript types expect. `vitest.config.mts` excludes
   `src/lib/contract/**` from the default `vitest:test` run (spreading
   Vitest's own `defaultExclude` rather than replacing it) precisely because
   this suite isn't self-contained the way every other vitest test is - it
-  needs `make apps:up` (once, to seed the stub's schema+examples) and
-  `make specmatic:stub-up` first, same as `playwright:test`/`specmatic:test`
+  needs `make apps:up` (once, to seed the mock's schema+examples) and
+  `make specmatic:mock-up` first, same as `playwright:test`/`specmatic:test`
   need `apps:up`.
 
-Both `specmatic` service and the `specmatic-stub` service in
+Both `specmatic` service and the `specmatic-mock` service in
 `specmatic/docker-compose.yml` run the exact same
 `specmatic/bin/prepare_contract.sh` first - it fetches the live
 `/openapi.json` (which, since it's contract-first now, is already 3.0.3 with
@@ -221,7 +221,7 @@ examples fresh on every run, never checked in:
   empirically had **no effect** on `specmatic test`'s generated requests
   even with a real, freshly-issued token wired up - still 401. Dropped in
   favor of an externalized example with the token in its `Authorization`
-  header, which reliably works - and, empirically, the stub's example
+  header, which reliably works - and, empirically, the mock's example
   matching keys off the request *body*, not the header value, so any
   syntactically-present bearer token reaches the example's response (see
   `api.consumer.test.ts`'s comments for how the Consumer test exploits this
@@ -262,7 +262,7 @@ more Specmatic derives on its own from `openapi.yaml`'s inline
 `apps_backend`'s `url` (see the Kong bullet above) can point at Specmatic's
 mock instead of the real backend, and neither `apps/frontend` nor anything
 hitting `/api/*` needs to change - only `kong/conf/declarative.yml` and a
-`kong:reset`: just `http://specmatic-stub:9091`, since its mock paths match
+`kong:reset`: just `http://specmatic-mock:9091`, since its mock paths match
 the real API directly. Verified end-to-end, not just wired up: repointed
 `apps_backend.url` at the mock, `kong:reset`, then `curl`'d
 `/api/accounts/balances` and `/api/accounts/1` through `localhost:8000` and got

@@ -14,7 +14,7 @@ const POLL_INTERVAL_MS = 1000;
  * `autoRefresh` (default on) gates only the interval, not the initial
  * load - turning it off freezes the table at its current state instead of
  * re-fetching every second, which is what you want when eyeballing a
- * single response (e.g. from Specmatic's stub, which returns a fresh
+ * single response (e.g. from Specmatic's mock, which returns a fresh
  * randomly-generated value per request for anything without a matching
  * example - see specmatic/docker-compose.yml - so a live poll against it
  * looks like the screen is constantly changing). */

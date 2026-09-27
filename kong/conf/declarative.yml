@@ -28,8 +28,8 @@ services:
   # won't resolve `backend` by name - Kong itself still starts fine
   # without it, this route just proxies a connection error until apps is
   # up). This is the seam a future Consumer-side E2E test could point at a
-  # mock instead of the real backend (e.g. Specmatic's stub, see
-  # specmatic:stub-up) without apps/frontend needing to know the
+  # mock instead of the real backend (e.g. Specmatic's mock, see
+  # specmatic:mock-up) without apps/frontend needing to know the
   # difference - just repoint this service's `url` and re-import.
   - name: apps_backend
     url: http://backend:8080
@@ -45,7 +45,7 @@ services:
       # from JS unless Access-Control-Expose-Headers lists them. The real
       # backend's own CORSMiddleware already exposes it (see
       # apps/backend/app/main.py), but repointing this service's `url` at
-      # a mock (e.g. Specmatic's stub) swaps in a server that doesn't know
+      # a mock (e.g. Specmatic's mock) swaps in a server that doesn't know
       # to - so add it here, at the gateway, where it applies no matter
       # what's behind this service. `add` (not `append`) is a no-op when
       # the upstream already sets it, so this doesn't double it up against

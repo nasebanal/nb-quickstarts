@@ -139,14 +139,14 @@ export const scenarioTesting: LocalizedDocsPage = {
             body: [
               "Specmatic reads openapi.yaml and sends requests to the running backend (run make apps:up first), then reports coverage per " +
                 "path, method and response code, including the error responses (401, 404, 422) that the normal " +
-                "flow does not reach. The report is specmatic/report/html/index.html (HTML and JUnit files).",
+                "flow does not reach. The report is specmatic/report/test/html/index.html (HTML and JUnit files).",
               "The consumer side is checked against a mock built from the same contract: the frontend's own API " +
                 "calls run against it; the mock reads the live schema from the backend, so start the apps stack first, " +
                 "then the mock. Its report is vitest/report-contract/index.html.",
             ],
             code: [
               { label: "Provider", code: "make apps:up\nmake specmatic:test" },
-              { label: "Consumer", code: "make apps:up\nmake specmatic:stub-up\nmake vitest:contract-test" },
+              { label: "Consumer", code: "make apps:up\nmake specmatic:mock-up\nmake vitest:contract-test" },
             ],
             images: [
               {
@@ -234,7 +234,7 @@ export const scenarioTesting: LocalizedDocsPage = {
           "Stop the services started for the tests. The reports remain in each tool's report directory (git-ignored) " +
             "until they are regenerated.",
         ],
-        code: [{ code: "make specmatic:stub-down\nmake apps:down" }],
+        code: [{ code: "make specmatic:mock-down\nmake apps:down" }],
       },
     ],
   },
@@ -372,14 +372,14 @@ export const scenarioTesting: LocalizedDocsPage = {
             body: [
               "Specmaticはopenapi.yamlを読み、稼働中のbackendへ(先にmake apps:up)リクエストを送って、パス・メソッド・レスポンスコード" +
                 "ごとのカバレッジを報告します。正常系では届かないエラーレスポンス(401・404・422)も含みます。" +
-                "レポートは specmatic/report/html/index.html です(HTMLとJUnitのファイル)。",
+                "レポートは specmatic/report/test/html/index.html です(HTMLとJUnitのファイル)。",
               "コンシューマー側は、同じコントラクトから作ったmockに対して、frontend自身のAPI呼び出しを実行して" +
                 "確認します。mockはbackendから稼働中のスキーマを取得するため、先にappsスタックを、次にmockを起動します。" +
                 "レポートは vitest/report-contract/index.html です。",
             ],
             code: [
               { label: "プロバイダー", code: "make apps:up\nmake specmatic:test" },
-              { label: "コンシューマー", code: "make apps:up\nmake specmatic:stub-up\nmake vitest:contract-test" },
+              { label: "コンシューマー", code: "make apps:up\nmake specmatic:mock-up\nmake vitest:contract-test" },
             ],
             images: [
               {
@@ -467,7 +467,7 @@ export const scenarioTesting: LocalizedDocsPage = {
           "テストのために起動したサービスを停止します。レポートは、再生成されるまで各ツールのレポートディレクトリに" +
             "残ります(gitignore対象)。",
         ],
-        code: [{ code: "make specmatic:stub-down\nmake apps:down" }],
+        code: [{ code: "make specmatic:mock-down\nmake apps:down" }],
       },
     ],
   },

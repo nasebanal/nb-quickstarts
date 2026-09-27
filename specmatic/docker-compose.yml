@@ -1,9 +1,9 @@
 services:
   specmatic:
-    image: znsio/specmatic:latest
+    image: specmatic/specmatic:latest
     working_dir: /app
     volumes:
-      # Specmatic always writes its HTML report to build/reports/specmatic/html
+      # Specmatic always writes its HTML report to build/reports/specmatic/test/html
       # under the working dir, with no flag to redirect it - so mount that
       # subtree straight onto the host instead.
       - ./report:/app/build/reports/specmatic
@@ -16,7 +16,7 @@ services:
     # already requires apps:up to make the actual test requests anyway).
     # See bin/prepare_contract.sh for the version relabel, the /graphql
     # exclusion, and the 5 externalized examples it builds fresh every run -
-    # shared with the specmatic-stub service below, which needs the exact
+    # shared with the specmatic-mock service below, which needs the exact
     # same contract to mock.
     command:
       - -c
@@ -38,20 +38,20 @@ services:
   # which is actually a stronger check for a consumer than always seeing
   # the same realistic-looking values, since it can't accidentally pass by
   # relying on one specific example's data.
-  specmatic-stub:
-    image: znsio/specmatic:latest
-    container_name: nb-specmatic-stub
+  specmatic-mock:
+    image: specmatic/specmatic:latest
+    container_name: nb-specmatic-mock
     working_dir: /app
     volumes:
       - ./bin:/app/bin:ro
     entrypoint: sh
     ports:
-      - "${SPECMATIC_STUB_PORT:-9091}:9091"
+      - "${SPECMATIC_MOCK_PORT:-9091}:9091"
     command:
       - -c
       - >
         sh bin/prepare_contract.sh &&
-        specmatic stub openapi.json --host 0.0.0.0 --port 9091
+        specmatic mock openapi.json --host 0.0.0.0 --port 9091
         --examples=examples
     networks:
       - apps-network
