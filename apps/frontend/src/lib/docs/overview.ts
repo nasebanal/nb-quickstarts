@@ -27,6 +27,10 @@ export const overview: LocalizedDocsPage = {
           "In the middle is the [apps stack](/docs/getting-started) on the shared apps-network: a Next.js frontend, a FastAPI backend " +
             "(REST, GraphQL and MCP) and MySQL, driven by a browser and, for load, by Locust. Everything else is a " +
             "module around it, each with its own directory and its own [make <module>:up](/docs/getting-started).",
+          "The demo app's own data model is event-sourced: the backend never updates a stored balance directly. " +
+            "POST /transactions appends one signed-delta event to an append-only ledger, and GET /accounts derives " +
+            "each name's current balance by summing its events. /transactions is the same write path every client " +
+            "(the frontend, kafka-bridge, Locust) uses; /accounts is a read-only view built from it.",
           "Around it sit the gateway and contract mocks ([Kong](/docs/scenario-kong), with [Specmatic](/docs/scenario-kong)), the async path " +
             "([Kafka and kafka-bridge](/docs/scenario-kafka)), identity and secrets ([Keycloak](/docs/scenario-keycloak) and [Vault](/docs/scenario-vault)), [observability](/docs/scenario-observability) (an " +
             "OpenTelemetry Collector feeding Tempo, Prometheus and Loki, read in Grafana, with Alertmanager " +
@@ -117,6 +121,10 @@ export const overview: LocalizedDocsPage = {
           "中心にあるのは、共通のapps-network上の[appsスタック](/docs/getting-started)です: Next.jsのfrontend、FastAPIのbackend" +
             "(REST・GraphQL・MCP)、MySQL。ブラウザと、負荷をかけるLocustがこれを呼びます。それ以外はすべて周りの" +
             "モジュールで、モジュールごとに専用のディレクトリと [make <モジュール名>:up](/docs/getting-started) があります。",
+          "デモアプリ自体のデータモデルはイベントソーシングです。backendは残高を直接更新しません。" +
+            "POST /transactionsは、追記専用の台帳に符号付きの差分イベントを1件追加し、GET /accountsは各名称の" +
+            "現在の残高をそのイベントの合計として導出します。/transactionsは、frontend・kafka-bridge・Locustを" +
+            "含むすべてのクライアントが使う同じ書き込み経路で、/accountsはそこから作られる読み取り専用のビューです。",
           "周りにあるのは、ゲートウェイとモック([Kong](/docs/scenario-kong)、[Specmatic](/docs/scenario-kong))、非同期の経路([Kafkaとkafka-bridge](/docs/scenario-kafka))、" +
             "認証とシークレット([Keycloak](/docs/scenario-keycloak)と[Vault](/docs/scenario-vault))、[オブザーバビリティ](/docs/scenario-observability)(OpenTelemetry Collectorが" +
             "Tempo・Prometheus・Lokiへ振り分け、Grafanaで見て、Alertmanagerがアラートを通知する)、" +
