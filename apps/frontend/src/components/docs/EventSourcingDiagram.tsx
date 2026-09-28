@@ -2,7 +2,7 @@
 
 import { useLocale } from "@/components/LocaleProvider";
 import {
-  EVENT_SOURCING_ACCOUNT,
+  EVENT_SOURCING_ACCOUNTS,
   EVENT_SOURCING_TEXT,
   EVENT_SOURCING_TRANSACTIONS,
 } from "@/lib/docs/eventSourcingDiagram";
@@ -10,9 +10,9 @@ import {
 // Same visual language as ErDiagram.tsx (plain HTML tables as entity cards,
 // reusing its .nb-docs-er* classes) rather than a second drawing style -
 // this is the same kind of "here's a table's actual rows" diagram, just at
-// the API's resource boundary instead of the raw MySQL schema: several
-// /transactions rows (the real seed data for Cash - app/seed.py) rolling up
-// into the one /accounts row GET /accounts actually returns for it.
+// the API's resource boundary instead of the raw MySQL schema: the real
+// seed data's five /transactions rows (app/seed.py) rolling up into the
+// three /accounts rows GET /accounts actually returns for them.
 export function EventSourcingDiagram() {
   const { locale } = useLocale();
   const text = EVENT_SOURCING_TEXT[locale];
@@ -30,7 +30,6 @@ export function EventSourcingDiagram() {
                 <th>{text.columns.id}</th>
                 <th>{text.columns.name}</th>
                 <th>{text.columns.quantity}</th>
-                <th>{text.columns.source}</th>
               </tr>
             </thead>
             <tbody>
@@ -41,7 +40,6 @@ export function EventSourcingDiagram() {
                   </td>
                   <td>{transaction.name}</td>
                   <td>{transaction.quantity}</td>
-                  <td>{transaction.source}</td>
                 </tr>
               ))}
             </tbody>
@@ -62,11 +60,13 @@ export function EventSourcingDiagram() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>{EVENT_SOURCING_ACCOUNT.name}</td>
-                <td>{EVENT_SOURCING_ACCOUNT.balance}</td>
-                <td>{EVENT_SOURCING_ACCOUNT.eventCount}</td>
-              </tr>
+              {EVENT_SOURCING_ACCOUNTS.map((account) => (
+                <tr key={account.name}>
+                  <td>{account.name}</td>
+                  <td>{account.balance}</td>
+                  <td>{account.eventCount}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
