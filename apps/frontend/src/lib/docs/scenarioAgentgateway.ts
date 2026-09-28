@@ -45,7 +45,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
               tone: "success",
             },
             {
-              text: "  create_account_accounts_post - Create Account",
+              text: "  create_account_accounts_post - Record a Transaction",
               tone: "success",
             },
             {
@@ -163,7 +163,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
               tone: "success",
             },
             {
-              text: "  create_account_accounts_post - Create Account",
+              text: "  create_account_accounts_post - Record a Transaction",
               tone: "success",
             },
             {

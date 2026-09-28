@@ -190,7 +190,16 @@ paths:
                       createdAt: "2024-01-01T00:00:00"
     post:
       tags: [accounts]
-      summary: Create Account
+      # Not "Create Account": quantity is a signed delta (see AccountCreate
+      # below), not an absolute value - this appends one more event to an
+      # account's ledger (a journal entry / transaction), same wording the
+      # frontend already uses for it (t.app.registerHeading, "Record a
+      # Transaction" - see accounts/page.tsx). "Create Account" reads like
+      # registering a brand new account, which this both isn't (posting
+      # against an existing name just adds to its running balance) and
+      # doesn't require (a name with no prior events is implicitly created
+      # by its first one - see Account in models.py).
+      summary: Record a Transaction
       operationId: create_account_accounts_post
       # Deliberately no requestBody/response `examples:` here, unlike every
       # other operation - this one needs a real bearer token (see auth.py),
