@@ -84,7 +84,7 @@ test("header login/logout link", async ({ page }) => {
   await expect(page.getByTestId("header-login-link")).toBeVisible();
 });
 
-test("logo click from /accounts reloads in place and keeps the session", async ({ page }) => {
+test("logo click from /accounts navigates home and keeps the session", async ({ page }) => {
   await page.goto("/");
   await page.getByTestId("login-open").click();
   await page.getByTestId("username-input").fill("demo");
@@ -92,17 +92,14 @@ test("logo click from /accounts reloads in place and keeps the session", async (
   await page.getByTestId("login-submit").click();
   await page.waitForURL("**/accounts");
 
-  // AuthProvider persists the token to sessionStorage (see
-  // AuthProvider.tsx), so a full reload — confirmed via Playwright's
-  // navigation-triggered load event — keeps the viewer logged in on the
-  // same page instead of bouncing them back to "/".
-  const [navigation] = await Promise.all([
-    page.waitForEvent("load"),
-    page.getByRole("button", { name: "NASEBANAL Demo" }).click(),
-  ]);
-  void navigation;
+  // The logo now navigates to the locale home ("/", which the root
+  // middleware redirects to /en or /ja) instead of reloading in place —
+  // see Header.tsx. AuthProvider persists the token to sessionStorage
+  // (see AuthProvider.tsx), so that navigation keeps the viewer logged in
+  // rather than bouncing them back to a logged-out state.
+  await page.getByRole("button", { name: "NASEBANAL Demo" }).click();
 
-  await expect(page).toHaveURL(/\/accounts$/);
+  await expect(page).toHaveURL(/\/(en|ja)$/);
   await page.getByTestId("user-menu-button").click();
   await expect(page.getByTestId("user-menu-name")).toHaveText("Demo User");
   await expect(page.getByTestId("logout-link")).toBeVisible();
