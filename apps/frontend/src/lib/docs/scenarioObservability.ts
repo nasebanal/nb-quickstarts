@@ -108,7 +108,7 @@ export const scenarioObservability: LocalizedDocsPage = {
       {
         heading: "What to look for",
         bullets: [
-          "Request rate by path shows the burst arriving - /auth/login first, then /accounts as the " +
+          "Request rate by path shows the burst arriving - /auth/login first, then /transactions as the " +
             "queue behind the DB pool builds.",
           "p95/p99 latency spikes toward the 30s DB-pool timeout - the same number Scenario 3's report " +
             "shows after the fact, but visible rising in real time here.",
@@ -218,7 +218,7 @@ export const scenarioObservability: LocalizedDocsPage = {
             code:
               "make kong:reset            # re-import the config with the opentelemetry plugin\n" +
               "make agentgateway:up       # (docker restart nb-agentgateway after editing config.yaml)\n" +
-              "curl localhost:8000/api/accounts/balances   # through Kong\n" +
+              "curl localhost:8000/api/accounts   # through Kong\n" +
               "make agentgateway:tools                     # MCP initialize + tools/list",
           },
         ],
@@ -231,19 +231,19 @@ export const scenarioObservability: LocalizedDocsPage = {
           },
           {
             src: "/docs/screenshots/tempo-kong-trace.png",
-            alt: "Grafana Explore on Tempo showing one trace: an nb-kong span 'kong' of 60 ms with the nb-backend span GET /accounts/balances and its connect, SELECT demo and http send spans nested underneath",
+            alt: "Grafana Explore on Tempo showing one trace: an nb-kong span 'kong' of 60 ms with the nb-backend span GET /accounts and its connect, SELECT demo and http send spans nested underneath",
             caption:
               "A request through Kong: Kong's span on top, the backend's request and its SQL query inside it - one trace across two services.",
           },
           {
             src: "/docs/screenshots/tempo-agentgateway-trace.png",
-            alt: "Grafana Explore on Tempo showing one trace: an agentgateway span tools/call, then tools/call apps-backend_list_balances_accounts_balances_get, with the nb-backend span GET /accounts/balances and its SQL query underneath",
+            alt: "Grafana Explore on Tempo showing one trace: an agentgateway span tools/call, then tools/call apps-backend_list_accounts_accounts_get, with the nb-backend span GET /accounts and its SQL query underneath",
             caption:
               "An MCP tool call through agentgateway: tools/call, the tool it resolved to, then the backend's REST request and query - the MCP call and the REST call in one trace.",
           },
         ],
         note:
-          "Real runs. Every Kong trace of /api/accounts/balances that was checked contained both nb-kong " +
+          "Real runs. Every Kong trace of /api/accounts that was checked contained both nb-kong " +
           "and nb-backend spans, so the trace context is passed on to the backend (the plugin's " +
           "header_type is preserve, the default). Kong 3.6's opentelemetry plugin exports traces only (its " +
           "schema has no log or metric export), so Kong's logs and metrics are not in Loki or Prometheus: " +
@@ -382,7 +382,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         heading: "確認するポイント",
         bullets: [
           "Request rate by pathで、バーストが到達する様子 — まず/auth/login、続いてDBプール背後の" +
-            "キューが積み上がるにつれて/accountsが増えていく。",
+            "キューが積み上がるにつれて/transactionsが増えていく。",
           "p95/p99レイテンシが30秒のDBプールタイムアウトに向かって急上昇する様子 — シナリオ3のレポートで" +
             "事後に見る同じ数字が、ここではリアルタイムに立ち上がっていくのが見える。",
           "Active requests / DB connections in useが、実行中ずっとプールの上限近くに張り付き、その後" +
@@ -491,7 +491,7 @@ export const scenarioObservability: LocalizedDocsPage = {
             code:
               "make kong:reset            # opentelemetryプラグイン入りの設定を再インポート\n" +
               "make agentgateway:up       # (config.yamlを編集した後はdocker restart nb-agentgateway)\n" +
-              "curl localhost:8000/api/accounts/balances   # Kong経由\n" +
+              "curl localhost:8000/api/accounts   # Kong経由\n" +
               "make agentgateway:tools                     # MCPのinitialize + tools/list",
           },
         ],
@@ -504,19 +504,19 @@ export const scenarioObservability: LocalizedDocsPage = {
           },
           {
             src: "/docs/screenshots/tempo-kong-trace.png",
-            alt: "GrafanaのExploreでTempoの1本のトレースを表示。60msのnb-kongのスパン「kong」の下に、nb-backendのスパンGET /accounts/balancesと、そのconnect・SELECT demo・http sendが入れ子で並んでいる",
+            alt: "GrafanaのExploreでTempoの1本のトレースを表示。60msのnb-kongのスパン「kong」の下に、nb-backendのスパンGET /accountsと、そのconnect・SELECT demo・http sendが入れ子で並んでいる",
             caption:
               "Kong経由のリクエスト: 一番上がKongのスパンで、その中にbackendのリクエストとSQLクエリが入る — 2つのサービスにまたがる1本のトレース。",
           },
           {
             src: "/docs/screenshots/tempo-agentgateway-trace.png",
-            alt: "GrafanaのExploreでTempoの1本のトレースを表示。agentgatewayのスパンtools/call、続いてtools/call apps-backend_list_balances_accounts_balances_get、その下にnb-backendのスパンGET /accounts/balancesとSQLクエリが並んでいる",
+            alt: "GrafanaのExploreでTempoの1本のトレースを表示。agentgatewayのスパンtools/call、続いてtools/call apps-backend_list_accounts_accounts_get、その下にnb-backendのスパンGET /accountsとSQLクエリが並んでいる",
             caption:
               "agentgateway経由のMCPツール呼び出し: tools/call、解決されたツール、そしてbackendのRESTリクエストとクエリ — MCP呼び出しとREST呼び出しが1本のトレースに入る。",
           },
         ],
         note:
-          "実際の実行結果です。確認したKong経由の/api/accounts/balancesのトレースはすべて、nb-kongとnb-backendの" +
+          "実際の実行結果です。確認したKong経由の/api/accountsのトレースはすべて、nb-kongとnb-backendの" +
           "両方のスパンを含んでいたので、トレースコンテキストはbackendへ引き継がれています(プラグインの" +
           "header_typeはデフォルトのpreserve)。Kong 3.6のopentelemetryプラグインが送れるのはトレースだけ(スキーマに" +
           "ログやメトリクスの送信設定がありません)なので、KongのログとメトリクスはLokiにもPrometheusにも入りません: " +

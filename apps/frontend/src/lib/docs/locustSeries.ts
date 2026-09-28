@@ -8,14 +8,14 @@
 //  - the direct-REST run also counts the 279 POST /auth/login calls each
 //    simulated user makes on start - all of them successful and all completed
 //    by t=7s (locust_stats.csv of the same run: /auth/login 279 requests, 0
-//    failures; POST /accounts 78 requests, 66 failures) - so those 279 are
+//    failures; POST /transactions 78 requests, 66 failures) - so those 279 are
 //    subtracted, and the series starts at t=7s, the first sample from which
-//    the remaining count is unambiguous. What's left is POST /accounts alone,
+//    the remaining count is unambiguous. What's left is POST /transactions alone,
 //    ending at exactly the 78 / 66 that locust_stats.csv reports.
 // A rate is undefined until the first request completes, so a series starts
 // there rather than at zero.
 
-// locust/logs/20260923_135153 - locustfile_http_overload.py, POST /accounts
+// locust/logs/20260923_135153 - locustfile_http_overload.py, POST /transactions
 export const restOverloadRun: [number, number, number][] = [
   [7, 4, 0],
   [8, 4, 0],

@@ -6,11 +6,15 @@
 // AGENTS.md's Kong section) without any other visible difference.
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 
-// Event-sourced: each Account is one quantity-change event, not a
+// Event-sourced: each Transaction is one quantity-change event, not a
 // standalone row with an absolute quantity. `quantity` is a signed delta -
-// see apps/backend/app/models.py. A name's current balance is the sum of
-// all its events (AccountBalance, from /accounts/balances).
-export interface Account {
+// see apps/backend/app/models.py (still just "Account" there - the
+// event-sourced storage is one table either way, split into two resources
+// only at this API boundary: /transactions is the event log itself, GET
+// from here; /accounts is the balance it adds up to, derived, read-only -
+// see AccountBalance below). A name's current balance is the sum of all
+// its transactions.
+export interface Transaction {
   id: number;
   name: string;
   quantity: number;
@@ -18,7 +22,7 @@ export interface Account {
   createdAt: string;
 }
 
-export interface AccountInput {
+export interface TransactionInput {
   name: string;
   quantity: number;
 }
@@ -123,16 +127,16 @@ export function updateProfile(token: string, input: ProfileInput): Promise<Profi
   });
 }
 
-export function listAccounts(): Promise<Account[]> {
+export function listTransactions(): Promise<Transaction[]> {
+  return request("/transactions");
+}
+
+export function listAccounts(): Promise<AccountBalance[]> {
   return request("/accounts");
 }
 
-export function listBalances(): Promise<AccountBalance[]> {
-  return request("/accounts/balances");
-}
-
-export function createAccount(token: string, input: AccountInput): Promise<Account> {
-  return request("/accounts", {
+export function createTransaction(token: string, input: TransactionInput): Promise<Transaction> {
+  return request("/transactions", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(input),

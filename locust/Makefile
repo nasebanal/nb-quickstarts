@@ -38,7 +38,7 @@ locust:
 	@echo "  make locust:up LOCUST_FILE=locustfile_http.py"
 	@echo "  make locust:up LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS=graphql-query"
 	@echo "  make locust:up LOCUST_FILE=locustfile_mysql.py   LOCUST_TAGS=mysql-select"
-	@echo "  make locust:up LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100  # direct-REST overload: ~30% of POST /accounts fail (use the same users/spawn rate for the Kafka run below)"
+	@echo "  make locust:up LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100  # direct-REST overload: ~30% of POST /transactions fail (use the same users/spawn rate for the Kafka run below)"
 	@echo "  make kafka:up && make kafka:bridge-up && make locust:up LOCUST_FILE=locustfile_kafka.py  # Kafka-buffered ingestion (see README 'Kafka bridge')"
 	@echo "  (to switch test types cleanly, run locust:restart, or locust:down then locust:up)"
 	@echo ""

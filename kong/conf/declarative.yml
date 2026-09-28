@@ -23,8 +23,8 @@ services:
           policy: local
 
   # Proxies to the real apps backend (REST/GraphQL/MCP/OpenAPI - everything
-  # under backend:8080's own root), strip_path so http://localhost:8000/api/accounts
-  # reaches backend:8080/accounts. Requires `make apps:up` (or apps-network
+  # under backend:8080's own root), strip_path so http://localhost:8000/api/transactions
+  # reaches backend:8080/transactions. Requires `make apps:up` (or apps-network
   # won't resolve `backend` by name - Kong itself still starts fine
   # without it, this route just proxies a connection error until apps is
   # up). This is the seam a future Consumer-side E2E test could point at a

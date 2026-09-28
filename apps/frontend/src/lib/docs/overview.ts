@@ -62,7 +62,7 @@ export const overview: LocalizedDocsPage = {
             heading: "Scenario 3: Switch to Kafka",
             href: "/docs/scenario-kafka",
             body: [
-              "Places Kafka in front of the write path: kafka-bridge reads events from a topic and forwards each one to the backend through POST /accounts, the same write every other client uses. The same Locust load is sent down two paths - direct REST, which errors under the burst, and through Kafka - and the measured results are compared.",
+              "Places Kafka in front of the write path: kafka-bridge reads events from a topic and forwards each one to the backend through POST /transactions, the same write every other client uses. The same Locust load is sent down two paths - direct REST, which errors under the burst, and through Kafka - and the measured results are compared.",
             ],
           },
           {
@@ -76,7 +76,7 @@ export const overview: LocalizedDocsPage = {
             heading: "Scenario 5: Use Keycloak",
             href: "/docs/scenario-keycloak",
             body: [
-              "Replaces the mock login with a real one: the login page gains a Keycloak option (with sign-up), the user authenticates at Keycloak, and the backend accepts the token Keycloak issued on the same POST /accounts route. The scenario then confirms that the backend performs the check.",
+              "Replaces the mock login with a real one: the login page gains a Keycloak option (with sign-up), the user authenticates at Keycloak, and the backend accepts the token Keycloak issued on the same POST /transactions route. The scenario then confirms that the backend performs the check.",
             ],
           },
           {
@@ -151,7 +151,7 @@ export const overview: LocalizedDocsPage = {
             heading: "シナリオ3: Kafka経由への切り替え",
             href: "/docs/scenario-kafka",
             body: [
-              "書き込み経路の手前にKafkaを置きます。kafka-bridgeがトピックからイベントを読み、1件ずつPOST /accountsでbackendへ転送します(他のすべてのクライアントと同じ書き込みです)。同じLocustの負荷を、バーストでエラーになるREST直接の経路と、Kafka経由の経路の2つに流し、測定結果を比較します。",
+              "書き込み経路の手前にKafkaを置きます。kafka-bridgeがトピックからイベントを読み、1件ずつPOST /transactionsでbackendへ転送します(他のすべてのクライアントと同じ書き込みです)。同じLocustの負荷を、バーストでエラーになるREST直接の経路と、Kafka経由の経路の2つに流し、測定結果を比較します。",
             ],
           },
           {
@@ -165,7 +165,7 @@ export const overview: LocalizedDocsPage = {
             heading: "シナリオ5: Keycloakの利用",
             href: "/docs/scenario-keycloak",
             body: [
-              "モックのログインを本物に置き換えます。ログイン画面にKeycloakの選択肢(サインアップ付き)が加わり、Keycloakで認証すると、backendは同じPOST /accountsでKeycloakが発行したトークンを受け付けます。そのうえで、backendが実際にトークンを検証していることを確認します。",
+              "モックのログインを本物に置き換えます。ログイン画面にKeycloakの選択肢(サインアップ付き)が加わり、Keycloakで認証すると、backendは同じPOST /transactionsでKeycloakが発行したトークンを受け付けます。そのうえで、backendが実際にトークンを検証していることを確認します。",
             ],
           },
           {

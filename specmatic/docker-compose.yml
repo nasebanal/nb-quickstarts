@@ -33,8 +33,8 @@ services:
   # the real backend happens to be doing right now. Requests that match one
   # of prepare_contract.sh's examples get that example's exact response;
   # anything else gets a schema-valid response with randomly generated
-  # values (confirmed: GET /accounts with no matching example returns a
-  # real Account shape with a random id/name/quantity, not a canned one) -
+  # values (confirmed: GET /transactions with no matching example returns a
+  # real Transaction shape with a random id/name/quantity, not a canned one) -
   # which is actually a stronger check for a consumer than always seeing
   # the same realistic-looking values, since it can't accidentally pass by
   # relying on one specific example's data.

@@ -128,7 +128,7 @@ vault-prove-needs-vault:
 	@docker logs nb-backend 2>&1 | grep -i "access denied\|Could not connect" | head -3 || true
 	@echo ""
 	@echo "And a real request:"
-	@curl -s -m 5 -o /dev/null -w "  GET /accounts/balances -> HTTP %{http_code}\n" http://localhost:8080/accounts/balances || echo "  (no answer - the backend never came up)"
+	@curl -s -m 5 -o /dev/null -w "  GET /accounts -> HTTP %{http_code}\n" http://localhost:8080/accounts || echo "  (no answer - the backend never came up)"
 	@echo ""
 	@echo "'make vault:verify-apps' fixes it by handing the backend a Vault-issued credential;"
 	@echo "'make apps:restart' returns it to the normal configuration."
@@ -146,7 +146,7 @@ vault-verify-apps: vault-setup-mysql
 	@docker logs nb-backend 2>&1 | grep -i vault || echo "  (no Vault log line yet - the container may still be starting; re-run in a few seconds)"
 	@echo ""
 	@echo "A real request over that connection (a MySQL round-trip, not just 'container is up')..."
-	@curl -s http://localhost:8080/accounts/balances | jq -c '.[0:2]'
+	@curl -s http://localhost:8080/accounts | jq -c '.[0:2]'
 	@echo ""
 	@$(MAKE) --no-print-directory vault-db-users
 	@echo ""

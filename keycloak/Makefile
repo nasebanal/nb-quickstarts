@@ -21,7 +21,7 @@ keycloak:
 	@echo ""
 	@echo "apps/backend integration (requires apps:up):"
 	@echo "  keycloak:login       - Get a real access token for the demo user, print it"
-	@echo "  keycloak:verify-apps - Get a token, then POST /accounts on the real backend with it"
+	@echo "  keycloak:verify-apps - Get a token, then POST /transactions on the real backend with it"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  KEYCLOAK_IMAGE=quay.io/keycloak/keycloak"
@@ -102,9 +102,9 @@ keycloak-verify-apps:
 	fi; \
 	echo "   Got token (truncated): $${TOKEN:0:24}..."; \
 	echo ""; \
-	echo "2. Calling the real backend's protected POST /accounts with it..."; \
+	echo "2. Calling the real backend's protected POST /transactions with it..."; \
 	CODE=$$(curl -s -o /tmp/keycloak-verify-apps.json -w "%{http_code}" \
-		-X POST http://localhost:8080/accounts \
+		-X POST http://localhost:8080/transactions \
 		-H "Authorization: Bearer $$TOKEN" -H "Content-Type: application/json" \
 		-d '{"name": "Keycloak Demo", "quantity": 1}'); \
 	echo "   HTTP $$CODE"; cat /tmp/keycloak-verify-apps.json; echo ""; \

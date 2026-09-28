@@ -10,9 +10,10 @@
 // whatever the real backend happens to be doing right now?"
 //
 // The mock returns our examples' exact values for requests that match one
-// (e.g. GET /accounts/1), and schema-valid *random* values for anything
-// else (e.g. plain GET /accounts) - so most assertions here check shape/
-// type, not specific values, except where an example guarantees one.
+// (e.g. GET /transactions/1), and schema-valid *random* values for
+// anything else (e.g. plain GET /transactions or GET /accounts) - so most
+// assertions here check shape/type, not specific values, except where an
+// example guarantees one.
 //
 // Requires: make apps:up (the mock still needs the real backend once, to
 // fetch the schema + build examples from - see specmatic:mock-up) and
@@ -21,7 +22,7 @@
 // unlike every other vitest test it isn't self-contained (see vitest's
 // own Makefile Note).
 import { describe, expect, it } from "vitest";
-import { createAccount, listAccounts, listBalances, login, UnauthorizedError } from "../api";
+import { createTransaction, listAccounts, listTransactions, login, UnauthorizedError } from "../api";
 
 describe("api client against the Specmatic contract mock", () => {
   it("login returns a token and username", async () => {
@@ -30,21 +31,21 @@ describe("api client against the Specmatic contract mock", () => {
     expect(typeof result.username).toBe("string");
   });
 
-  it("listAccounts returns an array shaped like Account[]", async () => {
-    const accounts = await listAccounts();
-    expect(Array.isArray(accounts)).toBe(true);
-    expect(accounts.length).toBeGreaterThan(0);
-    for (const account of accounts) {
-      expect(typeof account.id).toBe("number");
-      expect(typeof account.name).toBe("string");
-      expect(typeof account.quantity).toBe("number");
-      expect(typeof account.source).toBe("string");
-      expect(typeof account.createdAt).toBe("string");
+  it("listTransactions returns an array shaped like Transaction[]", async () => {
+    const transactions = await listTransactions();
+    expect(Array.isArray(transactions)).toBe(true);
+    expect(transactions.length).toBeGreaterThan(0);
+    for (const transaction of transactions) {
+      expect(typeof transaction.id).toBe("number");
+      expect(typeof transaction.name).toBe("string");
+      expect(typeof transaction.quantity).toBe("number");
+      expect(typeof transaction.source).toBe("string");
+      expect(typeof transaction.createdAt).toBe("string");
     }
   });
 
-  it("listBalances returns an array shaped like AccountBalance[]", async () => {
-    const balances = await listBalances();
+  it("listAccounts returns an array shaped like AccountBalance[]", async () => {
+    const balances = await listAccounts();
     expect(Array.isArray(balances)).toBe(true);
     expect(balances.length).toBeGreaterThan(0);
     for (const balance of balances) {
@@ -54,27 +55,32 @@ describe("api client against the Specmatic contract mock", () => {
     }
   });
 
-  it("createAccount with a valid token returns the created Account", async () => {
-    // Body must match prepare_contract.sh's post-accounts.json example
+  it("createTransaction with a valid token returns the created Transaction", async () => {
+    // Body must match prepare_contract.sh's post-transactions.json example
     // exactly - the mock only returns its canned 201 for a matching body,
     // regardless of the token's actual value (confirmed empirically: the
     // mock doesn't validate auth, it dispatches purely on method+path+body
     // shape/value, falling back to a schema-random response - not
     // necessarily 201 - for anything that doesn't match an example).
     const { token } = await login("demo", "demo");
-    const account = await createAccount(token, { name: "Specmatic Test Account", quantity: 1 });
-    expect(typeof account.id).toBe("number");
-    expect(typeof account.name).toBe("string");
-    expect(typeof account.quantity).toBe("number");
-    expect(typeof account.source).toBe("string");
-    expect(typeof account.createdAt).toBe("string");
+    const transaction = await createTransaction(token, { name: "Specmatic Test Account", quantity: 1 });
+    expect(typeof transaction.id).toBe("number");
+    expect(typeof transaction.name).toBe("string");
+    expect(typeof transaction.quantity).toBe("number");
+    expect(typeof transaction.source).toBe("string");
+    expect(typeof transaction.createdAt).toBe("string");
   });
 
-  it("createAccount with an invalid token throws UnauthorizedError", async () => {
-    // Body must match prepare_contract.sh's post-accounts-401.json example
-    // exactly, same reasoning as above - the 401 is keyed off this exact
-    // body, not off the (deliberately nonsense) token value.
-    await expect(createAccount("not-a-real-token", { name: "x", quantity: 1 })).rejects.toThrow(
+  it("createTransaction with an invalid token throws UnauthorizedError", async () => {
+    // Body *and* Authorization header must match prepare_contract.sh's
+    // post-transactions-401.json example exactly - **discovered directly**,
+    // contradicting this test's own former comment (and, going by git
+    // history, apparently every run since this example was introduced):
+    // the mock does key off the header value too, not just the body -
+    // confirmed by hand with curl, token-for-token, once this specific
+    // test started actually failing (body-only matching would have made
+    // any nonsense token 401 the same way; only this exact literal does).
+    await expect(createTransaction("invalid-token", { name: "x", quantity: 1 })).rejects.toThrow(
       UnauthorizedError,
     );
   });

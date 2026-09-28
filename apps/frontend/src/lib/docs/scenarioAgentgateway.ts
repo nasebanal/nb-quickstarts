@@ -12,7 +12,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "Why agentgateway",
         body: [
-          "An agent's create-account tool call is the same POST /accounts that the Kafka bridge (Scenario 3) makes for each event: another way in to the same write path.",
+          "An agent's create-transaction tool call is the same POST /transactions that the Kafka bridge (Scenario 3) makes for each event: another way in to the same write path.",
         ],
         bullets: [
           "Turns an existing OpenAPI contract into MCP tools with configuration only - no MCP server code to write or maintain in the backend.",
@@ -41,19 +41,19 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
             { text: "  health_health_get - Health", tone: "success" },
             { text: "  login_auth_login_post - Login", tone: "success" },
             {
+              text: "  list_transactions_transactions_get - List Transactions",
+              tone: "success",
+            },
+            {
+              text: "  create_transaction_transactions_post - Record a Transaction",
+              tone: "success",
+            },
+            {
+              text: "  get_transaction_transactions__transaction_id__get - Get Transaction",
+              tone: "success",
+            },
+            {
               text: "  list_accounts_accounts_get - List Accounts",
-              tone: "success",
-            },
-            {
-              text: "  create_account_accounts_post - Record a Transaction",
-              tone: "success",
-            },
-            {
-              text: "  list_balances_accounts_balances_get - List Balances",
-              tone: "success",
-            },
-            {
-              text: "  get_account_accounts__account_id__get - Get Account",
               tone: "success",
             },
           ],
@@ -62,13 +62,13 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "2. Call a tool through the gateway",
         body: [
-          "Calling list_balances_accounts_balances_get through the gateway returns the same live data " +
-            "GET /accounts/balances itself does - it's a real proxy to the running backend, not a " +
+          "Calling list_accounts_accounts_get through the gateway returns the same live data " +
+            "GET /accounts itself does - it's a real proxy to the running backend, not a " +
             "static description of it.",
         ],
         note:
-          "create_account_accounts_post needs a real bearer token, same as POST /accounts itself does " +
-          "everywhere else - call login_auth_login_post first and pass its token back as an " +
+          "create_transaction_transactions_post needs a real bearer token, same as POST /transactions " +
+          "itself does everywhere else - call login_auth_login_post first and pass its token back as an " +
           "Authorization header, or the tool call 401s the same way an unauthenticated curl would.",
       },
       {
@@ -129,7 +129,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "agentgatewayを使うメリット",
         body: [
-          "エージェントのアカウント作成ツールの呼び出しは、Kafkaブリッジ(シナリオ3)がイベントごとに行うのと同じPOST /accountsです: 同じ書き込み経路への、もう1つの入口。",
+          "エージェントの取引記帳ツールの呼び出しは、Kafkaブリッジ(シナリオ3)がイベントごとに行うのと同じPOST /transactionsです: 同じ書き込み経路への、もう1つの入口。",
         ],
         bullets: [
           "既存のOpenAPI契約から設定だけでMCPツールを作れ、backend側にMCPサーバーのコードを書いて保守する必要がありません。",
@@ -159,19 +159,19 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
             { text: "  health_health_get - Health", tone: "success" },
             { text: "  login_auth_login_post - Login", tone: "success" },
             {
+              text: "  list_transactions_transactions_get - List Transactions",
+              tone: "success",
+            },
+            {
+              text: "  create_transaction_transactions_post - Record a Transaction",
+              tone: "success",
+            },
+            {
+              text: "  get_transaction_transactions__transaction_id__get - Get Transaction",
+              tone: "success",
+            },
+            {
               text: "  list_accounts_accounts_get - List Accounts",
-              tone: "success",
-            },
-            {
-              text: "  create_account_accounts_post - Record a Transaction",
-              tone: "success",
-            },
-            {
-              text: "  list_balances_accounts_balances_get - List Balances",
-              tone: "success",
-            },
-            {
-              text: "  get_account_accounts__account_id__get - Get Account",
               tone: "success",
             },
           ],
@@ -180,12 +180,12 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "2. ゲートウェイ経由でツールを呼び出す",
         body: [
-          "list_balances_accounts_balances_getをゲートウェイ経由で呼び出すと、GET /accounts/balances自体" +
+          "list_accounts_accounts_getをゲートウェイ経由で呼び出すと、GET /accounts自体" +
             "が返すのと同じライブなデータが返ります — 静的な説明ではなく、稼働中のbackendへの本物のプロキシ" +
             "です。",
         ],
         note:
-          "create_account_accounts_postは、他のどこでもPOST /accounts自体が要求するのと同じく、本物の" +
+          "create_transaction_transactions_postは、他のどこでもPOST /transactions自体が要求するのと同じく、本物の" +
           "bearerトークンが必要です — 先にlogin_auth_login_postを呼び、そのトークンをAuthorizationヘッダー" +
           "として渡してください。渡さなければ、認証なしのcurlと同じように401になります。",
       },

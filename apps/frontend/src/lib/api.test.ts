@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAccount, getMe, listAccounts, listBalances, login, updateProfile } from "./api";
+import { createTransaction, getMe, listAccounts, listTransactions, login, updateProfile } from "./api";
 
 function mockFetchOnce(body: unknown, ok = true, status = 200): void {
   vi.stubGlobal(
@@ -29,23 +29,23 @@ describe("api client", () => {
     expect(JSON.parse((options as RequestInit).body as string)).toEqual({ username: "demo", password: "demo" });
   });
 
-  it("listAccounts returns the parsed account list", async () => {
+  it("listTransactions returns the parsed transaction list", async () => {
     mockFetchOnce([{ id: 1, name: "A", quantity: 1, source: "seed", createdAt: "now" }]);
-    const accounts = await listAccounts();
-    expect(accounts).toHaveLength(1);
-    expect(accounts[0].name).toBe("A");
+    const transactions = await listTransactions();
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0].name).toBe("A");
   });
 
-  it("listBalances returns the summed-per-name balances", async () => {
+  it("listAccounts returns the summed-per-name balances", async () => {
     mockFetchOnce([{ name: "A", balance: 12, eventCount: 3 }]);
-    const balances = await listBalances();
+    const balances = await listAccounts();
     expect(balances).toHaveLength(1);
     expect(balances[0]).toEqual({ name: "A", balance: 12, eventCount: 3 });
   });
 
-  it("createAccount sends a bearer auth header", async () => {
+  it("createTransaction sends a bearer auth header", async () => {
     mockFetchOnce({ id: 2, name: "B", quantity: 2, source: "api", createdAt: "now" });
-    await createAccount("token123", { name: "B", quantity: 2 });
+    await createTransaction("token123", { name: "B", quantity: 2 });
 
     const [, options] = vi.mocked(fetch).mock.calls[0];
     const headers = (options as RequestInit).headers as Record<string, string>;

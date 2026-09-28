@@ -26,7 +26,7 @@ export const scenarioKafka: LocalizedDocsPage = {
     title: "Scenario 3: Switch to Kafka",
     description:
       "kafka-bridge is a small standalone consumer that reads events off a Kafka topic and forwards " +
-      "each one to the real backend via POST /accounts - the same write every other client uses. This " +
+      "each one to the real backend via POST /transactions - the same write every other client uses. This " +
       "scenario measures why that indirection is worth it: the same Locust load, sent down two " +
       "different paths into the same backend.",
     sections: [
@@ -49,7 +49,7 @@ export const scenarioKafka: LocalizedDocsPage = {
       {
         heading: "2. Direct REST - this is the one that errors",
         body: [
-          "locustfile_http_overload.py hammers POST /accounts directly. At this repo's own default " +
+          "locustfile_http_overload.py hammers POST /transactions directly. At this repo's own default " +
             "limits (SQLAlchemy's default connection pool, a single uvicorn worker in --reload mode), " +
             "it starts failing once the load is heavy enough.",
         ],
@@ -97,7 +97,7 @@ export const scenarioKafka: LocalizedDocsPage = {
             [
               "300 / 100",
               "40s",
-              "66 of 78 POST /accounts failed (84.6%) in the run charted below, median at the 30s DB-pool timeout - earlier runs landed nearer ~30%, so expect it to vary",
+              "66 of 78 POST /transactions failed (84.6%) in the run charted below, median at the 30s DB-pool timeout - earlier runs landed nearer ~30%, so expect it to vary",
               "1.66M events, 0% failures, ~4ms median",
             ],
             [
@@ -110,7 +110,7 @@ export const scenarioKafka: LocalizedDocsPage = {
         },
         charts: [
           {
-            title: "Direct REST - POST /accounts",
+            title: "Direct REST - POST /transactions",
             subtitle: "300 users / 100 spawn rate / 40s. A request counts once it completes, so failures only show up as the 30s timeouts land.",
             points: restOverloadRun,
             xMax: 40,
@@ -175,7 +175,7 @@ export const scenarioKafka: LocalizedDocsPage = {
   ja: {
     title: "シナリオ3: Kafka経由への切り替え",
     description:
-      "kafka-bridgeは、Kafkaトピックからイベントを読み取り、1件ずつ実際のbackendへPOST /accountsとして" +
+      "kafka-bridgeは、Kafkaトピックからイベントを読み取り、1件ずつ実際のbackendへPOST /transactionsとして" +
       "転送する、小さな独立したconsumerです — 他のどのクライアントとも同じ書き込みです。このシナリオでは、" +
       "その間接化がなぜ価値を持つのかを、同じLocust負荷を2つの異なる経路で同じbackendに流し込んで実測" +
       "します。",
@@ -199,7 +199,7 @@ export const scenarioKafka: LocalizedDocsPage = {
       {
         heading: "2. REST直叩き — これがエラーになる側",
         body: [
-          "locustfile_http_overload.pyはPOST /accountsを直接叩きます。このリポジトリのデフォルト制限" +
+          "locustfile_http_overload.pyはPOST /transactionsを直接叩きます。このリポジトリのデフォルト制限" +
             "(SQLAlchemyのデフォルト接続プール、--reloadモードのuvicornワーカー1つ)では、負荷が一定を" +
             "超えると失敗し始めます。",
         ],
@@ -247,7 +247,7 @@ export const scenarioKafka: LocalizedDocsPage = {
             [
               "300 / 100",
               "40s",
-              "下のグラフの実行ではPOST /accounts 78件中66件が失敗(84.6%)、medianは30秒のDBプールタイムアウトに張り付く — 以前の実行では約30%で、ばらつきます",
+              "下のグラフの実行ではPOST /transactions 78件中66件が失敗(84.6%)、medianは30秒のDBプールタイムアウトに張り付く — 以前の実行では約30%で、ばらつきます",
               "166万件、失敗0%、median約4ms",
             ],
             [
@@ -260,7 +260,7 @@ export const scenarioKafka: LocalizedDocsPage = {
         },
         charts: [
           {
-            title: "REST直叩き — POST /accounts",
+            title: "REST直叩き — POST /transactions",
             subtitle: "300ユーザー / spawn rate 100 / 40秒。リクエストは完了した時点で数えるため、失敗は30秒タイムアウトが返ってくる時点で初めて現れます。",
             points: restOverloadRun,
             xMax: 40,
