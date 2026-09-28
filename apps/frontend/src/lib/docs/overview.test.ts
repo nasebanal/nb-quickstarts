@@ -25,13 +25,15 @@ describe("Overview page", () => {
     describe(locale, () => {
       const page = overview[locale];
 
-      it("has exactly three parts: purpose, structure, functional verification scenarios", () => {
-        expect(page.sections).toHaveLength(3);
+      it("has exactly four parts: purpose, structure, event sourcing, functional verification scenarios", () => {
+        expect(page.sections).toHaveLength(4);
         expect(page.sections.every((section) => section.heading)).toBe(true);
-        // The diagrams belong to the structure part, which is the second one.
+        // The architecture diagrams belong to the structure part (second); the
+        // Account/Transaction diagram belongs to the event-sourcing part (third).
         expect(page.sections[1].slot).toBe("architecture");
+        expect(page.sections[2].slot).toBe("eventSourcing");
         expect(page.sections[0].slot).toBeUndefined();
-        expect(page.sections[2].slot).toBeUndefined();
+        expect(page.sections[3].slot).toBeUndefined();
       });
 
       it("has no intro paragraph above the parts and none of the dropped material", () => {
@@ -43,7 +45,7 @@ describe("Overview page", () => {
       });
 
       it("describes every scenario once, under the scenario page's own title, in sidebar order", () => {
-        const subsections = page.sections[2].subsections ?? [];
+        const subsections = page.sections[3].subsections ?? [];
         expect(subsections.map((sub) => sub.heading)).toEqual(SCENARIOS.map((scenario) => scenario[locale].title));
         for (const sub of subsections) expect((sub.body ?? []).join("").trim().length).toBeGreaterThan(40);
       });
@@ -80,7 +82,7 @@ describe("Overview page", () => {
 
       it(`${locale}: links the NASEBANAL Stack page in this locale, and each scenario heading to its own page in sidebar order`, () => {
         expect(links.some((link) => link.href === `https://www.nasebanal.com/${locale}/stack`)).toBe(true);
-        expect((page.sections[2].subsections ?? []).map((sub) => sub.href)).toEqual(SCENARIO_HREFS);
+        expect((page.sections[3].subsections ?? []).map((sub) => sub.href)).toEqual(SCENARIO_HREFS);
       });
     }
   });

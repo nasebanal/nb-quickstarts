@@ -1881,6 +1881,17 @@ h1 {
   color: var(--nb-fg-subtle);
 }
 
+/* EventSourcingDiagram.tsx - the GROUP BY/SUM step between its two
+   .nb-docs-er-entity cards (nb-docs-er is already flex-direction: column,
+   so this just sits between them like a third stacked item). */
+.nb-docs-flow-arrow {
+  align-self: center;
+  margin: 0;
+  font-size: 0.8rem;
+  font-family: ui-monospace, monospace;
+  color: var(--nb-fg-muted);
+}
+
 
 /* "GitHub" link with its mark on the landing page (HowItWorks.tsx). */
 .nb-source-link {

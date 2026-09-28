@@ -1,9 +1,10 @@
 import type { LocalizedDocsPage } from "./types";
 
-// The Overview has three parts, in this order: the purpose of NASEBANAL Quickstarts, its structure
+// The Overview has four parts, in this order: the purpose of NASEBANAL Quickstarts, its structure
 // (the paragraphs read the diagrams, which app/docs/page.tsx renders into the "architecture" slot),
-// and the functional-verification scenarios, one short description each. Scenario 1 verifies the
-// demo app with the test tools; scenarios 2-7 each switch on one of the dashed integrations. Headings
+// the demo app's own event-sourced data model (its own diagram, the "eventSourcing" slot), and the
+// functional-verification scenarios, one short description each. Scenario 1 verifies the demo app
+// with the test tools; scenarios 2-7 each switch on one of the dashed integrations. Headings
 // and links follow the scenario pages' own titles and the sidebar order (overview.test.ts checks it).
 // Register: neutral and factual - no second-person address or chatty phrasing.
 export const overview: LocalizedDocsPage = {
@@ -27,10 +28,6 @@ export const overview: LocalizedDocsPage = {
           "In the middle is the [apps stack](/docs/getting-started) on the shared apps-network: a Next.js frontend, a FastAPI backend " +
             "(REST, GraphQL and MCP) and MySQL, driven by a browser and, for load, by Locust. Everything else is a " +
             "module around it, each with its own directory and its own [make <module>:up](/docs/getting-started).",
-          "The demo app's own data model is event-sourced: the backend never updates a stored balance directly. " +
-            "POST /transactions appends one signed-delta event to an append-only ledger, and GET /accounts derives " +
-            "each name's current balance by summing its events. /transactions is the same write path every client " +
-            "(the frontend, kafka-bridge, Locust) uses; /accounts is a read-only view built from it.",
           "Around it sit the gateway and contract mocks ([Kong](/docs/scenario-kong), with [Specmatic](/docs/scenario-kong)), the async path " +
             "([Kafka and kafka-bridge](/docs/scenario-kafka)), identity and secrets ([Keycloak](/docs/scenario-keycloak) and [Vault](/docs/scenario-vault)), [observability](/docs/scenario-observability) (an " +
             "OpenTelemetry Collector feeding Tempo, Prometheus and Loki, read in Grafana, with Alertmanager " +
@@ -41,6 +38,21 @@ export const overview: LocalizedDocsPage = {
             "through agentgateway."
         ],
         slot: "architecture",
+      },
+      {
+        heading: "The demo app's data model: event sourcing",
+        body: [
+          "Event sourcing stores every change as its own immutable event, appended to a log, rather than " +
+            "overwriting a single current-value row in place. The current value, when needed, is derived by " +
+            "replaying (or, here, summing) the events that led to it - the log is the source of truth, not a " +
+            "snapshot of it.",
+          "The demo app applies this directly: the backend never updates a stored balance. " +
+            "POST /transactions appends one signed-delta event (e.g. -30000 to record an expense) to an " +
+            "append-only ledger, and GET /accounts derives each name's current balance by summing every " +
+            "event recorded for it - the same one write path every client uses, whichever module it comes from. " +
+            "/accounts is a read-only view built from it, never written to directly.",
+        ],
+        slot: "eventSourcing",
       },
       {
         heading: "Functional verification scenarios",
@@ -121,10 +133,6 @@ export const overview: LocalizedDocsPage = {
           "中心にあるのは、共通のapps-network上の[appsスタック](/docs/getting-started)です: Next.jsのfrontend、FastAPIのbackend" +
             "(REST・GraphQL・MCP)、MySQL。ブラウザと、負荷をかけるLocustがこれを呼びます。それ以外はすべて周りの" +
             "モジュールで、モジュールごとに専用のディレクトリと [make <モジュール名>:up](/docs/getting-started) があります。",
-          "デモアプリ自体のデータモデルはイベントソーシングです。backendは残高を直接更新しません。" +
-            "POST /transactionsは、追記専用の台帳に符号付きの差分イベントを1件追加し、GET /accountsは各名称の" +
-            "現在の残高をそのイベントの合計として導出します。/transactionsは、frontend・kafka-bridge・Locustを" +
-            "含むすべてのクライアントが使う同じ書き込み経路で、/accountsはそこから作られる読み取り専用のビューです。",
           "周りにあるのは、ゲートウェイとモック([Kong](/docs/scenario-kong)、[Specmatic](/docs/scenario-kong))、非同期の経路([Kafkaとkafka-bridge](/docs/scenario-kafka))、" +
             "認証とシークレット([Keycloak](/docs/scenario-keycloak)と[Vault](/docs/scenario-vault))、[オブザーバビリティ](/docs/scenario-observability)(OpenTelemetry Collectorが" +
             "Tempo・Prometheus・Lokiへ振り分け、Grafanaで見て、Alertmanagerがアラートを通知する)、" +
@@ -134,6 +142,20 @@ export const overview: LocalizedDocsPage = {
             "またはオプションでagentgatewayを経由してbackendに届きます。"
         ],
         slot: "architecture",
+      },
+      {
+        heading: "デモアプリのデータモデル: イベントソーシング",
+        body: [
+          "イベントソーシングとは、変更のたびに、現在値を持つ1行をその場で上書きするのではなく、変更それ自体を" +
+            "不変のイベントとしてログに追記していく方式です。現在値が必要になったときは、そこに至った" +
+            "イベント群を再生(ここでは合計)して導出します — 真実の情報源はスナップショットではなく、ログそのものです。",
+          "デモアプリはこれをそのまま実装しています。backendは残高を直接更新しません。" +
+            "POST /transactionsは、符号付きの差分イベント(例: 支出の記録には-30000)を1件、追記専用の台帳に" +
+            "追加し、GET /accountsは各名称に記録された全イベントの合計として現在の残高を導出します — " +
+            "どのモジュールから呼ばれても、書き込みはこの1本の経路だけです。/accountsはそこから作られる" +
+            "読み取り専用のビューで、直接書き込まれることはありません。",
+        ],
+        slot: "eventSourcing",
       },
       {
         heading: "機能確認シナリオ",
