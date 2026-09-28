@@ -15,6 +15,8 @@ import os
 
 from locust import HttpUser, task
 
+import report_on_stop  # noqa: F401 - writes the --html report when a run stops
+
 
 class OverloadUser(HttpUser):
     wait_time = lambda self: 0  # noqa: E731 - no think time, on purpose

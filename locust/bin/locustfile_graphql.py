@@ -2,6 +2,8 @@ import os
 
 from locust import HttpUser, between, tag, task
 
+import report_on_stop  # noqa: F401 - writes the --html report when a run stops
+
 
 class WebsiteUser(HttpUser):
     wait_time = between(1, 3)
