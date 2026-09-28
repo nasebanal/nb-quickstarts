@@ -1,9 +1,10 @@
 import type { LocalizedDocsPage } from "./types";
 
-// The Overview has three parts, in this order: the purpose of NASEBANAL Quickstarts, its structure
+// The Overview has four parts, in this order: the purpose of NASEBANAL Quickstarts, its structure
 // (the paragraphs read the diagrams, which app/docs/page.tsx renders into the "architecture" slot),
-// and the functional-verification scenarios, one short description each. Scenario 1 verifies the
-// demo app with the test tools; scenarios 2-7 each switch on one of the dashed integrations. Headings
+// the demo app's own event-sourced data model (its own diagram, the "eventSourcing" slot), and the
+// functional-verification scenarios, one short description each. Scenario 1 verifies the demo app
+// with the test tools; scenarios 2-7 each switch on one of the dashed integrations. Headings
 // and links follow the scenario pages' own titles and the sidebar order (overview.test.ts checks it).
 // Register: neutral and factual - no second-person address or chatty phrasing.
 export const overview: LocalizedDocsPage = {
@@ -39,6 +40,21 @@ export const overview: LocalizedDocsPage = {
         slot: "architecture",
       },
       {
+        heading: "The demo app's data model: event sourcing",
+        body: [
+          "Event sourcing stores every change as its own immutable event, appended to a log, rather than " +
+            "overwriting a single current-value row in place. The current value, when needed, is derived by " +
+            "replaying (or, here, summing) the events that led to it - the log is the source of truth, not a " +
+            "snapshot of it.",
+          "The demo app applies this directly: the backend never updates a stored balance. " +
+            "POST /transactions appends one signed-delta event (e.g. -30000 to record an expense) to an " +
+            "append-only ledger, and GET /accounts derives each name's current balance by summing every " +
+            "event recorded for it - the same one write path every client uses, whichever module it comes from. " +
+            "/accounts is a read-only view built from it, never written to directly.",
+        ],
+        slot: "eventSourcing",
+      },
+      {
         heading: "Functional verification scenarios",
         body: [
           "Scenario 1 verifies the demo app with the test tools. Scenarios 2 to 7 each switch on one of the dashed integrations above and check that it works. The order follows the sidebar.",
@@ -62,7 +78,7 @@ export const overview: LocalizedDocsPage = {
             heading: "Scenario 3: Switch to Kafka",
             href: "/docs/scenario-kafka",
             body: [
-              "Places Kafka in front of the write path: kafka-bridge reads events from a topic and forwards each one to the backend through POST /accounts, the same write every other client uses. The same Locust load is sent down two paths - direct REST, which errors under the burst, and through Kafka - and the measured results are compared.",
+              "Places Kafka in front of the write path: kafka-bridge reads events from a topic and forwards each one to the backend through POST /transactions, the same write every other client uses. The same Locust load is sent down two paths - direct REST, which errors under the burst, and through Kafka - and the measured results are compared.",
             ],
           },
           {
@@ -76,7 +92,7 @@ export const overview: LocalizedDocsPage = {
             heading: "Scenario 5: Use Keycloak",
             href: "/docs/scenario-keycloak",
             body: [
-              "Replaces the mock login with a real one: the login page gains a Keycloak option (with sign-up), the user authenticates at Keycloak, and the backend accepts the token Keycloak issued on the same POST /accounts route. The scenario then confirms that the backend performs the check.",
+              "Replaces the mock login with a real one: the login page gains a Keycloak option (with sign-up), the user authenticates at Keycloak, and the backend accepts the token Keycloak issued on the same POST /transactions route. The scenario then confirms that the backend performs the check.",
             ],
           },
           {
@@ -128,6 +144,20 @@ export const overview: LocalizedDocsPage = {
         slot: "architecture",
       },
       {
+        heading: "デモアプリのデータモデル: イベントソーシング",
+        body: [
+          "イベントソーシングとは、変更のたびに、現在値を持つ1行をその場で上書きするのではなく、変更それ自体を" +
+            "不変のイベントとしてログに追記していく方式です。現在値が必要になったときは、そこに至った" +
+            "イベント群を再生(ここでは合計)して導出します — 真実の情報源はスナップショットではなく、ログそのものです。",
+          "デモアプリはこれをそのまま実装しています。backendは残高を直接更新しません。" +
+            "POST /transactionsは、符号付きの差分イベント(例: 支出の記録には-30000)を1件、追記専用の台帳に" +
+            "追加し、GET /accountsは各名称に記録された全イベントの合計として現在の残高を導出します — " +
+            "どのモジュールから呼ばれても、書き込みはこの1本の経路だけです。/accountsはそこから作られる" +
+            "読み取り専用のビューで、直接書き込まれることはありません。",
+        ],
+        slot: "eventSourcing",
+      },
+      {
         heading: "機能確認シナリオ",
         body: [
           "シナリオ1は、テストツールでデモアプリの動作を検証します。シナリオ2〜7は、それぞれ上の図の破線の連携を1つずつオンにして、その機能を確認します。順番はサイドバーのとおりです。",
@@ -151,7 +181,7 @@ export const overview: LocalizedDocsPage = {
             heading: "シナリオ3: Kafka経由への切り替え",
             href: "/docs/scenario-kafka",
             body: [
-              "書き込み経路の手前にKafkaを置きます。kafka-bridgeがトピックからイベントを読み、1件ずつPOST /accountsでbackendへ転送します(他のすべてのクライアントと同じ書き込みです)。同じLocustの負荷を、バーストでエラーになるREST直接の経路と、Kafka経由の経路の2つに流し、測定結果を比較します。",
+              "書き込み経路の手前にKafkaを置きます。kafka-bridgeがトピックからイベントを読み、1件ずつPOST /transactionsでbackendへ転送します(他のすべてのクライアントと同じ書き込みです)。同じLocustの負荷を、バーストでエラーになるREST直接の経路と、Kafka経由の経路の2つに流し、測定結果を比較します。",
             ],
           },
           {
@@ -165,7 +195,7 @@ export const overview: LocalizedDocsPage = {
             heading: "シナリオ5: Keycloakの利用",
             href: "/docs/scenario-keycloak",
             body: [
-              "モックのログインを本物に置き換えます。ログイン画面にKeycloakの選択肢(サインアップ付き)が加わり、Keycloakで認証すると、backendは同じPOST /accountsでKeycloakが発行したトークンを受け付けます。そのうえで、backendが実際にトークンを検証していることを確認します。",
+              "モックのログインを本物に置き換えます。ログイン画面にKeycloakの選択肢(サインアップ付き)が加わり、Keycloakで認証すると、backendは同じPOST /transactionsでKeycloakが発行したトークンを受け付けます。そのうえで、backendが実際にトークンを検証していることを確認します。",
             ],
           },
           {

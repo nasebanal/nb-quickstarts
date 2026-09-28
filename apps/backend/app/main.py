@@ -8,7 +8,7 @@ from fastapi_mcp import FastApiMCP
 
 from app.db import Base, SessionLocal, engine, wait_for_database
 from app.graphql.schema import graphql_router
-from app.routers import accounts, auth, health, me
+from app.routers import accounts, auth, health, me, transactions
 from app.seed import seed_if_empty
 from app.telemetry import setup_telemetry
 
@@ -59,13 +59,15 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(transactions.router)
 app.include_router(accounts.router)
 app.include_router(me.router)
 app.include_router(graphql_router, prefix="/graphql")
 
 # Exposes the REST routes above as MCP tools at /mcp (Streamable HTTP), so
-# Claude Desktop (or any MCP client) can list/create accounts directly. Must
-# be mounted after the routers above are registered, since it introspects
-# the app's OpenAPI schema to build the tool list.
+# Claude Desktop (or any MCP client) can list transactions/post one/list
+# balances directly. Must be mounted after the routers above are
+# registered, since it introspects the app's OpenAPI schema to build the
+# tool list.
 mcp = FastApiMCP(app)
 mcp.mount_http()

@@ -4,7 +4,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
   en: {
     title: "Scenario 5: Use Keycloak",
     description:
-      "POST /accounts is protected by app/auth.py's get_current_username - until now, only " +
+      "POST /transactions is protected by app/auth.py's get_current_username - until now, only " +
       "satisfiable with a mock token from POST /auth/login. This scenario turns on a real login: the " +
       "login page gains a Keycloak option (with sign-up), you authenticate at Keycloak like you would " +
       "with \"Sign in with Google\", and the backend accepts the token Keycloak issued on that exact " +
@@ -76,7 +76,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
               from: "fe",
               to: "app",
               text: "Call the REST API",
-              detail: "POST /accounts  -  Authorization: Bearer <JWT>",
+              detail: "POST /transactions  -  Authorization: Bearer <JWT>",
             },
             {
               kind: "message",
@@ -135,7 +135,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
             "trades the code for a token, and you land on the accounts page.",
           "Open the user menu (top right): your name and a Keycloak badge show it was a Keycloak login. " +
             "Record a transaction - it succeeds, which means the backend accepted the Keycloak-issued " +
-            "JWT on POST /accounts.",
+            "JWT on POST /transactions.",
           "Logout ends the Keycloak session too, so the next \"Log in with Keycloak\" asks for credentials " +
             "again instead of signing you straight back in.",
         ],
@@ -171,7 +171,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
         code: [{ code: "make keycloak:verify-apps" }],
         body: [
           "The same thing without a browser: this gets a token for the demo user straight from Keycloak " +
-            "(the password grant, which the demo client also allows) and POSTs it to POST /accounts. Then " +
+            "(the password grant, which the demo client also allows) and POSTs it to POST /transactions. Then " +
             "try the same call without a token, and with a token whose signature was altered:",
         ],
         terminal: {
@@ -179,10 +179,10 @@ export const scenarioKeycloak: LocalizedDocsPage = {
             { text: "$ make keycloak:verify-apps", tone: "muted" },
             { text: "1. Getting a real access token from Keycloak (realm nasebanal, user keycloak-demo)..." },
             { text: "   Got token (truncated): eyJhbGciOiJSUzI1NiIsInR5..." },
-            { text: "2. Calling the real backend's protected POST /accounts with it..." },
+            { text: "2. Calling the real backend's protected POST /transactions with it..." },
             { text: "   HTTP 201", tone: "success" },
             { text: "" },
-            { text: "$ curl -X POST localhost:8080/accounts ...            # no token", tone: "muted" },
+            { text: "$ curl -X POST localhost:8080/transactions ...            # no token", tone: "muted" },
             { text: "401", tone: "error" },
             { text: "$ curl ... -H \"Authorization: Bearer <token, last character changed>\"", tone: "muted" },
             { text: '{"detail":"invalid or missing token"}  401', tone: "error" },
@@ -212,7 +212,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
   ja: {
     title: "シナリオ5: Keycloakの利用",
     description:
-      "POST /accountsは、app/auth.pyのget_current_usernameによって保護されています — これまでは" +
+      "POST /transactionsは、app/auth.pyのget_current_usernameによって保護されています — これまでは" +
       "POST /auth/loginが発行するモックトークンでしか満たせませんでした。このシナリオでは本物のログインを" +
       "有効にします: ログイン画面にKeycloakの選択肢(サインアップ付き)が加わり、「Googleでログイン」と同じ" +
       "ように、Keycloak側で認証し、まさにこのルートでKeycloakが発行したトークンをbackendが受け入れます。",
@@ -282,7 +282,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
               from: "fe",
               to: "app",
               text: "REST APIを呼ぶ",
-              detail: "POST /accounts  -  Authorization: Bearer <JWT>",
+              detail: "POST /transactions  -  Authorization: Bearer <JWT>",
             },
             {
               kind: "message",
@@ -342,7 +342,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           "keycloak-demo / nasebanal-demoでサインインします。Keycloakが/auth/callbackへ戻し、アプリが" +
             "コードをトークンに交換して、口座ページに着きます。",
           "右上のユーザーメニューを開くと、名前とKeycloakバッジが表示され、Keycloakでのログインだった" +
-            "ことがわかります。取引を記帳してください — 成功すれば、backendがPOST /accountsで" +
+            "ことがわかります。取引を記帳してください — 成功すれば、backendがPOST /transactionsで" +
             "Keycloak発行のJWTを受け入れたということです。",
           "ログアウトはKeycloak側のセッションも終了するため、次に「Keycloakでログイン」すると、そのまま" +
             "ログインされるのではなく、再び認証情報を聞かれます。",
@@ -379,7 +379,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
         code: [{ code: "make keycloak:verify-apps" }],
         body: [
           "ブラウザなしでの同じ確認です: デモユーザーのトークンをKeycloakから直接取得し(デモ用クライアント" +
-            "はパスワードグラントも許可しています)、POST /accountsへPOSTします。続けて、同じ呼び出しを" +
+            "はパスワードグラントも許可しています)、POST /transactionsへPOSTします。続けて、同じ呼び出しを" +
             "トークンなしと、署名を書き換えたトークンで試します:",
         ],
         terminal: {
@@ -387,10 +387,10 @@ export const scenarioKeycloak: LocalizedDocsPage = {
             { text: "$ make keycloak:verify-apps", tone: "muted" },
             { text: "1. Getting a real access token from Keycloak (realm nasebanal, user keycloak-demo)..." },
             { text: "   Got token (truncated): eyJhbGciOiJSUzI1NiIsInR5..." },
-            { text: "2. Calling the real backend's protected POST /accounts with it..." },
+            { text: "2. Calling the real backend's protected POST /transactions with it..." },
             { text: "   HTTP 201", tone: "success" },
             { text: "" },
-            { text: "$ curl -X POST localhost:8080/accounts ...            # トークンなし", tone: "muted" },
+            { text: "$ curl -X POST localhost:8080/transactions ...            # トークンなし", tone: "muted" },
             { text: "401", tone: "error" },
             { text: "$ curl ... -H \"Authorization: Bearer <最後の1文字を書き換えたトークン>\"", tone: "muted" },
             { text: '{"detail":"invalid or missing token"}  401', tone: "error" },

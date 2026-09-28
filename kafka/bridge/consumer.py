@@ -54,8 +54,9 @@ _status = {"kafka_connected": False, "backend_reachable": False}
 
 
 def _login() -> str:
-    """Fetches (or reuses) a bearer token for POST /accounts. Retries forever -
-    the backend may not be up yet, or may be temporarily unreachable."""
+    """Fetches (or reuses) a bearer token for POST /transactions. Retries
+    forever - the backend may not be up yet, or may be temporarily
+    unreachable."""
     global _token
     if _token:
         return _token
@@ -93,14 +94,14 @@ def _parse(raw: bytes) -> dict:
 
 
 def _forward(event: dict) -> bool:
-    """POSTs one event to /accounts. Returns True on success. A 401 clears the
-    cached token so the next attempt re-logs in (e.g. after a backend
-    restart, which wipes its in-memory token store)."""
+    """POSTs one event to /transactions. Returns True on success. A 401
+    clears the cached token so the next attempt re-logs in (e.g. after a
+    backend restart, which wipes its in-memory token store)."""
     global _token
     token = _login()
     try:
         response = requests.post(
-            f"{TARGET_URL}/accounts",
+            f"{TARGET_URL}/transactions",
             json={"name": event["name"], "quantity": event["quantity"]},
             headers={"Authorization": f"Bearer {token}"},
             timeout=5,

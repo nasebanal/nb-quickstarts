@@ -5,7 +5,7 @@ export const scenarioKong: LocalizedDocsPage = {
     title: "Scenario 2: Switch to Kong",
     description:
       "Kong's apps_backend gateway service proxies http://localhost:8000/api/* to the real backend's " +
-      "own root (strip_path: true, so /api/accounts reaches backend:8080/accounts). This scenario " +
+      "own root (strip_path: true, so /api/transactions reaches backend:8080/transactions). This scenario " +
       "routes the frontend through it, then repoints that same service at a contract mock instead of " +
       "the real backend - with no frontend code change either time.",
     sections: [
@@ -83,7 +83,7 @@ export const scenarioKong: LocalizedDocsPage = {
         bullets: [
           "make kong:open (or open http://localhost:8002) → Gateway Services → apps_backend → Edit.",
           "Set Host / Port / Path to one of the targets above, then Save.",
-          "curl http://localhost:8000/api/accounts/balances (or reload the frontend, if it's routed " +
+          "curl http://localhost:8000/api/accounts (or reload the frontend, if it's routed " +
             "through Kong) to confirm - allow a couple of seconds for the change to propagate.",
           "To go back to the real backend: edit apps_backend again, Host backend / Port 8080 / Path " +
             "empty, Save.",
@@ -101,7 +101,7 @@ export const scenarioKong: LocalizedDocsPage = {
         terminal: {
           lines: [
             {
-              text: "$ curl -s http://localhost:8000/api/accounts/balances",
+              text: "$ curl -s http://localhost:8000/api/accounts",
               tone: "muted",
             },
             {
@@ -115,7 +115,7 @@ export const scenarioKong: LocalizedDocsPage = {
             { text: "host: specmatic-mock port: 9091", tone: "info" },
             { text: "" },
             {
-              text: "$ curl -s http://localhost:8000/api/accounts/balances",
+              text: "$ curl -s http://localhost:8000/api/accounts",
               tone: "muted",
             },
             {
@@ -150,7 +150,7 @@ export const scenarioKong: LocalizedDocsPage = {
     title: "シナリオ2: Kong経由への切り替え",
     description:
       "Kongのapps_backendというGateway Serviceは、http://localhost:8000/api/*を実際のbackendのルートへ" +
-      "そのままプロキシします(strip_path: trueなので、/api/accountsはbackend:8080/accountsに届きます)。" +
+      "そのままプロキシします(strip_path: trueなので、/api/transactionsはbackend:8080/transactionsに届きます)。" +
       "このシナリオでは、まずfrontendの接続先をこのKong経由に切り替え、そのうえで同じServiceの向き先を" +
       "実backendから契約モックへ差し替えます — どちらの場合もfrontend側のコード変更は一切不要です。",
     sections: [
@@ -227,7 +227,7 @@ export const scenarioKong: LocalizedDocsPage = {
         bullets: [
           "make kong:open(またはhttp://localhost:8002を開く)→ Gateway Services → apps_backend → Edit。",
           "Host / Port / Pathを上の表いずれかに設定してSave。",
-          "curl http://localhost:8000/api/accounts/balances(またはKong経由のfrontendをリロード)で確認 " +
+          "curl http://localhost:8000/api/accounts(またはKong経由のfrontendをリロード)で確認 " +
             "— 反映まで数秒かかることがあります。",
           "実backendに戻すには: apps_backendを再度編集し、Host backend / Port 8080 / Pathは空でSave。",
         ],
@@ -243,7 +243,7 @@ export const scenarioKong: LocalizedDocsPage = {
         terminal: {
           lines: [
             {
-              text: "$ curl -s http://localhost:8000/api/accounts/balances",
+              text: "$ curl -s http://localhost:8000/api/accounts",
               tone: "muted",
             },
             {
@@ -257,7 +257,7 @@ export const scenarioKong: LocalizedDocsPage = {
             { text: "host: specmatic-mock port: 9091", tone: "info" },
             { text: "" },
             {
-              text: "$ curl -s http://localhost:8000/api/accounts/balances",
+              text: "$ curl -s http://localhost:8000/api/accounts",
               tone: "muted",
             },
             {

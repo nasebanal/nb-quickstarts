@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listBalances, type AccountBalance } from "./api";
+import { listAccounts, type AccountBalance } from "./api";
 
 const POLL_INTERVAL_MS = 1000;
 
-/** Polls GET /accounts/balances on an interval, so the balances table stays
+/** Polls GET /accounts on an interval, so the balances table stays
  * live while a load test (or anyone else) is registering events - no
  * per-event UI updates to render, which is what makes this cheap even
  * during a heavy run: however many events land between two polls, this
@@ -28,7 +28,7 @@ export function useBalances(autoRefresh = true) {
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      setBalances(await listBalances());
+      setBalances(await listAccounts());
     } finally {
       inFlight.current = false;
     }

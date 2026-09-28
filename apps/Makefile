@@ -16,7 +16,7 @@ endif
 #     exported copy in sync with).
 #   - Kafka events reach accounts via a separate container, kafka-bridge
 #     (see kafka/docker-compose.yml + kafka/bridge/), which consumes the
-#     topic and calls POST /accounts over REST - not an in-process consumer
+#     topic and calls POST /transactions over REST - not an in-process consumer
 #     here, so apps/backend has zero Kafka dependency.
 # Locust/Playwright/Vitest/Pytest/Specmatic and Kong (gateway)
 # are added as modules separate from apps, connecting to

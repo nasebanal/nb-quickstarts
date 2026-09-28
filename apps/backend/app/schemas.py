@@ -13,7 +13,7 @@ class CamelModel(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class AccountCreate(CamelModel):
+class TransactionCreate(CamelModel):
     """`quantity` is a signed delta (e.g. -3 to record consumption), not an
     absolute value — see `Account` in models.py."""
 
@@ -21,7 +21,7 @@ class AccountCreate(CamelModel):
     quantity: int = 0
 
 
-class AccountOut(CamelModel):
+class TransactionOut(CamelModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True)
 
     id: int

@@ -25,9 +25,23 @@
 openapi: 3.0.3
 info:
   title: nb-quickstarts apps backend
+  # English, not localized: OpenAPI has no per-field i18n mechanism (every
+  # description/summary is a single string), and Scalar's own UI chrome is
+  # deliberately pinned to English too (see ScalarDoc.tsx) - keeping this
+  # spec's own prose in the same language avoids a spec that's part
+  # English (schema titles, operation summaries, tags), part Japanese (only
+  # this field). Maintaining a second, locale-specific copy of this file
+  # was considered and rejected: this is the hand-maintained, single
+  # source-of-truth contract (see the header comment above) - a second
+  # copy would only ever differ in this one field, but the two would still
+  # need to be kept in lockstep for every real schema/path change,
+  # doubling the maintenance cost of the one property (no drift) this
+  # file's whole design exists for.
   description: >-
-    テスト対象アプリのバックエンドAPI(accounts
-    リソースの最小限のイベントソーシング実装)。この契約(openapi.yaml)がソース・オブ・トゥルースで、実装側がこれに従う。
+    The test-target app's backend API (a minimal event-sourced
+    implementation). /transactions is the append-only event log itself;
+    /accounts is the balance view derived from it. This contract
+    (openapi.yaml) is the source of truth, and the implementation follows it.
   version: 0.1.0
 paths:
   /health:
@@ -98,8 +112,8 @@ paths:
       tags: [me]
       summary: Get Me
       operationId: get_me_me_get
-      # Like POST /accounts: needs a bearer token, which an OpenAPI example
-      # can't carry - so no inline examples;
+      # Like POST /transactions: needs a bearer token, which an OpenAPI
+      # example can't carry - so no inline examples;
       # specmatic:test covers it with externalized examples that send a real
       # token (see specmatic/bin/prepare_contract.sh).
       security:
@@ -160,11 +174,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HTTPValidationError"
-  /accounts:
+  /transactions:
     get:
-      tags: [accounts]
-      summary: List Accounts
-      operationId: list_accounts_accounts_get
+      tags: [transactions]
+      summary: List Transactions
+      operationId: list_transactions_transactions_get
       responses:
         "200":
           description: Successful Response
@@ -172,11 +186,11 @@ paths:
             application/json:
               schema:
                 type: array
-                title: Response List Accounts Accounts Get
+                title: Response List Transactions Transactions Get
                 items:
-                  $ref: "#/components/schemas/AccountOut"
+                  $ref: "#/components/schemas/TransactionOut"
               examples:
-                seeded_accounts:
+                seeded_transactions:
                   value:
                     - id: 1
                       name: Cash
@@ -189,9 +203,18 @@ paths:
                       source: seed
                       createdAt: "2024-01-01T00:00:00"
     post:
-      tags: [accounts]
-      summary: Create Account
-      operationId: create_account_accounts_post
+      tags: [transactions]
+      # Not "Create Account": quantity is a signed delta (see
+      # TransactionCreate below), not an absolute value - this appends one
+      # more event to an account's ledger (a journal entry), same wording
+      # the frontend already uses for it (t.app.registerHeading, "Record a
+      # Transaction" - see accounts/page.tsx). An account itself is never
+      # created directly - GET /accounts is a read model derived from this
+      # log, not a separate resource this operation writes to; a name with
+      # no prior transactions is implicitly created by its first one (see
+      # Account in models.py).
+      summary: Record a Transaction
+      operationId: create_transaction_transactions_post
       # Deliberately no requestBody/response `examples:` here, unlike every
       # other operation - this one needs a real bearer token (see auth.py),
       # which an OpenAPI example has no way to carry (it's a header, not
@@ -208,14 +231,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AccountCreate"
+              $ref: "#/components/schemas/TransactionCreate"
       responses:
         "201":
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AccountOut"
+                $ref: "#/components/schemas/TransactionOut"
         "401":
           description: Missing or invalid bearer token
           content:
@@ -232,11 +255,64 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HTTPValidationError"
-  /accounts/balances:
+  /transactions/{transaction_id}:
+    get:
+      tags: [transactions]
+      summary: Get Transaction
+      operationId: get_transaction_transactions__transaction_id__get
+      parameters:
+        - name: transaction_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: Transaction Id
+          examples:
+            cash_seed_transaction:
+              summary: The seed data's first row - always present
+              value: 1
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionOut"
+              examples:
+                cash_seed_transaction:
+                  value:
+                    id: 1
+                    name: Cash
+                    quantity: 100000
+                    source: seed
+                    createdAt: "2024-01-01T00:00:00"
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
+              examples:
+                not_found:
+                  value:
+                    detail: transaction not found
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+  /accounts:
     get:
       tags: [accounts]
-      summary: List Balances
-      operationId: list_balances_accounts_balances_get
+      # A read model derived from /transactions (one row per distinct name,
+      # its balance the running sum of every transaction posted against
+      # it) - not a separately created/stored entity, so this is the only
+      # operation this resource has: no POST (see /transactions instead)
+      # and no GET /accounts/{id}, since an account's identity is its name,
+      # not an integer id the way a transaction's is.
+      summary: List Accounts
+      operationId: list_accounts_accounts_get
       responses:
         "200":
           description: Successful Response
@@ -244,7 +320,7 @@ paths:
             application/json:
               schema:
                 type: array
-                title: Response List Balances Accounts Balances Get
+                title: Response List Accounts Accounts Get
                 items:
                   $ref: "#/components/schemas/AccountBalance"
               examples:
@@ -259,53 +335,6 @@ paths:
                     - name: Sales Revenue
                       balance: 50000
                       eventCount: 1
-  /accounts/{account_id}:
-    get:
-      tags: [accounts]
-      summary: Get Account
-      operationId: get_account_accounts__account_id__get
-      parameters:
-        - name: account_id
-          in: path
-          required: true
-          schema:
-            type: integer
-            title: Account Id
-          examples:
-            cash_account:
-              summary: The seed data's first row - always present
-              value: 1
-      responses:
-        "200":
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AccountOut"
-              examples:
-                cash_account:
-                  value:
-                    id: 1
-                    name: Cash
-                    quantity: 100000
-                    source: seed
-                    createdAt: "2024-01-01T00:00:00"
-        "404":
-          description: Account not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HTTPError"
-              examples:
-                not_found:
-                  value:
-                    detail: account not found
-        "422":
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HTTPValidationError"
 components:
   securitySchemes:
     HTTPBearer:
@@ -330,9 +359,9 @@ components:
         eventCount:
           type: integer
           title: Eventcount
-    AccountCreate:
+    TransactionCreate:
       type: object
-      title: AccountCreate
+      title: TransactionCreate
       description: >-
         `quantity` is a signed delta (e.g. -3 to record consumption), not an
         absolute value - see `Account` in models.py.
@@ -345,9 +374,9 @@ components:
           type: integer
           title: Quantity
           default: 0
-    AccountOut:
+    TransactionOut:
       type: object
-      title: AccountOut
+      title: TransactionOut
       required: [id, name, quantity, source, createdAt]
       properties:
         id:

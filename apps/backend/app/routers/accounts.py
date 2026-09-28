@@ -1,48 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_username
 from app.db import get_db
-from app.schemas import AccountBalance, AccountCreate, AccountOut
+from app.schemas import AccountBalance
 from app.services import account_service
 
+# An account - one distinct name and its current balance, the running total
+# of every transaction posted against it (routers/transactions.py) - is a
+# read model derived from the transaction log, not a separately created
+# entity: there's no POST here, an account with no prior transactions is
+# implicitly created by its first one (see Account in models.py). Split
+# from the transaction log itself on purpose: the same event-sourced idea
+# Chris Richardson's Event Sourcing / CQRS patterns describe (the write
+# side is the immutable log; this is a read-side projection over it), just
+# without a separate datastore or event store for it - both still come from
+# the one `accounts` table (account_service.py).
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
-@router.get("", response_model=list[AccountOut])
-def list_accounts(db: Session = Depends(get_db)) -> list[AccountOut]:
-    accounts = account_service.list_accounts(db)
-    return [AccountOut.model_validate(account) for account in accounts]
-
-
-# Must be declared before GET /{account_id} - otherwise FastAPI would try to
-# match "balances" as an account_id (an int) and fail with a 422 instead of
-# reaching this route.
-@router.get("/balances", response_model=list[AccountBalance])
-def list_balances(db: Session = Depends(get_db)) -> list[AccountBalance]:
+@router.get("", response_model=list[AccountBalance])
+def list_accounts(db: Session = Depends(get_db)) -> list[AccountBalance]:
     return account_service.get_balances(db)
-
-
-@router.get("/{account_id}", response_model=AccountOut)
-def get_account(
-    # examples=[1]: the seed data's first row - stable and always present
-    # (this table is append-only, nothing ever deletes it) - so contract
-    # testers that read OpenAPI examples (e.g. Specmatic) exercise a real
-    # id instead of a random one that's guaranteed to 404.
-    account_id: int = Path(examples=[1]),
-    db: Session = Depends(get_db),
-) -> AccountOut:
-    account = account_service.get_account(db, account_id)
-    if account is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="account not found")
-    return AccountOut.model_validate(account)
-
-
-@router.post("", response_model=AccountOut, status_code=status.HTTP_201_CREATED)
-def create_account(
-    payload: AccountCreate,
-    db: Session = Depends(get_db),
-    username: str = Depends(get_current_username),
-) -> AccountOut:
-    account = account_service.register_account(db, payload, source="api")
-    return AccountOut.model_validate(account)

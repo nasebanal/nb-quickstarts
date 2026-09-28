@@ -185,7 +185,7 @@ make apps:restart   # frontend needs recreating - Next.js dev mode bakes NEXT_PU
    | Real backend (default) | `backend` | `8080` | *(empty)* |
    | Specmatic's mock (`make specmatic:mock-up` first) | `specmatic-mock` | `9091` | *(empty)* |
 
-3. `curl http://localhost:8000/api/accounts/balances` (or reload `apps/frontend`, if it's routed through Kong) to confirm - allow a couple of seconds for the change to propagate to Kong's own worker processes.
+3. `curl http://localhost:8000/api/accounts` (or reload `apps/frontend`, if it's routed through Kong) to confirm - allow a couple of seconds for the change to propagate to Kong's own worker processes.
 4. To go back to the real backend: edit `apps_backend` again, Host `backend` / Port `8080` / Path empty, **Save**.
 
 Verified this way, not just described: every request during a real `make playwright:test` run against a Kong-routed frontend showed up in Kong's own access log going to `/api/*`, and pointing `apps_backend` at Specmatic's mock returned exactly the example values from `openapi.yaml`, confirmed via `curl` and Specmatic's own request log.
@@ -194,7 +194,7 @@ There's only ever one `apps_backend` service to edit — no separate service per
 
 ### Keycloak: a real login, and a real token the backend verifies
 
-`apps/backend`'s `POST /accounts` is protected by `app/auth.py`'s `get_current_username` — until now, only satisfiable with a mock token from `POST /auth/login` (a username, no password). Keycloak adds a real OIDC login: the login page gets a **Demo login / Keycloak** toggle (with **Sign up**), you authenticate at Keycloak like you would with "Sign in with Google", and the backend accepts the JWT Keycloak issued on the exact same route. One variable turns on both the backend and the login page:
+`apps/backend`'s `POST /transactions` is protected by `app/auth.py`'s `get_current_username` — until now, only satisfiable with a mock token from `POST /auth/login` (a username, no password). Keycloak adds a real OIDC login: the login page gets a **Demo login / Keycloak** toggle (with **Sign up**), you authenticate at Keycloak like you would with "Sign in with Google", and the backend accepts the JWT Keycloak issued on the exact same route. One variable turns on both the backend and the login page:
 
 ```bash
 make apps:up
@@ -205,7 +205,7 @@ make apps:restart          # backend and frontend need recreating to pick it up
 
 Then open http://localhost:5173, click Login, pick **Keycloak**, and sign in as `keycloak-demo` / `nasebanal-demo` (or **Sign up** for a new user — the form is Keycloak's own; `make keycloak:open` shows the user in the admin console). The user menu shows a Keycloak badge, and recording a transaction succeeds because the backend verified the token's signature against Keycloak's public keys.
 
-Without a browser: `make keycloak:verify-apps` gets a token for the demo user (password grant) and sends it as `Authorization: Bearer` to `POST /accounts`; `make keycloak:login` just prints one, for trying by hand with curl. A token without a valid signature, or no token at all, gets a `401`. `KEYCLOAK_ISSUER` is the address the *browser* logs in at (and the `iss` every token carries); the backend fetches the signing keys from `KEYCLOAK_JWKS_URL` (default `http://keycloak:8080/...`, the in-network address). Setting `KEYCLOAK_ISSUER` back to empty and restarting returns to mock-token-only.
+Without a browser: `make keycloak:verify-apps` gets a token for the demo user (password grant) and sends it as `Authorization: Bearer` to `POST /transactions`; `make keycloak:login` just prints one, for trying by hand with curl. A token without a valid signature, or no token at all, gets a `401`. `KEYCLOAK_ISSUER` is the address the *browser* logs in at (and the `iss` every token carries); the backend fetches the signing keys from `KEYCLOAK_JWKS_URL` (default `http://keycloak:8080/...`, the in-network address). Setting `KEYCLOAK_ISSUER` back to empty and restarting returns to mock-token-only.
 
 ### Vault: the backend has no MySQL password - Vault creates a user for it
 
@@ -235,9 +235,9 @@ make agentgateway:up
 make agentgateway:tools   # does the MCP handshake by hand, lists what's actually being served
 ```
 
-Verified end-to-end: `agentgateway:tools` lists six tools - `health_health_get`, `login_auth_login_post`, `list_accounts_accounts_get`, `create_account_accounts_post`, `list_balances_accounts_balances_get`, `get_account_accounts__account_id__get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_balances_accounts_balances_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts/balances` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
+Verified end-to-end: `agentgateway:tools` lists six tools - `health_health_get`, `login_auth_login_post`, `list_transactions_transactions_get`, `create_transaction_transactions_post`, `get_transaction_transactions__transaction_id__get`, `list_accounts_accounts_get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_accounts_accounts_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
 
-Point an MCP client (Claude Desktop, [mcp-inspector](https://github.com/modelcontextprotocol/inspector), ...) at `http://localhost:8010/mcp` to use it interactively. `create_account_accounts_post` needs a real bearer token, same as `POST /accounts` itself does everywhere else - call `login_auth_login_post` first and pass its token back as an `Authorization` header, or the tool call 401s the same way an unauthenticated `curl` would.
+Point an MCP client (Claude Desktop, [mcp-inspector](https://github.com/modelcontextprotocol/inspector), ...) at `http://localhost:8010/mcp` to use it interactively. `create_transaction_transactions_post` needs a real bearer token, same as `POST /transactions` itself does everywhere else - call `login_auth_login_post` first and pass its token back as an `Authorization` header, or the tool call 401s the same way an unauthenticated `curl` would.
 
 agentgateway also ships a real dashboard UI (a React SPA, built into the image by default - `Dockerfile`'s `CARGO_FEATURES=agentgateway-app/ui`), served off its **admin** port, separate from the MCP port above:
 
@@ -272,7 +272,7 @@ Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't expor
 
 ### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
 
-`make kafka:bridge-up` starts a small standalone consumer (`kafka/bridge/`) that reads events off the Kafka topic and forwards each one to a REST backend via `POST /accounts` — `apps/backend` by default, but `KAFKA_BRIDGE_TARGET_URL` can point anywhere, same as every other test tool's target host. It's deliberately separate from `kafka:up` (opt in explicitly) and lives in its own container rather than inside `apps/backend`, so a Kafka or backend outage only ever affects the bridge itself — it just retries forever, and only commits a Kafka offset after a successful delivery, so an outage pauses ingestion rather than losing events.
+`make kafka:bridge-up` starts a small standalone consumer (`kafka/bridge/`) that reads events off the Kafka topic and forwards each one to a REST backend via `POST /transactions` — `apps/backend` by default, but `KAFKA_BRIDGE_TARGET_URL` can point anywhere, same as every other test tool's target host. It's deliberately separate from `kafka:up` (opt in explicitly) and lives in its own container rather than inside `apps/backend`, so a Kafka or backend outage only ever affects the bridge itself — it just retries forever, and only commits a Kafka offset after a successful delivery, so an outage pauses ingestion rather than losing events.
 
 ```bash
 make apps:up
@@ -440,7 +440,7 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 | `KAFKA_PORT` | `9092` | Host-published broker port |
 | `KAFKA_TOPIC_NAME` | `quickstart-events` | Topic `kafka:add-topics` creates and everything else reads/writes |
 | `KAFKA_TOPIC_PARTITIONS` | `1` | Partition count for that topic |
-| `KAFKA_BRIDGE_TARGET_URL` | `http://backend:8080` | Where kafka-bridge forwards events via `POST /accounts` - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
+| `KAFKA_BRIDGE_TARGET_URL` | `http://backend:8080` | Where kafka-bridge forwards events via `POST /transactions` - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
 | `KAFKA_BRIDGE_HEALTH_PORT` | `8090` | kafka-bridge's own `/health` port |
 
 ### Keycloak

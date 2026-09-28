@@ -21,7 +21,7 @@ from app.passwords import verify_password
 # verify it on its own, with no shared store and no database query - which is
 # what running several instances behind a load balancer needs, and what keeps login as
 # cheap as it always was for the load-test scenarios (login must not compete
-# with POST /accounts for the DB connection pool). It also survives restarts
+# with POST /transactions for the DB connection pool). It also survives restarts
 # for free. There is no expiry and no revocation, by design: it is the demo
 # login, not a session system. (It used to be an in-memory dict persisted to
 # a JSON file; several instances writing that file overwrote each other's
@@ -98,7 +98,7 @@ class Principal:
 # the process. Login then costs one PBKDF2 and no database round-trip after the
 # first: Locust's overload scenarios log in once per simulated user, and a DB
 # query per login would make login compete for the same connection pool the
-# scenarios are trying to exhaust with POST /accounts. (The hashes never change
+# scenarios are trying to exhaust with POST /transactions. (The hashes never change
 # - there is no change-password feature.)
 _password_hashes: dict[str, str] = {}
 

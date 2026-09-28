@@ -24,35 +24,35 @@ TOKEN=$(curl -sf -X POST http://backend:8080/auth/login \
   -H "Content-Type: application/json" -d '{"username": "demo", "password": "demo"}' | jq -r .token)
 
 jq -n --arg token "$TOKEN" \
-  '{"http-request": {"method": "POST", "path": "/accounts", "headers": {"Authorization": ("Bearer " + $token)}, "body": {"name": "Specmatic Test Account", "quantity": 1}}, "http-response": {"status": 201, "body": {"id": 1, "name": "Specmatic Test Account", "quantity": 1, "source": "api", "createdAt": "2024-01-01T00:00:00"}}}' \
-  > examples/post-accounts.json
+  '{"http-request": {"method": "POST", "path": "/transactions", "headers": {"Authorization": ("Bearer " + $token)}, "body": {"name": "Specmatic Test Account", "quantity": 1}}, "http-response": {"status": 201, "body": {"id": 1, "name": "Specmatic Test Account", "quantity": 1, "source": "api", "createdAt": "2024-01-01T00:00:00"}}}' \
+  > examples/post-transactions.json
 
-curl -sf http://backend:8080/accounts/1 |
-  jq '{"http-request": {"method": "GET", "path": "/accounts/1"}, "http-response": {"status": 200, "body": .}}' \
-  > examples/get-accounts-account_id.json
+curl -sf http://backend:8080/transactions/1 |
+  jq '{"http-request": {"method": "GET", "path": "/transactions/1"}, "http-response": {"status": 200, "body": .}}' \
+  > examples/get-transactions-transaction_id.json
 
 curl -s -X POST http://backend:8080/auth/login -H "Content-Type: application/json" -d '{}' |
   jq '{"http-request": {"method": "POST", "path": "/auth/login", "body": {}}, "http-response": {"status": 422, "body": .}}' \
   > examples/post-auth-login-422.json
 
-curl -s -X POST http://backend:8080/accounts -H "Content-Type: application/json" \
+curl -s -X POST http://backend:8080/transactions -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" -d '{}' |
   jq --arg token "$TOKEN" \
-  '{"http-request": {"method": "POST", "path": "/accounts", "headers": {"Authorization": ("Bearer " + $token)}, "body": {}}, "http-response": {"status": 422, "body": .}}' \
-  > examples/post-accounts-422.json
+  '{"http-request": {"method": "POST", "path": "/transactions", "headers": {"Authorization": ("Bearer " + $token)}, "body": {}}, "http-response": {"status": 422, "body": .}}' \
+  > examples/post-transactions-422.json
 
-curl -s http://backend:8080/accounts/not-a-number |
-  jq '{"http-request": {"method": "GET", "path": "/accounts/not-a-number"}, "http-response": {"status": 422, "body": .}}' \
-  > examples/get-accounts-account_id-422.json
+curl -s http://backend:8080/transactions/not-a-number |
+  jq '{"http-request": {"method": "GET", "path": "/transactions/not-a-number"}, "http-response": {"status": 422, "body": .}}' \
+  > examples/get-transactions-transaction_id-422.json
 
-curl -s -X POST http://backend:8080/accounts -H "Content-Type: application/json" \
+curl -s -X POST http://backend:8080/transactions -H "Content-Type: application/json" \
   -H "Authorization: Bearer invalid-token" -d '{"name": "x", "quantity": 1}' |
-  jq '{"http-request": {"method": "POST", "path": "/accounts", "headers": {"Authorization": "Bearer invalid-token"}, "body": {"name": "x", "quantity": 1}}, "http-response": {"status": 401, "body": .}}' \
-  > examples/post-accounts-401.json
+  jq '{"http-request": {"method": "POST", "path": "/transactions", "headers": {"Authorization": "Bearer invalid-token"}, "body": {"name": "x", "quantity": 1}}, "http-response": {"status": 401, "body": .}}' \
+  > examples/post-transactions-401.json
 
-curl -s http://backend:8080/accounts/999999 |
-  jq '{"http-request": {"method": "GET", "path": "/accounts/999999"}, "http-response": {"status": 404, "body": .}}' \
-  > examples/get-accounts-account_id-404.json
+curl -s http://backend:8080/transactions/999999 |
+  jq '{"http-request": {"method": "GET", "path": "/transactions/999999"}, "http-response": {"status": 404, "body": .}}' \
+  > examples/get-transactions-transaction_id-404.json
 
 # POST /auth/login with a wrong password - the documented 401.
 curl -s -X POST http://backend:8080/auth/login -H "Content-Type: application/json" \
@@ -60,8 +60,9 @@ curl -s -X POST http://backend:8080/auth/login -H "Content-Type: application/jso
   jq '{"http-request": {"method": "POST", "path": "/auth/login", "body": {"username": "demo", "password": "wrong"}}, "http-response": {"status": 401, "body": .}}' \
   > examples/post-auth-login-401.json
 
-# GET /me and PUT /me/profile need a bearer token, like POST /accounts - so the
-# token goes in externalized examples, with each expected body fetched live.
+# GET /me and PUT /me/profile need a bearer token, like POST /transactions -
+# so the token goes in externalized examples, with each expected body
+# fetched live.
 curl -sf http://backend:8080/me -H "Authorization: Bearer $TOKEN" |
   jq --arg token "$TOKEN" \
   '{"http-request": {"method": "GET", "path": "/me", "headers": {"Authorization": ("Bearer " + $token)}}, "http-response": {"status": 200, "body": .}}' \

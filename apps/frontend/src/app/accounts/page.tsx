@@ -3,7 +3,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/components/LocaleProvider";
-import { API_BASE, checkKafkaBridge, checkViaKong, createAccount, UnauthorizedError } from "@/lib/api";
+import { API_BASE, checkKafkaBridge, checkViaKong, createTransaction, UnauthorizedError } from "@/lib/api";
 import { useBalances } from "@/lib/useBalances";
 
 // Shared by every "is X actually true right now" status check next to the
@@ -59,17 +59,17 @@ export default function AccountsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- navigate is stable enough (same convention as AuthProvider.tsx's setLocale); re-run only when auth state changes
   }, [initializing, token]);
 
-  const onCreateAccount = async (event: FormEvent<HTMLFormElement>) => {
+  const onRecordTransaction = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // The <select> below is `required`, but it's also `disabled` while
     // there are zero accounts (nothing to pick), and browsers skip
     // constraint validation on a disabled control - so `required` alone
-    // would not stop a blank accountName from reaching createAccount() in
+    // would not stop a blank accountName from reaching createTransaction() in
     // that state. Guard it explicitly here too.
     if (!token || !accountName) return;
     setAccountError("");
     try {
-      await createAccount(token, { name: accountName, quantity: Number(accountQuantity) });
+      await createTransaction(token, { name: accountName, quantity: Number(accountQuantity) });
       setAccountName("");
       setAccountQuantity("0");
       // The polling hook picks this up on its own within POLL_INTERVAL_MS
@@ -159,7 +159,7 @@ export default function AccountsPage() {
 
         <section>
           <h2>{t.app.registerHeading}</h2>
-          <form data-testid="account-form" onSubmit={onCreateAccount}>
+          <form data-testid="account-form" onSubmit={onRecordTransaction}>
             <select
               name="name"
               value={accountName}
@@ -170,7 +170,7 @@ export default function AccountsPage() {
             >
               {/* This placeholder is the only option while there are zero
                   accounts, and can never itself be submitted - the submit
-                  button is disabled in the same state, and onCreateAccount
+                  button is disabled in the same state, and onRecordTransaction
                   guards against an empty accountName besides. */}
               {balances.length === 0 && <option value="">{t.app.noAccountsPlaceholder}</option>}
               {balances.map((balance) => (

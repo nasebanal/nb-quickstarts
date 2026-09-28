@@ -2,6 +2,7 @@
 
 import { DocsArticle } from "@/components/docs/DocsArticle";
 import { ArchitectureDiagram } from "@/components/docs/ArchitectureDiagram";
+import { EventSourcingDiagram } from "@/components/docs/EventSourcingDiagram";
 import { useLocale } from "@/components/LocaleProvider";
 import { overview } from "@/lib/docs/overview";
 
@@ -23,6 +24,9 @@ export default function DocsOverviewPage() {
             />
           </>
         ),
+        // Rendered inside the Overview's "The demo app's data model" section
+        // (see slot: "eventSourcing" in lib/docs/overview.ts).
+        eventSourcing: <EventSourcingDiagram />,
       }}
     />
   );
