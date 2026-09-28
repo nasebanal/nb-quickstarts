@@ -4,6 +4,7 @@ __pycache__/
 *.pyd
 .venv/
 .vscode/
+.idea/
 .DS_Store
 *.log
 *.sqlite3

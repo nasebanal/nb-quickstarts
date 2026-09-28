@@ -1,7 +1,7 @@
 // A Consumer-side contract test: unlike api.test.ts (which mocks fetch
 // entirely and never touches a real server) or Playwright's E2E tests
 // (which exercise the real, currently-running backend), this file makes
-// real HTTP requests against a Specmatic stub built from apps/backend's
+// real HTTP requests against a Specmatic mock built from apps/backend's
 // checked-in contract (apps/backend/openapi.yaml) - see
 // specmatic/bin/prepare_contract.sh. That answers a different question
 // than either of those: "does this frontend's actual API usage - the
@@ -9,21 +9,21 @@
 // expects to parse - hold up against the *contract*, independent of
 // whatever the real backend happens to be doing right now?"
 //
-// The stub returns our examples' exact values for requests that match one
+// The mock returns our examples' exact values for requests that match one
 // (e.g. GET /accounts/1), and schema-valid *random* values for anything
 // else (e.g. plain GET /accounts) - so most assertions here check shape/
 // type, not specific values, except where an example guarantees one.
 //
-// Requires: make apps:up (the stub still needs the real backend once, to
-// fetch the schema + build examples from - see specmatic:stub-up) and
-// make specmatic:stub-up. Run via `make vitest:contract-test`, not
+// Requires: make apps:up (the mock still needs the real backend once, to
+// fetch the schema + build examples from - see specmatic:mock-up) and
+// make specmatic:mock-up. Run via `make vitest:contract-test`, not
 // `vitest:test` - this is deliberately a separate, opt-in command, since
 // unlike every other vitest test it isn't self-contained (see vitest's
 // own Makefile Note).
 import { describe, expect, it } from "vitest";
 import { createAccount, listAccounts, listBalances, login, UnauthorizedError } from "../api";
 
-describe("api client against the Specmatic contract stub", () => {
+describe("api client against the Specmatic contract mock", () => {
   it("login returns a token and username", async () => {
     const result = await login("demo", "demo");
     expect(typeof result.token).toBe("string");
@@ -56,9 +56,9 @@ describe("api client against the Specmatic contract stub", () => {
 
   it("createAccount with a valid token returns the created Account", async () => {
     // Body must match prepare_contract.sh's post-accounts.json example
-    // exactly - the stub only returns its canned 201 for a matching body,
+    // exactly - the mock only returns its canned 201 for a matching body,
     // regardless of the token's actual value (confirmed empirically: the
-    // stub doesn't validate auth, it dispatches purely on method+path+body
+    // mock doesn't validate auth, it dispatches purely on method+path+body
     // shape/value, falling back to a schema-random response - not
     // necessarily 201 - for anything that doesn't match an example).
     const { token } = await login("demo", "demo");

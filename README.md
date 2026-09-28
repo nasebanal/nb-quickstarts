@@ -48,7 +48,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Kong | Manager UI | http://localhost:8002 | `kong:8002` | HTTPS: 8445 (host), `kong:8445` (in-network); edits need DB mode (the default) |
 | Kafka | Broker | localhost:9092 | `kafka:29092` | `KAFKA_PORT`; the in-network listener is a *different* port (`29092`, `PLAINTEXT_INTERNAL`) than the host-published one (`9092`, `PLAINTEXT`) - see `kafka/docker-compose.yml`'s `KAFKA_LISTENERS` comment |
 | Kafka | kafka-bridge health | http://localhost:8090/health | `kafka-bridge:8090/health` | Only once `kafka:bridge-up` has run; `KAFKA_BRIDGE_HEALTH_PORT` |
-| Specmatic | Mock server | http://localhost:9091 | `specmatic-stub:9091` | `SPECMATIC_STUB_PORT`; needs `apps:up` first (`make specmatic:stub-up`) |
+| Specmatic | Mock server | http://localhost:9091 | `specmatic-mock:9091` | `SPECMATIC_MOCK_PORT`; needs `apps:up` first (`make specmatic:mock-up`) |
 | Keycloak | Admin console | http://localhost:8180/admin | `keycloak:8080/admin` | `KEYCLOAK_PORT`; realm `nasebanal`, admin/admin by default |
 | Keycloak | Token endpoint (realm `nasebanal`) | http://localhost:8180/realms/nasebanal/... | `keycloak:8080/realms/nasebanal/...` | Client `apps-demo`, user `keycloak-demo` / `nasebanal-demo` - see [Keycloak: a real login, and a real token the backend verifies](#keycloak-a-real-login-and-a-real-token-the-backend-verifies) |
 | Vault | UI / API | http://localhost:8200 | `vault:8200` | `VAULT_PORT`; dev-mode root token `VAULT_ROOT_TOKEN` |
@@ -158,12 +158,12 @@ make specmatic:test          # Provider: real requests against the real running 
 ```
 
 ```bash
-make apps:up                 # needed once, to seed the stub's schema + examples
-make specmatic:stub-up       # mock server built from the same contract (localhost:9091)
+make apps:up                 # needed once, to seed the mock's schema + examples
+make specmatic:mock-up       # mock server built from the same contract (localhost:9091)
 make vitest:contract-test    # Consumer: apps/frontend's real api.ts calls against the mock, not a mocked fetch or the real backend
 ```
 
-`specmatic/bin/prepare_contract.sh` (shared by both `specmatic:test` and `specmatic:stub-up`) fetches the live schema and builds 7 externalized examples fresh on every run — a real bearer token, an id that actually exists, and deliberately-invalid requests covering every documented non-2xx response — so Specmatic's own coverage report reaches 100%. See `AGENTS.md`'s Specmatic section for the full story, including a dead end (Specmatic's own security-token config parses correctly but has no effect on generated requests) and why `SPECMATIC_GENERATIVE_TESTS` was tried and rejected in favor of explicit negative examples.
+`specmatic/bin/prepare_contract.sh` (shared by both `specmatic:test` and `specmatic:mock-up`) fetches the live schema and builds 7 externalized examples fresh on every run — a real bearer token, an id that actually exists, and deliberately-invalid requests covering every documented non-2xx response — so Specmatic's own coverage report reaches 100%. See `AGENTS.md`'s Specmatic section for the full story, including a dead end (Specmatic's own security-token config parses correctly but has no effect on generated requests) and why `SPECMATIC_GENERATIVE_TESTS` was tried and rejected in favor of explicit negative examples.
 
 ### Kong: routing to the real backend, or to a contract mock instead
 
@@ -183,7 +183,7 @@ make apps:restart   # frontend needs recreating - Next.js dev mode bakes NEXT_PU
    | Target | Host | Port | Path |
    |---|---|---|---|
    | Real backend (default) | `backend` | `8080` | *(empty)* |
-   | Specmatic's stub (`make specmatic:stub-up` first) | `specmatic-stub` | `9091` | *(empty)* |
+   | Specmatic's mock (`make specmatic:mock-up` first) | `specmatic-mock` | `9091` | *(empty)* |
 
 3. `curl http://localhost:8000/api/accounts/balances` (or reload `apps/frontend`, if it's routed through Kong) to confirm - allow a couple of seconds for the change to propagate to Kong's own worker processes.
 4. To go back to the real backend: edit `apps_backend` again, Host `backend` / Port `8080` / Path empty, **Save**.
@@ -463,7 +463,7 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 
 | Variable | Default | Description |
 |---|---|---|
-| `SPECMATIC_STUB_PORT` | `9091` | `specmatic:stub-up`'s mock server port |
+| `SPECMATIC_MOCK_PORT` | `9091` | `specmatic:mock-up`'s mock server port |
 | `PLAYWRIGHT_BASE_URL` | `http://localhost:5173` | URL Playwright navigates to (runs on the host network, not `apps-network`) |
 
 ### Locust
@@ -524,7 +524,7 @@ Every `make <module>:test` run leaves a browsable report behind. These are all g
 | `vitest` | `vitest/report/index.html` |
 | `vitest:contract-test` | `vitest/report-contract/index.html` |
 | `playwright` | `playwright/report/index.html` |
-| `specmatic` | `specmatic/report/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml` |
+| `specmatic` | `specmatic/report/test/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml` |
 | `locust` | `locust/logs/<timestamp>/report.html`, plus the files below |
 | `zap` | `zap/report/<scan>-report.html` (also `.json`) - `baseline`/`full-scan`/`api-scan`, overwritten each run |
 
@@ -571,7 +571,7 @@ make vitest:test            # apps/frontend unit tests (fetch mocked, apps:up no
 make playwright:test        # E2E browser test against the running frontend (requires apps:up)
 make specmatic:test         # Provider contract test: does the backend honor apps/backend/openapi.yaml? (requires apps:up)
 
-make specmatic:stub-up      # mock server built from the same contract (requires apps:up)
+make specmatic:mock-up      # mock server built from the same contract (requires apps:up)
 make vitest:contract-test   # Consumer contract test: does the frontend's API usage hold up against it?
 
 ```

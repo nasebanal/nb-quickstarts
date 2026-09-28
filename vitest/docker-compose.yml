@@ -11,9 +11,9 @@ services:
     command: npm run test:report
 
   # Consumer-side contract test: runs only src/lib/contract/ against a
-  # Specmatic stub (make specmatic:stub-up), not the real backend - see
+  # Specmatic mock (make specmatic:mock-up), not the real backend - see
   # that directory's api.consumer.test.ts for why. Needs apps-network to
-  # reach the stub by its service name, unlike the `vitest` service above
+  # reach the mock by its service name, unlike the `vitest` service above
   # (fetch entirely mocked, no network needed at all).
   vitest-contract:
     build:
@@ -25,7 +25,7 @@ services:
       - ./report-contract:/report
     working_dir: /app
     environment:
-      NEXT_PUBLIC_API_BASE: http://specmatic-stub:${SPECMATIC_STUB_PORT:-9091}
+      NEXT_PUBLIC_API_BASE: http://specmatic-mock:${SPECMATIC_MOCK_PORT:-9091}
     command: npm run test:contract-report
     networks:
       - apps-network

@@ -12,7 +12,7 @@
 # hand-maintained contract, "does the implementation still honor this
 # file" becomes a real, failable question - which is the whole point of
 # Contract-Driven Development. Consumers (apps/frontend, kafka-bridge,
-# Specmatic's stub for consumer-side testing) and the Provider
+# Specmatic's mock for consumer-side testing) and the Provider
 # (apps/backend) both build against this one file independently.
 #
 # GraphQL (/graphql) is deliberately not described here - it's a separate

@@ -13,8 +13,8 @@ const htmlReportDir = process.env.VITEST_HTML_REPORT;
 export default defineConfig({
   test: {
     reporters: htmlReportDir ? ["default", ["html", { outputDir: htmlReportDir }]] : ["default"],
-    // src/lib/contract/ needs a running Specmatic stub (make
-    // specmatic:stub-up) - excluded from the default `vitest:test` run
+    // src/lib/contract/ needs a running Specmatic mock (make
+    // specmatic:mock-up) - excluded from the default `vitest:test` run
     // (which is otherwise fully self-contained, fetch mocked out, no
     // apps:up needed) and run separately via vitest.contract.config.mts /
     // `make vitest:contract-test` instead. Spreading defaultExclude here

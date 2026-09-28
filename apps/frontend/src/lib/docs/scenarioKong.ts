@@ -47,7 +47,7 @@ export const scenarioKong: LocalizedDocsPage = {
           {
             label:
               "Specmatic's mock (needs apps:up first, to seed its schema+examples):",
-            code: "make specmatic:stub-up",
+            code: "make specmatic:mock-up",
           },
         ],
         note:
@@ -66,7 +66,7 @@ export const scenarioKong: LocalizedDocsPage = {
           headers: ["Target", "Host", "Port", "Path"],
           rows: [
             ["Real backend (default)", "backend", "8080", "(empty)"],
-            ["Specmatic's mock", "specmatic-stub", "9091", "(empty)"],
+            ["Specmatic's mock", "specmatic-mock", "9091", "(empty)"],
           ],
         },
         images: [
@@ -109,10 +109,10 @@ export const scenarioKong: LocalizedDocsPage = {
             },
             { text: "" },
             {
-              text: "$ curl -s -X PATCH http://localhost:8001/services/apps_backend -d host=specmatic-stub -d port=9091",
+              text: "$ curl -s -X PATCH http://localhost:8001/services/apps_backend -d host=specmatic-mock -d port=9091",
               tone: "muted",
             },
-            { text: "host: specmatic-stub port: 9091", tone: "info" },
+            { text: "host: specmatic-mock port: 9091", tone: "info" },
             { text: "" },
             {
               text: "$ curl -s http://localhost:8000/api/accounts/balances",
@@ -139,7 +139,7 @@ export const scenarioKong: LocalizedDocsPage = {
             code:
               "# .env: remove NEXT_PUBLIC_API_BASE (or set it back to http://localhost:8080)\n" +
               "make apps:restart          # frontend needs recreating to pick up the change\n" +
-              "make specmatic:stub-down   # if you started Specmatic's mock\n" +
+              "make specmatic:mock-down   # if you started Specmatic's mock\n" +
               "make kong:down",
           },
         ],
@@ -192,7 +192,7 @@ export const scenarioKong: LocalizedDocsPage = {
           {
             label:
               "Specmaticのモック(先にapps:upが必要 — スキーマ/exampleを取り込むため):",
-            code: "make specmatic:stub-up",
+            code: "make specmatic:mock-up",
           },
         ],
         note:
@@ -210,7 +210,7 @@ export const scenarioKong: LocalizedDocsPage = {
           headers: ["向き先", "Host", "Port", "Path"],
           rows: [
             ["実backend(デフォルト)", "backend", "8080", "(空)"],
-            ["Specmaticのモック", "specmatic-stub", "9091", "(空)"],
+            ["Specmaticのモック", "specmatic-mock", "9091", "(空)"],
           ],
         },
         images: [
@@ -251,10 +251,10 @@ export const scenarioKong: LocalizedDocsPage = {
             },
             { text: "" },
             {
-              text: "$ curl -s -X PATCH http://localhost:8001/services/apps_backend -d host=specmatic-stub -d port=9091",
+              text: "$ curl -s -X PATCH http://localhost:8001/services/apps_backend -d host=specmatic-mock -d port=9091",
               tone: "muted",
             },
-            { text: "host: specmatic-stub port: 9091", tone: "info" },
+            { text: "host: specmatic-mock port: 9091", tone: "info" },
             { text: "" },
             {
               text: "$ curl -s http://localhost:8000/api/accounts/balances",
@@ -281,7 +281,7 @@ export const scenarioKong: LocalizedDocsPage = {
             code:
               "# .env: NEXT_PUBLIC_API_BASEを削除(またはhttp://localhost:8080に戻す)\n" +
               "make apps:restart          # frontendを再作成して変更を反映\n" +
-              "make specmatic:stub-down   # Specmaticのモックを起動した場合\n" +
+              "make specmatic:mock-down   # Specmaticのモックを起動した場合\n" +
               "make kong:down",
           },
         ],
