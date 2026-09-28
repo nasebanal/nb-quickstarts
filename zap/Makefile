@@ -26,6 +26,10 @@ zap:
 	@echo "                  needs this instead; also cleans up the container docker compose run"
 	@echo "                  --rm would otherwise leave behind after a hard kill)"
 	@echo ""
+	@echo "  zap:report    - Open every *-report.html currently in zap/report/ in your browser"
+	@echo "                  (whichever scans have actually been run - not a fixed list, so a"
+	@echo "                  new scan type added later is picked up with no change needed here)"
+	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  ZAP_VERSION=2.17.0 # zaproxy/zap-stable image tag"
 	@echo ""
@@ -107,3 +111,22 @@ zap-scan:
 	@$(MAKE) zap-api-scan
 	@echo ""
 	@echo "All three scans passed. Reports: zap/report/{baseline,full-scan,api-scan}-report.html"
+
+# ZAP's own report.html is self-contained (styles/JS inlined) - opens fine
+# via file://, same as pytest's/specmatic's. Globs zap/report/*.html rather
+# than naming baseline/full-scan/api-scan explicitly, so a scan type added
+# later (a new zap-<name>-scan target) is picked up automatically instead of
+# needing this target edited too - the *-report.json siblings are the raw
+# data those HTML files are rendered from, not meant to be opened directly.
+# Iterates with `while read` rather than `for f in $$reports` - this
+# Makefile's SHELL is zsh (see root Makefile), which, unlike bash/POSIX sh,
+# does NOT word-split an unquoted variable by default: `for f in $$reports`
+# silently treated the whole multi-line ls output as one argument instead of
+# iterating (caught by actually running this, not just reading it back).
+zap-report:
+	@reports=$$(ls zap/report/*-report.html 2>/dev/null); \
+	if [ -z "$$reports" ]; then \
+		echo "No report yet - run 'make zap:baseline' (or :full-scan/:api-scan) first."; \
+		exit 1; \
+	fi; \
+	echo "$$reports" | while IFS= read -r f; do bin/open_browser.sh "$$f"; done

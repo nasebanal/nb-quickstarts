@@ -20,6 +20,8 @@ playwright:
 	@echo "Note: requires apps to be running first - make apps:up."
 	@echo ""
 	@echo "Report: playwright/report/index.html"
+	@echo ""
+	@echo "  playwright:report - Serve + open it via Playwright's own report viewer (Ctrl+C to stop)"
 
 playwright\:%:
 	@$(MAKE) playwright-$(subst playwright:,,$@)
@@ -28,3 +30,24 @@ playwright\:%:
 
 playwright-test: apps-network-ensure
 	@docker compose -p playwright -f playwright/docker-compose.yml run --rm playwright
+
+# A passing run's index.html is small enough to be fully self-contained and
+# opens fine via file://, but a failing one externalizes screenshots/videos/
+# traces - and the trace viewer specifically always needs to be served over
+# HTTP regardless. `npx playwright show-report` (Playwright's own CLI,
+# already installed on the host by playwright-test's npm install into the
+# bind-mounted playwright/node_modules) serves it correctly either way and
+# opens the browser itself - falls back to a plain file:// open (with a
+# caveat) only if npx isn't on the host at all.
+playwright-report:
+	@if [ ! -f playwright/report/index.html ]; then \
+		echo "No report yet - run 'make playwright:test' first."; \
+		exit 1; \
+	fi
+	@if command -v npx >/dev/null 2>&1; then \
+		(cd playwright && npx playwright show-report report); \
+	else \
+		echo "npx not found on host - opening the static file directly."; \
+		echo "Screenshots/videos/traces from a failing run may not load under file://; install Node to use Playwright's own report viewer instead."; \
+		bin/open_browser.sh playwright/report/index.html; \
+	fi

@@ -27,6 +27,8 @@ specmatic:
 	@echo "Note: both require apps to be running first - make apps:up."
 	@echo ""
 	@echo "Report: specmatic/report/test/html/index.html (also specmatic/junit/TEST-junit-jupiter.xml)"
+	@echo ""
+	@echo "  specmatic:report - Open that report in your browser"
 
 specmatic\:%:
 	@$(MAKE) specmatic-$(subst specmatic:,,$@)
@@ -35,6 +37,17 @@ specmatic\:%:
 
 specmatic-test: apps-network-ensure
 	@docker compose -p specmatic -f specmatic/docker-compose.yml run --rm specmatic
+
+# specmatic/report/test/html/index.html (the one specmatic-test itself
+# produces) is a single self-contained file, unlike specmatic/report/html -
+# a separate, unrelated report with its own assets/ directory - opens fine
+# via file://.
+specmatic-report:
+	@if [ ! -f specmatic/report/test/html/index.html ]; then \
+		echo "No report yet - run 'make specmatic:test' first."; \
+		exit 1; \
+	fi
+	@bin/open_browser.sh specmatic/report/test/html/index.html
 
 specmatic-mock-up: apps-network-ensure
 	@echo "Starting Specmatic mock (mock server built from apps/backend/openapi.yaml + examples)..."

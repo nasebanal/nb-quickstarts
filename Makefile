@@ -42,6 +42,7 @@ all:
 	@echo "  all:restart - all:down then all:up"
 	@echo "  all:status  - Show container status for every module"
 	@echo "  all:test    - Run pytest/vitest/playwright/specmatic in sequence (starts apps:up first)"
+	@echo "  all:report  - Open every existing test report in your browser"
 	@echo "  all:reset   - Wipe apps/kong/kafka/observability persistent state, restart the rest"
 
 all\:%:
@@ -110,6 +111,25 @@ all-test: apps-up
 	@$(MAKE) vitest-test
 	@$(MAKE) playwright-test
 	@$(MAKE) specmatic-test
+
+# Opens every report that's a plain, self-contained file straight away -
+# pytest/specmatic/zap/locust (each module's own -report target explains why
+# file:// is fine for these). vitest's and playwright's reports instead need
+# a real local server each (see their own Makefiles' comments) and their
+# show commands block in the foreground until Ctrl+C - two of those can't
+# both run from one sequential recipe, so this points at running them
+# separately rather than trying to background two dev servers unattended.
+all-report:
+	@echo "Opening every self-contained report that exists..."
+	@-$(MAKE) pytest-report
+	@-$(MAKE) specmatic-report
+	@-$(MAKE) zap-report
+	@-$(MAKE) locust-report
+	@echo ""
+	@echo "vitest and playwright reports need their own local server each -"
+	@echo "run these separately (each opens your browser once ready):"
+	@echo "  make vitest:report"
+	@echo "  make playwright:report"
 
 # apps/kong/kafka each have a named Docker volume worth wiping
 # (apps_apps-db-data, kong_kong-db-data, kafka_kafka-data -

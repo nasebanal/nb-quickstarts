@@ -30,6 +30,7 @@ locust:
 	@echo "  locust:status      - Check Locust container status"
 	@echo "  locust:restart     - Restart Locust containers"
 	@echo "  locust:open        - Open Locust UI in browser"
+	@echo "  locust:report      - Open the most recent run's report.html in your browser"
 	@echo ""
 	@echo "Load Testing (configure via .env or CLI, then run locust:up or locust:test):"
 	@echo "  make apps:up                                            # start test target apps (once)"
@@ -192,6 +193,22 @@ locust-restart:
 
 locust-open:
 	@bin/open_browser.sh http://localhost:8089
+
+# Unlike every other module's fixed single report path, locust:test writes a
+# fresh locust/logs/<timestamp>/report.html on every run and never overwrites
+# an older one (see AGENTS.md's "Report files" section) - so there's no one
+# path to hardcode. The YYYYMMDD_HHMMSS directory names sort correctly as
+# plain strings, so the lexicographically last one is the most recent run;
+# report.html itself is self-contained (like pytest's/specmatic's), so a
+# plain file:// open is fine.
+locust-report:
+	@latest=$$(ls -d locust/logs/*/ 2>/dev/null | sort | tail -1); \
+	if [ -z "$$latest" ] || [ ! -f "$$latest/report.html" ]; then \
+		echo "No report yet - run 'make locust:test' (or locust:up and let a run finish) first."; \
+		exit 1; \
+	fi; \
+	echo "Opening $${latest}report.html (most recent run)..."; \
+	bin/open_browser.sh "$${latest}report.html"
 
 locust-join-cluster:
 	@echo "Joining existing Locust cluster..."
