@@ -92,6 +92,7 @@ export interface Dictionary {
     sessionExpiredError: string;
     apiBaseLabel: string;
     viaKongLabel: string;
+    viaMockLabel: string;
     kafkaBridgeLabel: string;
   };
   footer: {
@@ -202,6 +203,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       sessionExpiredError: "Your session has expired (the backend restarted since you logged in) — logging you out.",
       apiBaseLabel: "API endpoint",
       viaKongLabel: "Via Kong",
+      viaMockLabel: "Via Mock",
       kafkaBridgeLabel: "Kafka Bridge",
     },
     footer: {
@@ -307,6 +309,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       sessionExpiredError: "セッションの有効期限が切れました(ログイン後にbackendが再起動されました) — ログアウトします。",
       apiBaseLabel: "呼び出し先API",
       viaKongLabel: "Kong経由",
+      viaMockLabel: "Mock経由",
       kafkaBridgeLabel: "Kafka Bridge",
     },
     footer: {
