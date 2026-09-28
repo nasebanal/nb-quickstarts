@@ -1,11 +1,11 @@
 "use client";
 
-import { GitHubIcon } from "./icons";
 import { useLocale } from "./LocaleProvider";
 
-// The repository itself, not its README: the details live in /docs now, so the
-// pointer here is to the source.
-const GITHUB_URL = "https://github.com/nasebanal/nb-quickstarts";
+// What this whole app verifies - the NASEBANAL Stack itself. Lives here (the
+// pre-login landing page), not in the Footer, so it comes with the
+// explanation of what it actually is, not just a bare link.
+const NASEBANAL_URL = "https://www.nasebanal.com";
 
 // Icon shapes/colors and card styling mirror nb-dentiscope's "How It Works"
 // section (60x60 rounded-2xl icon tile, light-blue gradient, #47b1e8
@@ -41,13 +41,14 @@ export function HowItWorks() {
           </div>
         ))}
       </div>
+      {/* The GitHub source-code pointer that used to live here moved to the
+          header's "Source Code" link (Header.tsx) - no need to say it twice. */}
       <p className="nb-how-it-works-readme">
-        {t.howItWorks.sourceNote}{" "}
-        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="nb-source-link" data-testid="github-link">
-          <GitHubIcon />
-          {t.howItWorks.sourceLinkLabel}
-        </a>
-        {t.howItWorks.sourceNoteAfter}
+        {t.howItWorks.stackNote}{" "}
+        <a href={NASEBANAL_URL} target="_blank" rel="noopener noreferrer" className="nb-source-link" data-testid="nasebanal-stack-link">
+          {t.howItWorks.stackLinkLabel}
+        </a>{" "}
+        {t.howItWorks.stackNoteAfter}
       </p>
     </section>
   );

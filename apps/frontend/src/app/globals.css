@@ -1891,48 +1891,6 @@ h1 {
 }
 
 
-/* BackendRouting.tsx - which backend instance answered, and how the frontend
-   server found it (fixed address or Consul). */
-.nb-routing {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 18px;
-  margin: 12px 0;
-  padding: 10px 14px;
-  border: 1px solid var(--nb-border);
-  border-radius: 8px;
-  font-size: 0.85rem;
-  color: var(--nb-fg-muted);
-}
-
-.nb-routing strong {
-  color: var(--nb-fg);
-}
-
-.nb-routing-toggle {
-  margin-left: 4px;
-  padding: 3px 10px;
-  border: 1px solid var(--nb-border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--nb-fg-muted);
-  font-size: 0.82rem;
-  cursor: pointer;
-}
-
-.nb-routing-toggle-active {
-  border-color: var(--nb-accent);
-  background: var(--nb-accent);
-  color: #fff;
-  font-weight: 600;
-}
-
-.nb-routing-detail {
-  font-family: ui-monospace, monospace;
-  font-size: 0.8rem;
-}
-
 /* Printing / "Save as PDF".
    - The site header's search/nav chrome, the footer and the docs sidebar are
      navigation, not content: hidden. (Chrome's own "Headers and footers"

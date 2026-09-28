@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/components/LocaleProvider";
 import { DOCS_NAV, navLabel, type DocsNavItem } from "@/lib/docs/nav";
+import { stripLocalePrefix } from "@/lib/i18n";
 
 function NavItem({ item, pathname }: { item: DocsNavItem; pathname: string | null }) {
   const { locale } = useLocale();
@@ -40,7 +41,10 @@ function NavItem({ item, pathname }: { item: DocsNavItem; pathname: string | nul
 // Active-link highlighting is exact-pathname, not prefix-matching: each
 // scenario is its own leaf page, not a sub-route of another one.
 export function DocsSidebar() {
-  const pathname = usePathname();
+  // stripLocalePrefix first - item.href values (nav.ts) are unprefixed, so
+  // a locale-prefixed visit (/ja/docs/scenario-kong) would otherwise never
+  // match and the active link would never highlight.
+  const pathname = stripLocalePrefix(usePathname());
 
   return (
     <nav className="nb-docs-sidebar" aria-label="Docs navigation" data-testid="docs-sidebar">

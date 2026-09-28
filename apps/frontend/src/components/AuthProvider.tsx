@@ -43,11 +43,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [idToken, setIdToken] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const { setLocale } = useLocale();
-  // The profile's language is applied once per login, not on every load of
-  // the profile: after that the header's language toggle is free to differ
-  // without the next fetch quietly undoing it.
-  const languageAppliedFor = useRef<string | null>(null);
+  const { applyProfileLocale, consumeManualLocaleChoice } = useLocale();
+  // Guards against re-fetching the profile pointlessly on every render this
+  // effect happens to run for the same token - not a "once per login"
+  // locale guard (that's consumeManualLocaleChoice()'s job now, since a ref
+  // does not survive the full reloads a locale-prefixed URL involves - see
+  // LocaleProvider.tsx's own comment on the bug that caused).
+  const fetchedFor = useRef<string | null>(null);
 
   useEffect(() => {
     try {
@@ -73,17 +75,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!token) {
       setProfile(null);
-      languageAppliedFor.current = null;
+      fetchedFor.current = null;
       return;
     }
+    if (fetchedFor.current === token) return;
+    fetchedFor.current = token;
     let cancelled = false;
     getMe(token)
       .then((loaded) => {
         if (cancelled) return;
         setProfile(loaded);
-        if (languageAppliedFor.current !== token) {
-          languageAppliedFor.current = token;
-          setLocale(loaded.language);
+        // The profile's saved language keeps winning on every ordinary
+        // navigation while logged in (same as before per-page locale
+        // prefixes existed at all - nothing ever navigated on login back
+        // then, so the display just carried over as React state) - it only
+        // ever loses right after the viewer explicitly picked something
+        // else via the language toggle, which is exactly what
+        // consumeManualLocaleChoice() tells apart (see its own comment).
+        if (!consumeManualLocaleChoice()) {
+          applyProfileLocale(loaded.language);
         }
       })
       .catch(() => {
@@ -93,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- setLocale is stable enough; re-run only when the token changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- applyProfileLocale/consumeManualLocaleChoice are stable enough; re-run only when the token changes
   }, [token]);
 
   const setAuth = (

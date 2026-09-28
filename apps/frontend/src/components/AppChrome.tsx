@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { stripLocalePrefix } from "@/lib/i18n";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 
@@ -12,7 +13,9 @@ import { Header } from "./Header";
 // route opts out of both entirely rather than stacking two navbars.
 export function AppChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const hideChrome = pathname?.startsWith("/api-specs");
+  // stripLocalePrefix first - a locale-prefixed visit (/ja/api-specs) would
+  // otherwise never match this check and show doubled-up chrome.
+  const hideChrome = stripLocalePrefix(pathname).startsWith("/api-specs");
 
   if (hideChrome) {
     return <>{children}</>;

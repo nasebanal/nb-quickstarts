@@ -1,5 +1,3 @@
-import { recordServed } from "./servedBy";
-
 // Thin client for the backend (apps/backend, FastAPI). This runs in the
 // browser, so it must use the host-published URL, not the container name.
 // Exported read-only so the UI can show what it's actually talking to
@@ -7,12 +5,6 @@ import { recordServed } from "./servedBy";
 // Specmatic mock via NEXT_PUBLIC_API_BASE (see
 // AGENTS.md's Kong section) without any other visible difference.
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
-
-// True when API_BASE is a path on this app itself (e.g. /api/backend) rather
-// than a URL of the backend/Kong: the browser then calls the frontend server,
-// which finds the backend (one fixed address, or through Consul) and forwards
-// - see lib/server/backendResolver.ts.
-export const VIA_FRONTEND_SERVER = API_BASE.startsWith("/");
 
 // Event-sourced: each Account is one quantity-change event, not a
 // standalone row with an absolute quantity. `quantity` is a signed delta -
@@ -52,7 +44,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...options.headers,
     },
   });
-  recordServed(response.headers);
   if (!response.ok) {
     const body = await response.text();
     if (response.status === 401) {

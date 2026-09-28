@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthProvider";
+import { LocaleLink } from "./LocaleLink";
 import { useLocale } from "./LocaleProvider";
 
 // Self-contained re-implementation of nb-shared-navigation's profile
@@ -10,7 +10,7 @@ import { useLocale } from "./LocaleProvider";
 // name header, red Logout row) — not a dependency on the private package,
 // see Header.tsx's own note on why.
 export function UserMenu() {
-  const { t } = useLocale();
+  const { t, localePath } = useLocale();
   const { username, provider, profile, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -69,14 +69,14 @@ export function UserMenu() {
             )}
           </div>
           <div className="nb-nav-dropdown-footer">
-            <Link
-              href="/profile"
+            <LocaleLink
+              href={localePath("/profile")}
               className="nb-nav-dropdown-item"
               onClick={() => setOpen(false)}
               data-testid="profile-link"
             >
               {t.profile.menuLabel}
-            </Link>
+            </LocaleLink>
             <button
               type="button"
               className="nb-nav-dropdown-item nb-nav-dropdown-logout"
