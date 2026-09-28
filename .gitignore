@@ -13,8 +13,12 @@ apps/frontend/.next/
 apps/frontend/.vitest/
 *.tsbuildinfo
 
-# Environment variables (contains sensitive information)
+# Environment variables (contains sensitive information) - every .env.*
+# variant (.env.bak, .env.local, ...) except the checked-in .env.example
+# template, which documents the variables without real values.
 .env
+.env.*
+!.env.example
 
 # Locust cluster mode flag file
 .locust_cluster_mode
