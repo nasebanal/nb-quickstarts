@@ -27,6 +27,9 @@ vitest:
 	@echo ""
 	@echo "Report: vitest/report/index.html (vitest:test),"
 	@echo "        vitest/report-contract/index.html (vitest:contract-test)"
+	@echo ""
+	@echo "  vitest:report          - Serve + open vitest/report/index.html (Ctrl+C to stop serving)"
+	@echo "  vitest:report-contract - Same, for vitest/report-contract/index.html"
 
 vitest\:%:
 	@$(MAKE) vitest-$(subst vitest:,,$@)
@@ -38,3 +41,25 @@ vitest-test:
 
 vitest-contract-test: apps-network-ensure
 	@docker compose -p vitest -f vitest/docker-compose.yml run --build --rm vitest-contract
+
+# Unlike pytest's/specmatic's single self-contained file, Vitest's own html
+# reporter ships a small SPA (report/ui/assets/*.js) that fetches
+# report/ui/html.meta.json.gz by a relative path at runtime - browsers block
+# fetch() against file:// URLs entirely, so opening index.html directly
+# leaves the page blank. A trivial local static server sidesteps that same
+# way `npx playwright show-report` does for Playwright below. Runs in the
+# foreground (like that command) - Ctrl+C stops it; nothing is left running.
+vitest-report:
+	@$(MAKE) _vitest-serve-report DIR=vitest/report PORT=$${VITEST_REPORT_PORT:-4173}
+
+vitest-report-contract:
+	@$(MAKE) _vitest-serve-report DIR=vitest/report-contract PORT=$${VITEST_REPORT_CONTRACT_PORT:-4174}
+
+_vitest-serve-report:
+	@if [ ! -f $(DIR)/index.html ]; then \
+		echo "No report yet in $(DIR) - run the matching vitest:test first."; \
+		exit 1; \
+	fi
+	@echo "Serving $(DIR) at http://localhost:$(PORT) (Ctrl+C to stop)..."
+	@(sleep 1 && bin/open_browser.sh http://localhost:$(PORT)) &
+	@python3 -m http.server $(PORT) --directory $(DIR)
