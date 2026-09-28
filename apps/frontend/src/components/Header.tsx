@@ -33,18 +33,19 @@ export function Header() {
       {/* Inner content shares the page's 1200px container so the navbar
           lines up with the hero/how-it-works content below it. */}
       <div className="container nb-header-inner">
-        {/* Everywhere else: a full reload of the current page (not a soft
-            client nav, and not a navigation to "/") — matches
-            nb-landing-page's logo-reloads-the-page behavior while staying on
-            whatever route you're already on. The session survives because
-            AuthProvider persists the token to sessionStorage (see
-            AuthProvider.tsx).
+        {/* Everywhere else: navigate to the locale root ("/" through
+            navigate(), which prefixes it with whatever /en or /ja segment
+            the current URL already carries via localePath - so it acts as
+            this app's actual "home", not just a reload of wherever you
+            happen to be (e.g. /profile, which has nothing to reload back
+            *to*).
             Inside /docs specifically: a soft nav back to /docs (the Overview
             page) instead - the Docs link opens this whole section in its own
             tab/window (see the header link below), so the logo there acts as
             that tab's own "home", the same way it acts as the app's home
-            everywhere else. Reloading whatever scenario subpage you're deep
-            in wouldn't do that; only navigating back to /docs itself does. */}
+            everywhere else. Navigating all the way to "/" from a scenario
+            subpage wouldn't do that; only navigating back to /docs itself
+            does. */}
         <button
           type="button"
           className="nb-header-brand nb-header-brand-button"
@@ -52,7 +53,7 @@ export function Header() {
             if (inDocs) {
               navigate("/docs");
             } else {
-              window.location.reload();
+              navigate("/");
             }
           }}
         >
