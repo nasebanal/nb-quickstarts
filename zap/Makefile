@@ -17,9 +17,13 @@ zap:
 	@echo ""
 	@echo "Scans (all one-shot, all require apps:up first):"
 	@echo "  zap:baseline  - Passive scan of apps/frontend (safe - spiders + observes, never attacks, ~1-2 min)"
-	@echo "  zap:full-scan - Active scan of apps/frontend (sends real attack payloads - takes longer, several minutes+)"
 	@echo "  zap:api-scan  - Scans apps/backend's REST API directly from its live OpenAPI schema (active, endpoint-aware)"
-	@echo "  zap:scan      - Runs all three above in sequence, stops at the first one that fails"
+	@echo "  zap:scan      - Runs zap:baseline + zap:api-scan in sequence, stops at the first one that fails."
+	@echo "                  Deliberately excludes zap:full-scan (see below) - run that one explicitly."
+	@echo ""
+	@echo "  zap:full-scan - Active scan of apps/frontend (sends real attack payloads, several minutes+)."
+	@echo "                  ⚠️  Can pin apps/frontend's CPU into a runaway loop - see the note below"
+	@echo "                  before running this one. Not included in zap:scan for that reason."
 	@echo ""
 	@echo "  zap:stop      - Kill a scan that's already running (Ctrl+C on its own terminal works"
 	@echo "                  too, but a scan started elsewhere - another shell, a background job -"
@@ -99,18 +103,27 @@ zap-api-scan: apps-network-ensure
 		-r api-scan-report.html -J api-scan-report.json -I
 	@echo "Report: zap/report/api-scan-report.html"
 
-# Runs the same three scans as `zap:baseline`/`zap:full-scan`/`zap:api-scan`
-# individually, in one shot - each is its own `$(MAKE)` call (not a single
-# recipe with all three commands inline) so a real (non-INFO) finding in an
-# earlier scan stops the rest, same as `all:test` stopping at the first
-# tool that fails. Not part of `all:test` itself - see zap/Makefile's own
-# module comment (and AGENTS.md's ZAP bullet) for why.
+# Runs zap:baseline + zap:api-scan in one shot - each is its own `$(MAKE)`
+# call (not a single recipe with both commands inline) so a real (non-INFO)
+# finding in the first scan stops the rest, same as `all:test` stopping at
+# the first tool that fails. Not part of `all:test` itself - see
+# zap/Makefile's own module comment (and AGENTS.md's ZAP bullet) for why.
+#
+# Deliberately excludes zap:full-scan, unlike before: measured directly,
+# baseline (~78s) and api-scan (~45s) both leave apps/frontend/apps/backend
+# at negligible CPU/memory the whole time, while zap:full-scan's attack
+# payloads against apps/frontend's many hashed _next/static/* asset URLs can
+# drive its Next.js dev server (Turbopack) into a CPU-pinning recompile loop
+# that doesn't recover on its own even after the scan stops (see zap:'s own
+# help text and README.md's ZAP section) - not something to fold into a
+# "run everything safe" composite target. Run zap:full-scan on its own when
+# you want that deeper check and can watch for (or accept) the risk.
 zap-scan:
 	@$(MAKE) zap-baseline
-	@$(MAKE) zap-full-scan
 	@$(MAKE) zap-api-scan
 	@echo ""
-	@echo "All three scans passed. Reports: zap/report/{baseline,full-scan,api-scan}-report.html"
+	@echo "Both scans passed. Reports: zap/report/{baseline,api-scan}-report.html"
+	@echo "(zap:full-scan not included - see 'make zap' for why - run it separately if you want it.)"
 
 # ZAP's own report.html is self-contained (styles/JS inlined) - opens fine
 # via file://, same as pytest's/specmatic's. Globs zap/report/*.html rather

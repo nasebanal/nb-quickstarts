@@ -214,6 +214,8 @@ export const scenarioTesting: LocalizedDocsPage = {
                 caption: "ZAP api-scan of the backend: 27 endpoints, no High or Medium alerts (2 Low). The scan passed 116 rules with 0 failures and 2 warnings.",
               },
             ],
+            note:
+              "There's also make zap:full-scan, a deeper active scan of the frontend itself - deliberately left out of the walkthrough above. Its attack payloads against the frontend's many hashed _next/static/* asset URLs can drive the Next.js dev server (Turbopack) into a CPU-pinning recompile loop that doesn't recover on its own, even after the scan stops. If that happens, restart just the frontend: docker compose -p apps -f apps/docker-compose.yml restart frontend.",
           },
           {
             heading: "Evaluation",
@@ -447,6 +449,8 @@ export const scenarioTesting: LocalizedDocsPage = {
                 caption: "backendのZAP api-scan: 27エンドポイントでHigh・Mediumのアラートなし(Lowが2件)。116ルールに合格し、失敗0件・警告2件。",
               },
             ],
+            note:
+              "make zap:full-scanというコマンドもあります。frontend自体に対するより踏み込んだアクティブスキャンですが、上記のウォークスルーからは意図的に外しています。frontendの大量のハッシュ付き _next/static/* アセットURLへの攻撃ペイロードが、Next.jsの開発サーバー(Turbopack)を再コンパイル/キャッシュ書き換えの無限ループに陥らせ、スキャンを止めた後もCPUが張り付いたまま回復しないことがあるためです。発生した場合は frontend コンテナだけを再起動してください: docker compose -p apps -f apps/docker-compose.yml restart frontend",
           },
           {
             heading: "評価結果",
