@@ -3,10 +3,9 @@ import os
 import time
 
 import pymysql
+import report_on_stop  # noqa: F401 - writes the --html report when a run stops
 
 from locust import User, between, events, tag, task
-
-import report_on_stop  # noqa: F401 - writes the --html report when a run stops
 
 # MySQL Connection Configuration (from environment variables)
 MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql-server")

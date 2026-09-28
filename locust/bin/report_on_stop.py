@@ -25,8 +25,9 @@ the master's command line ever carries --html, so parsed_options.html_file
 is None there.
 """
 
-from locust import events
 from locust.html import get_html_report, process_html_filename
+
+from locust import events
 
 
 @events.test_stop.add_listener

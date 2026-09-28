@@ -1,8 +1,8 @@
 import os
 
-from locust import HttpUser, between, tag, task
-
 import report_on_stop  # noqa: F401 - writes the --html report when a run stops
+
+from locust import HttpUser, between, tag, task
 
 
 class WebsiteUser(HttpUser):

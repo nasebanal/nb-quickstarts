@@ -16,10 +16,10 @@ import json
 import os
 import time
 
+import report_on_stop  # noqa: F401 - writes the --html report when a run stops
+
 from kafka import KafkaProducer
 from locust import User, events, task
-
-import report_on_stop  # noqa: F401 - writes the --html report when a run stops
 
 BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:29092")
 TOPIC = os.getenv("KAFKA_TOPIC", "quickstart-events")
