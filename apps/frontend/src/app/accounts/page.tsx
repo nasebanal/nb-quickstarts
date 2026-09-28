@@ -3,15 +3,17 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/components/LocaleProvider";
-import { API_BASE, checkKafkaBridge, checkViaKong, createTransaction, UnauthorizedError } from "@/lib/api";
+import { API_BASE, checkKafkaBridge, checkViaKong, checkViaMock, createTransaction, UnauthorizedError } from "@/lib/api";
 import { useBalances } from "@/lib/useBalances";
 
 // Shared by every "is X actually true right now" status check next to the
-// backend URL field (Via Kong, Kafka Bridge, ...) - each is a real,
-// verified signal (see checkViaKong/checkKafkaBridge's own comments in
-// api.ts), and none of them change without a container restart, so one
-// check on mount is enough for any of them - no need to poll the way
-// useBalances polls balances.
+// backend URL field (Via Kong, Via Mock, Kafka Bridge, ...) - each is a
+// real, verified signal (see checkViaKong/checkViaMock/checkKafkaBridge's
+// own comments in api.ts). None of them normally change mid-session, but
+// apps_backend's target can now be repointed live via Kong's Admin API (no
+// container restart) - a plain page reload is still enough to pick that up,
+// same as any of these, so one check on mount remains fine; no need to poll
+// the way useBalances polls balances.
 function useStatusCheck(check: () => Promise<boolean>): boolean | null {
   const [status, setStatus] = useState<boolean | null>(null);
   useEffect(() => {
@@ -34,6 +36,7 @@ export default function AccountsPage() {
   const [accountQuantity, setAccountQuantity] = useState("0");
   const [accountError, setAccountError] = useState("");
   const viaKong = useStatusCheck(checkViaKong);
+  const viaMock = useStatusCheck(checkViaMock);
   const kafkaBridge = useStatusCheck(checkKafkaBridge);
 
   // Transactions post against an existing account, picked from the chart
@@ -117,6 +120,10 @@ export default function AccountsPage() {
           <span className="nb-status-toggle" data-testid="via-kong">
             <label htmlFor="via-kong-input">{t.app.viaKongLabel}</label>
             <input id="via-kong-input" type="checkbox" checked={viaKong ?? false} disabled readOnly />
+          </span>
+          <span className="nb-status-toggle" data-testid="via-mock">
+            <label htmlFor="via-mock-input">{t.app.viaMockLabel}</label>
+            <input id="via-mock-input" type="checkbox" checked={viaMock ?? false} disabled readOnly />
           </span>
           <span className="nb-status-toggle" data-testid="kafka-bridge">
             <label htmlFor="kafka-bridge-input">{t.app.kafkaBridgeLabel}</label>

@@ -72,6 +72,22 @@ export async function checkViaKong(): Promise<boolean> {
   return (response.headers.get("via") ?? "").toLowerCase().includes("kong");
 }
 
+// Same idea as checkViaKong() above, for the other thing apps_backend's url
+// can be repointed at: Specmatic's mock (see AGENTS.md's Kong section) adds
+// its own `X-Specmatic-Result: success` response header, which the real
+// backend never does - a verifiable "is this actually the mock answering"
+// signal, not just inferring it from whatever data happens to come back
+// (the mock's /accounts example looks like plausible real data - see
+// openapi.yaml's `seeded_balances` example - so the numbers alone don't
+// tell you). Needs Access-Control-Expose-Headers to list it, same
+// requirement as Via - see kong/conf/declarative.yml's response-transformer
+// plugin, the one place that applies regardless of what's actually behind
+// apps_backend right now.
+export async function checkViaMock(): Promise<boolean> {
+  const response = await fetch(`${API_BASE}/health`);
+  return response.headers.get("x-specmatic-result") !== null;
+}
+
 const KAFKA_BRIDGE_HEALTH_URL =
   process.env.NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL ?? "http://localhost:8090";
 

@@ -49,12 +49,16 @@ services:
       # to - so add it here, at the gateway, where it applies no matter
       # what's behind this service. `add` (not `append`) is a no-op when
       # the upstream already sets it, so this doesn't double it up against
-      # the real backend.
+      # the real backend. Same reasoning covers the "Via Mock" indicator
+      # (checkViaMock()) and Specmatic's own `X-Specmatic-Result` header -
+      # the real backend never sends that header at all, so exposing its
+      # name is harmless there, and it's only ever actually present when
+      # this service is pointed at Specmatic's mock.
       - name: response-transformer
         config:
           add:
             headers:
-              - "Access-Control-Expose-Headers:Via"
+              - "Access-Control-Expose-Headers:Via,X-Specmatic-Result"
       # Sends a trace of each request through the gateway to the OTel
       # Collector (`make observability:up`; it shares apps-network with Kong).
       # The plugin also needs KONG_TRACING_INSTRUMENTATIONS=request in
