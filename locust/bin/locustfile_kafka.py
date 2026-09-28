@@ -16,6 +16,8 @@ import json
 import os
 import time
 
+import report_on_stop  # noqa: F401 - writes the --html report when a run stops
+
 from kafka import KafkaProducer
 from locust import User, events, task
 

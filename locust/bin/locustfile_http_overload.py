@@ -13,6 +13,8 @@ Usage: make locust:up LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=100 L
 
 import os
 
+import report_on_stop  # noqa: F401 - writes the --html report when a run stops
+
 from locust import HttpUser, task
 
 
