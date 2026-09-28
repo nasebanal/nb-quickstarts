@@ -11,13 +11,6 @@ const MANUAL_LOCALE_KEY = "nb-quickstarts-manual-locale";
 
 interface LocaleContextValue {
   locale: Locale;
-  // The URL's own /en or /ja segment, or null when the current path carries
-  // none. Exposed so a consumer that might otherwise override `locale` from
-  // some other source (AuthProvider.tsx's profile-language sync) can tell
-  // whether the URL itself is already dictating the language and defer to
-  // it - the URL prefix is meant to always win once present, same as
-  // localeFromPathname()'s own doc comment says.
-  urlLocale: Locale | null;
   setLocale: (locale: Locale) => void;
   t: Dictionary;
   // Prefixes `target` with the current URL's own /en or /ja segment, if it
@@ -203,7 +196,6 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     <LocaleContext.Provider
       value={{
         locale,
-        urlLocale,
         setLocale,
         t: dictionaries[locale],
         localePath,
