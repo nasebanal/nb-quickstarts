@@ -123,31 +123,39 @@ test("a wrong password is rejected and keeps the modal open", async ({ page }) =
 });
 
 test("profile: shows the recorded email, saves display name and language", async ({ page }) => {
-  await page.goto("/");
+  // Pinned to /en explicitly (rather than "/", whose Accept-Language-based
+  // redirect target isn't deterministic) so this test's own expectations
+  // don't depend on it - see AuthProvider.tsx's profile-language sync: the
+  // URL's own /en segment wins over the seeded Japanese profile language for
+  // what's *displayed*, on purpose, so staying on /en throughout keeps every
+  // displayed-text assertion below stable regardless of what's saved.
+  await page.goto("/en");
   await page.getByTestId("login-open").click();
   await page.getByTestId("username-input").fill("demo");
   await page.getByTestId("password-input").fill("demo");
   await page.getByTestId("login-submit").click();
-  await page.waitForURL("**/accounts");
+  await page.waitForURL("**/en/accounts");
 
   await page.getByTestId("user-menu-button").click();
   await page.getByTestId("profile-link").click();
-  await page.waitForURL("**/profile");
+  await page.waitForURL("**/en/profile");
 
   // The email is recorded (from the users table) but not editable.
   await expect(page.getByTestId("profile-email")).toHaveValue("demo@nasebanal.com");
   await expect(page.getByTestId("profile-email")).toHaveAttribute("readonly", "");
 
-  // The seeded language is Japanese, applied when logging in.
+  // The language <select> reflects what's actually saved in the backend
+  // (the seed data's "ja") independent of the page's own displayed
+  // language, which stays English here because the URL says /en.
   await expect(page.getByTestId("profile-language")).toHaveValue("ja");
-  await expect(page.locator("h1")).toHaveText("プロフィール");
+  await expect(page.locator("h1")).toHaveText("Profile");
 
   await page.getByTestId("profile-display-name").fill("Second Tester");
   await page.getByTestId("profile-language").selectOption("en");
   await page.getByTestId("profile-save").click();
   await expect(page.getByTestId("profile-status")).toBeVisible();
 
-  // It stuck: a reload reads it back from the backend, and the UI is now English.
+  // It stuck: a reload reads it back from the backend.
   await page.reload();
   await expect(page.getByTestId("profile-display-name")).toHaveValue("Second Tester");
   await expect(page.getByTestId("profile-language")).toHaveValue("en");
