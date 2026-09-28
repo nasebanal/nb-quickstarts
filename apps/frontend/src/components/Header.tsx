@@ -1,28 +1,32 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { stripLocalePrefix } from "@/lib/i18n";
 import { useAuth } from "./AuthProvider";
-import { ExternalLinkIcon } from "./icons";
+import { ExternalLinkIcon, GitHubIcon } from "./icons";
 import { LanguageToggle } from "./LanguageToggle";
+import { LocaleLink } from "./LocaleLink";
 import { useLocale } from "./LocaleProvider";
 import { LoginModal } from "./LoginModal";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserMenu } from "./UserMenu";
+
+const GITHUB_URL = "https://github.com/nasebanal/nb-quickstarts";
 
 // Self-contained: no external/private package (works air-gapped). The logo
 // asset lives locally at public/logo.png. Title wording/colors match
 // nb-dentiscope's navbar ("NASEBANAL" in --nb-logo-fg, "Demo" in the shared
 // .nb-nav-brand-demo lime) without depending on @nasebanal/shared-navigation.
 export function Header() {
-  const { t, locale } = useLocale();
+  const { t, localePath, navigate } = useLocale();
   const { token } = useAuth();
   const pathname = usePathname();
-  const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  const inDocs = pathname?.startsWith("/docs") ?? false;
+  // stripLocalePrefix first - a locale-prefixed visit (/ja/docs/...) would
+  // otherwise never match this check.
+  const inDocs = stripLocalePrefix(pathname).startsWith("/docs");
 
   return (
     <header className="nb-header">
@@ -46,7 +50,7 @@ export function Header() {
           className="nb-header-brand nb-header-brand-button"
           onClick={() => {
             if (inDocs) {
-              router.push("/docs");
+              navigate("/docs");
             } else {
               window.location.reload();
             }
@@ -58,8 +62,8 @@ export function Header() {
           </span>
         </button>
         <div className="nb-header-actions">
-          <Link
-            href="/api-specs"
+          <LocaleLink
+            href={localePath("/api-specs")}
             target="_blank"
             rel="noopener noreferrer"
             className="nb-header-nav-link"
@@ -69,7 +73,7 @@ export function Header() {
             {t.hero.apiReferenceLabel}
             <ExternalLinkIcon />
             <span className="nb-sr-only"> ({t.hero.opensInNewWindow})</span>
-          </Link>
+          </LocaleLink>
           {/* Same treatment as API Reference above - opens in a separate
               window/tab rather than navigating away, since /docs shares this
               same Header/Footer chrome (AppChrome only opts /api-specs out of
@@ -77,8 +81,8 @@ export function Header() {
               docs would be an unwelcome navigation. The icon/title/sr-only
               text (both here and above) make that explicit up front, rather
               than only being obvious after clicking. */}
-          <Link
-            href="/docs"
+          <LocaleLink
+            href={localePath("/docs")}
             target="_blank"
             rel="noopener noreferrer"
             className="nb-header-nav-link"
@@ -88,21 +92,26 @@ export function Header() {
             {t.hero.docsLabel}
             <ExternalLinkIcon />
             <span className="nb-sr-only"> ({t.hero.opensInNewWindow})</span>
-          </Link>
-          {/* nasebanal.com's own contact form (its landing page has one section per
-              language: /ja#contact, /en#contact) - an external link, so same
-              treatment as API Reference / Docs above: new tab, icon, sr-only note. */}
+          </LocaleLink>
+          {/* Points at the repo itself rather than a contact form - questions/
+              discussion happen on GitHub (issues/discussions), same as any
+              other OSS project. Icon-only, not text+ExternalLinkIcon like API
+              Reference/Docs above: more compact, matches the icon-only shape
+              LanguageToggle/ThemeToggle already use here, and GitHub's mark
+              is recognizable enough on its own not to need a label - a
+              pattern worth reusing as-is in any other NASEBANAL OSS app's
+              header, unlike the rest of this one (built around this app's
+              own routes/copy). */}
           <a
-            href={`https://www.nasebanal.com/${locale}#contact`}
+            href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="nb-header-nav-link"
-            data-testid="contact-link"
-            title={t.hero.opensInNewWindow}
+            className="nb-icon-button"
+            data-testid="source-code-link"
+            aria-label={t.hero.sourceCodeLabel}
+            title={`${t.hero.sourceCodeLabel} (${t.hero.opensInNewWindow})`}
           >
-            {t.hero.contactLabel}
-            <ExternalLinkIcon />
-            <span className="nb-sr-only"> ({t.hero.opensInNewWindow})</span>
+            <GitHubIcon />
           </a>
           <LanguageToggle />
           <ThemeToggle />

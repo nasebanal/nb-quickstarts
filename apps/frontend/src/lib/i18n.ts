@@ -1,6 +1,23 @@
 export type Locale = "en" | "ja";
 
 export const LOCALES: Locale[] = ["en", "ja"];
+export const DEFAULT_LOCALE: Locale = "en";
+
+// A leading /en or /ja path segment is how a URL specifies its language
+// (see next.config.ts's rewrite, which makes e.g. /ja/accounts transparently
+// serve the existing /accounts route - LocaleProvider.tsx reads it back out
+// via this same helper). Anything that branches on the pathname itself
+// (AppChrome's chrome-hiding check, Header's inDocs check, DocsSidebar's
+// active-link check) needs to strip it first, or a /ja/docs/... URL would
+// no longer match a plain "/docs" prefix check.
+export function stripLocalePrefix(pathname: string | null | undefined): string {
+  if (!pathname) return "/";
+  const segments = pathname.split("/");
+  const first = segments[1] ?? "";
+  if (!(LOCALES as string[]).includes(first)) return pathname;
+  const rest = segments.slice(2).join("/");
+  return `/${rest}`;
+}
 
 export interface Dictionary {
   hero: {
@@ -12,7 +29,7 @@ export interface Dictionary {
     endpointsTitle: string;
     apiReferenceLabel: string;
     docsLabel: string;
-    contactLabel: string;
+    sourceCodeLabel: string;
     opensInNewWindow: string;
   };
   login: {
@@ -48,24 +65,16 @@ export interface Dictionary {
     updateFailed: string;
     loading: string;
   };
-  routing: {
-    servedBy: string;
-    resolvedBy: string;
-    direct: string;
-    consul: string;
-    fixedAddress: string;
-    consulSays: string;
-    noneHealthy: string;
-    consulUnreachable: string;
-  };
   howItWorks: {
     title: string;
     steps: { title: string; description: string }[];
-    // One sentence in three parts, so the link can sit on the word "GitHub"
-    // itself in either language's word order.
-    sourceNote: string;
-    sourceLinkLabel: string;
-    sourceNoteAfter: string;
+    // One sentence in three parts, so the link can sit on the word
+    // "NASEBANAL Stack" itself in either language's word order (the GitHub
+    // source-code pointer this used to share the shape with moved to the
+    // header's "Source Code" link).
+    stackNote: string;
+    stackLinkLabel: string;
+    stackNoteAfter: string;
   };
   app: {
     conceptDescription: string;
@@ -87,8 +96,9 @@ export interface Dictionary {
   };
   footer: {
     rightsReserved: string;
-    nasebanalStack: string;
     license: string;
+    operatedBy: string;
+    contact: string;
   };
 }
 
@@ -107,7 +117,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       endpointsTitle: "Endpoints once running",
       apiReferenceLabel: "API Reference",
       docsLabel: "Docs",
-      contactLabel: "Contact",
+      sourceCodeLabel: "Source Code",
       opensInNewWindow: "opens in a new window",
     },
     login: {
@@ -145,16 +155,6 @@ export const dictionaries: Record<Locale, Dictionary> = {
       updateFailed: "Failed to update profile",
       loading: "Loading...",
     },
-    routing: {
-      servedBy: "Served by",
-      resolvedBy: "Backend found via",
-      direct: "Fixed address",
-      consul: "Consul",
-      fixedAddress: "always",
-      consulSays: "healthy now",
-      noneHealthy: "none",
-      consulUnreachable: "Consul unreachable",
-    },
     howItWorks: {
       title: "How It Works",
       steps: [
@@ -178,9 +178,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
             "anytime to start fresh.",
         },
       ],
-      sourceNote: "The source code for this demo application and each module is published on",
-      sourceLinkLabel: "GitHub",
-      sourceNoteAfter: ".",
+      stackNote: "Quickstarts verifies the",
+      stackLinkLabel: "NASEBANAL Stack",
+      stackNoteAfter: "— the proven open-source technologies NASEBANAL's own products build on.",
     },
     app: {
       conceptDescription:
@@ -206,8 +206,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     footer: {
       rightsReserved: "All rights reserved.",
-      nasebanalStack: "NASEBANAL Stack",
       license: "License",
+      operatedBy: "About Us",
+      contact: "Contact",
     },
   },
   ja: {
@@ -223,7 +224,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       endpointsTitle: "起動後のエンドポイント",
       apiReferenceLabel: "APIリファレンス",
       docsLabel: "ドキュメント",
-      contactLabel: "お問い合わせ",
+      sourceCodeLabel: "ソースコード",
       opensInNewWindow: "別ウィンドウで開きます",
     },
     login: {
@@ -261,16 +262,6 @@ export const dictionaries: Record<Locale, Dictionary> = {
       updateFailed: "プロフィールの更新に失敗しました",
       loading: "読み込み中...",
     },
-    routing: {
-      servedBy: "応答したインスタンス",
-      resolvedBy: "backendの見つけ方",
-      direct: "固定アドレス",
-      consul: "Consul",
-      fixedAddress: "常に",
-      consulSays: "今健全なもの",
-      noneHealthy: "なし",
-      consulUnreachable: "Consulに接続できません",
-    },
     howItWorks: {
       title: "使い方",
       steps: [
@@ -293,9 +284,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
             "make apps:down — コンテナをきれいに停止・削除します。またapps:upすればいつでも再開できます。",
         },
       ],
-      sourceNote: "このデモ用アプリケーションと各モジュールのソースコードは",
-      sourceLinkLabel: "GitHub",
-      sourceNoteAfter: "で公開されています。",
+      stackNote: "Quickstartsは",
+      stackLinkLabel: "NASEBANAL Stack",
+      stackNoteAfter: "―NASEBANALの各プロダクトが基盤とする、実績あるOSS技術群―の動作を検証します。",
     },
     app: {
       conceptDescription:
@@ -320,8 +311,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     footer: {
       rightsReserved: "All rights reserved.",
-      nasebanalStack: "NASEBANAL Stack",
       license: "ライセンス",
+      operatedBy: "運営会社",
+      contact: "お問い合わせ",
     },
   },
 };

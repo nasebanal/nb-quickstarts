@@ -30,8 +30,6 @@ apps:
 	@echo ""
 	@echo "Container Management:"
 	@echo "  apps:up             - Build (if needed) and start test target apps (MySQL + backend + frontend)."
-	@echo "                        APPS_BACKEND_INSTANCES=3 make apps:up runs three backend instances (default 1);"
-	@echo "                        run it again with another number to scale up or down"
 	@echo "  apps:down           - Stop and remove apps containers (MySQL data preserved)"
 	@echo "  apps:status         - Check apps container status"
 	@echo "  apps:restart        - Restart apps containers (MySQL data preserved)"
@@ -71,8 +69,8 @@ apps-network-ensure:
 	@docker network create apps-network >/dev/null 2>&1 || true
 
 apps-up: apps-network-ensure
-	@echo "Starting apps (MySQL + backend + frontend; $${APPS_BACKEND_INSTANCES:-1} backend instance(s))..."
-	@sh apps/bin/compose.sh up -d $${APPS_BUILD_FLAG---build}
+	@echo "Starting apps (MySQL + backend + frontend)..."
+	@docker compose -p apps -f apps/docker-compose.yml up -d $${APPS_BUILD_FLAG---build}
 	@printf "Waiting for MySQL (mysql-server) to be ready"
 	@i=0; \
 		until [ "$$(docker inspect -f '{{.State.Health.Status}}' nb-mysql-server 2>/dev/null)" = "healthy" ] || [ $$i -ge 60 ]; do \
@@ -91,12 +89,12 @@ apps-up: apps-network-ensure
 
 apps-down:
 	@echo "Stopping apps containers..."
-	@sh apps/bin/compose.sh down --remove-orphans
+	@docker compose -p apps -f apps/docker-compose.yml down --remove-orphans
 	@echo "Apps containers stopped and removed. (MySQL data preserved in the apps_apps-db-data Docker volume — use 'make apps:reset' to wipe it.)"
 
 apps-status:
 	@echo "Checking apps container status..."
-	@sh apps/bin/compose.sh ps
+	@docker compose -p apps -f apps/docker-compose.yml ps
 
 apps-restart:
 	@$(MAKE) apps-down
@@ -104,7 +102,7 @@ apps-restart:
 
 apps-reset:
 	@echo "Resetting apps (wiping MySQL data)..."
-	@sh apps/bin/compose.sh down --remove-orphans --volumes
+	@docker compose -p apps -f apps/docker-compose.yml down --remove-orphans --volumes
 	@APPS_BUILD_FLAG= $(MAKE) apps-up
 
 apps-open:

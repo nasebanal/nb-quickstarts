@@ -50,7 +50,9 @@ test("modal closes without navigating away", async ({ page }) => {
 
   await page.getByTestId("login-modal-overlay").click({ position: { x: 10, y: 10 } });
   await expect(page.getByTestId("login-modal")).not.toBeVisible();
-  await expect(page).toHaveURL(/\/$/);
+  // "/" itself always redirects to /en or /ja (middleware.ts, by Accept-Language) -
+  // this only checks that it stayed on that landing page, not a specific locale.
+  await expect(page).toHaveURL(/\/(en|ja)$/);
 });
 
 test("visiting /accounts directly without logging in redirects home", async ({ page }) => {
@@ -115,7 +117,9 @@ test("a wrong password is rejected and keeps the modal open", async ({ page }) =
 
   await expect(page.getByTestId("auth-error")).toContainText("401");
   await expect(page.getByTestId("login-modal")).toBeVisible();
-  await expect(page).toHaveURL(/\/$/);
+  // "/" itself always redirects to /en or /ja (middleware.ts, by Accept-Language) -
+  // this only checks that it stayed on that landing page, not a specific locale.
+  await expect(page).toHaveURL(/\/(en|ja)$/);
 });
 
 test("profile: shows the recorded email, saves display name and language", async ({ page }) => {

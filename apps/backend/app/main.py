@@ -1,5 +1,3 @@
-import os
-import socket
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -8,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_mcp import FastApiMCP
 
-from app.db import Base, SessionLocal, engine, startup_lock, wait_for_database
+from app.db import Base, SessionLocal, engine, wait_for_database
 from app.graphql.schema import graphql_router
 from app.routers import accounts, auth, health, me
 from app.seed import seed_if_empty
@@ -20,43 +18,14 @@ OPENAPI_SPEC_PATH = Path(__file__).resolve().parent.parent / "openapi.yaml"
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     wait_for_database()
-    with startup_lock():
-        Base.metadata.create_all(bind=engine)
-        with SessionLocal() as db:
-            seed_if_empty(db)
+    Base.metadata.create_all(bind=engine)
+    with SessionLocal() as db:
+        seed_if_empty(db)
     yield
 
 
 app = FastAPI(lifespan=lifespan)
 setup_telemetry(app, engine)
-
-
-# Which instance answered: with more than one backend instance
-# (APPS_BACKEND_INSTANCES > 1) a client needs to see who served it. A raw ASGI middleware,
-# not @app.middleware("http") - that one wraps every request in
-# BaseHTTPMiddleware, which costs measurable throughput, and this app is the
-# thing the load-test scenarios measure.
-INSTANCE_ID = os.getenv("INSTANCE_ID") or socket.gethostname()
-
-
-class ServedByMiddleware:
-    def __init__(self, inner):
-        self.inner = inner
-
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            await self.inner(scope, receive, send)
-            return
-
-        async def send_with_header(message):
-            if message["type"] == "http.response.start":
-                message.setdefault("headers", []).append((b"x-served-by", INSTANCE_ID.encode()))
-            await send(message)
-
-        await self.inner(scope, receive, send_with_header)
-
-
-app.add_middleware(ServedByMiddleware)
 
 
 # The contract (openapi.yaml) is the source of truth, not this app's own
@@ -85,7 +54,7 @@ app.add_middleware(
     # it to every proxied response; a direct connection has no such
     # header). Confirmed via curl that Kong adds it, and separately that
     # fetch()'s response.headers.get("via") returns null without this.
-    expose_headers=["Via", "X-Served-By"],
+    expose_headers=["Via"],
 )
 
 app.include_router(health.router)

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/components/LocaleProvider";
@@ -12,17 +11,17 @@ import type { Locale } from "@/lib/i18n";
 // backend (PUT /me/profile) into the users table; the language is also
 // applied to the UI straight away, and again the next time this user logs in.
 export default function ProfilePage() {
-  const { t, setLocale } = useLocale();
+  const { t, applyProfileLocale, navigate } = useLocale();
   const { token, initializing, profile, setProfile, username, logout } = useAuth();
-  const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [language, setLanguage] = useState<Locale>("en");
   const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!initializing && !token) router.replace("/");
-  }, [initializing, token, router]);
+    if (!initializing && !token) navigate("/", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- navigate is stable enough (same convention as AuthProvider.tsx's setLocale); re-run only when auth state changes
+  }, [initializing, token]);
 
   // Fill the form once the profile has loaded.
   useEffect(() => {
@@ -39,7 +38,12 @@ export default function ProfilePage() {
     try {
       const saved = await updateProfile(token, { displayName, language });
       setProfile(saved);
-      setLocale(saved.language);
+      // Not setLocale: this must apply in place, right here, so the success
+      // message below is still what the viewer sees next - the same reason
+      // AuthProvider.tsx's own profile-language sync uses this instead of
+      // setLocale (see its own comment). The saved language is also
+      // reflected on the next login and the next unprefixed visit either way.
+      applyProfileLocale(saved.language);
       setStatus({ ok: true, message: t.profile.updateSuccess });
     } catch (err) {
       if (err instanceof UnauthorizedError) {

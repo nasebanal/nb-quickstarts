@@ -1,9 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { BackendRouting } from "@/components/BackendRouting";
 import { useLocale } from "@/components/LocaleProvider";
 import { API_BASE, checkKafkaBridge, checkViaKong, createAccount, UnauthorizedError } from "@/lib/api";
 import { useBalances } from "@/lib/useBalances";
@@ -28,9 +26,8 @@ function useStatusCheck(check: () => Promise<boolean>): boolean | null {
 }
 
 export default function AccountsPage() {
-  const { t } = useLocale();
+  const { t, navigate } = useLocale();
   const { token, initializing, logout } = useAuth();
-  const router = useRouter();
   const [autoRefresh, setAutoRefresh] = useState(true);
   const { balances, refresh } = useBalances(autoRefresh);
   const [accountName, setAccountName] = useState("");
@@ -57,13 +54,19 @@ export default function AccountsPage() {
   // logged-in viewer home on every plain page reload.
   useEffect(() => {
     if (!initializing && !token) {
-      router.replace("/");
+      navigate("/", { replace: true });
     }
-  }, [initializing, token, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- navigate is stable enough (same convention as AuthProvider.tsx's setLocale); re-run only when auth state changes
+  }, [initializing, token]);
 
   const onCreateAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!token) return;
+    // The <select> below is `required`, but it's also `disabled` while
+    // there are zero accounts (nothing to pick), and browsers skip
+    // constraint validation on a disabled control - so `required` alone
+    // would not stop a blank accountName from reaching createAccount() in
+    // that state. Guard it explicitly here too.
+    if (!token || !accountName) return;
     setAccountError("");
     try {
       await createAccount(token, { name: accountName, quantity: Number(accountQuantity) });
@@ -121,8 +124,6 @@ export default function AccountsPage() {
           </span>
         </div>
 
-        <BackendRouting />
-
         <section>
           <div className="nb-section-heading-row">
             <h2>{t.app.balanceHeading}</h2>
@@ -167,6 +168,10 @@ export default function AccountsPage() {
               disabled={balances.length === 0}
               data-testid="account-select"
             >
+              {/* This placeholder is the only option while there are zero
+                  accounts, and can never itself be submitted - the submit
+                  button is disabled in the same state, and onCreateAccount
+                  guards against an empty accountName besides. */}
               {balances.length === 0 && <option value="">{t.app.noAccountsPlaceholder}</option>}
               {balances.map((balance) => (
                 <option key={balance.name} value={balance.name}>
@@ -182,7 +187,11 @@ export default function AccountsPage() {
               onChange={(event) => setAccountQuantity(event.target.value)}
               required
             />
-            <button type="submit" data-testid="account-submit">
+            {/* Disabled together with the <select> above (same condition) -
+                with zero accounts there's nothing valid to submit against,
+                so the button itself must not be clickable rather than
+                relying solely on the submit-handler guard above. */}
+            <button type="submit" data-testid="account-submit" disabled={balances.length === 0}>
               {t.app.registerButton}
             </button>
           </form>

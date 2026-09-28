@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { login } from "@/lib/api";
 import { beginKeycloakLogin, keycloakEnabled } from "@/lib/oidc";
@@ -11,9 +10,8 @@ type LoginMode = "mock" | "keycloak";
 const MODE_KEY = "nb-quickstarts-login-mode";
 
 export function LoginModal({ onClose }: { onClose: () => void }) {
-  const { t, locale } = useLocale();
+  const { t, locale, navigate } = useLocale();
   const { setAuth } = useAuth();
-  const router = useRouter();
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [error, setError] = useState("");
@@ -51,7 +49,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
       const result = await login(usernameInput, passwordInput);
       setAuth(result.token, result.username);
       onClose();
-      router.push("/accounts");
+      navigate("/accounts");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
