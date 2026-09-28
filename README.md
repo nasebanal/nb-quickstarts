@@ -382,17 +382,17 @@ make zap:baseline    # passive scan of apps/frontend - spiders + observes, never
 ```
 
 ```bash
-make zap:full-scan   # ⚠️  active scan of apps/frontend - sends real attack payloads (SQLi, XSS, ...), several minutes+
-                      #    Can pin apps/frontend's CPU into a runaway loop - see the warning below before running this.
-```
-
-```bash
 make zap:api-scan    # scans apps/backend directly from its live OpenAPI schema (apps/backend/openapi.yaml) - endpoint-aware, so it exercises every documented route, not just what a spider happens to crawl
 ```
 
 ```bash
 make zap:scan        # runs zap:baseline + zap:api-scan in sequence, stops at the first one that fails - deliberately excludes zap:full-scan (see the warning below), run that one explicitly
 make zap:stop        # kills a scan that's running elsewhere (another shell, a background job) - Ctrl+C works fine for one running in your own terminal
+```
+
+```bash
+make zap:full-scan   # ⚠️  active scan of apps/frontend - sends real attack payloads (SQLi, XSS, ...), several minutes+
+                      #    Can pin apps/frontend's CPU into a runaway loop - see the warning below before running this.
 ```
 
 Verified end-to-end against this repo's own `apps`: `baseline` found 12 WARN-level findings (missing security headers like CSP/`X-Content-Type-Options`, mostly - `apps/frontend` is a dev-mode Next.js server, not hardened for production) and 0 FAIL; `api-scan` ran every active rule (SQLi, XXE, command injection, SSTI, ...) against every `apps/backend` route from the OpenAPI schema and came back 116 PASS, 2 WARN (the same missing-header class), 0 FAIL. Both are cheap to run: measured directly, `baseline` took ~78s and `api-scan` ~45s, with `apps/frontend`/`apps/backend` staying at negligible CPU/memory throughout either one - that's why both are safe to bundle into `zap:scan`.
