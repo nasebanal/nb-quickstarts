@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [idToken, setIdToken] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const { applyProfileLocale, consumeManualLocaleChoice } = useLocale();
+  const { applyProfileLocale, consumeManualLocaleChoice, urlLocale } = useLocale();
   // Guards against re-fetching the profile pointlessly on every render this
   // effect happens to run for the same token - not a "once per login"
   // locale guard (that's consumeManualLocaleChoice()'s job now, since a ref
@@ -92,7 +92,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // ever loses right after the viewer explicitly picked something
         // else via the language toggle, which is exactly what
         // consumeManualLocaleChoice() tells apart (see its own comment).
-        if (!consumeManualLocaleChoice()) {
+        // A page reached via its own /en or /ja URL segment is a third case
+        // neither of the above covers: urlLocale is what makes that prefix
+        // mean anything at all (see LocaleProvider.tsx's own
+        // localeFromPathname() comment), so it must keep winning over a
+        // saved profile language too, not just over a just-made manual
+        // toggle - otherwise visiting /en/accounts while signed in to an
+        // account with a Japanese-language profile silently redisplayed
+        // Japanese anyway, contradicting what the URL itself asked for.
+        if (!urlLocale && !consumeManualLocaleChoice()) {
           applyProfileLocale(loaded.language);
         }
       })
