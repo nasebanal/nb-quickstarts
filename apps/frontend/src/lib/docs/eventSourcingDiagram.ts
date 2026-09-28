@@ -30,7 +30,7 @@ export const EVENT_SOURCING_TEXT: Record<
   en: {
     label: "Diagram: how Account and Transaction relate",
     transactionsHeading: "/transactions",
-    transactionsSummary: "the event log itself - one row per POST",
+    transactionsSummary: "per transaction - one signed entry against an account",
     accountsHeading: "/accounts",
     accountsSummary: "per account - the transaction total (balance) for that account",
     operation: "GROUP BY name, SUM(quantity)",
@@ -39,7 +39,7 @@ export const EVENT_SOURCING_TEXT: Record<
   ja: {
     label: "図: AccountとTransactionの関係",
     transactionsHeading: "/transactions",
-    transactionsSummary: "イベントログそのもの — POST 1件につき1行",
+    transactionsSummary: "取引単位の記帳イベント(勘定科目への1件の増減)",
     accountsHeading: "/accounts",
     accountsSummary: "勘定科目単位の取引集計値(勘定科目ごとの残高)",
     operation: "name でGROUP BY、quantity をSUM",
