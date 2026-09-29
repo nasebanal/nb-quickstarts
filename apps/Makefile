@@ -9,12 +9,12 @@ endif
 #################### APPS (TEST TARGETS) ###################
 # apps is the actual test target itself: MySQL + backend (Python/FastAPI,
 # REST+GraphQL) + frontend (TypeScript/Next.js).
-#   - backend reads/writes accounts in MySQL. No OpenAPI schema is checked
+#   - backend reads/writes transactions in MySQL. No OpenAPI schema is checked
 #     in - Specmatic and the frontend's /api-specs page both fetch
 #     the backend's live /openapi.json at the point of use instead (this is
 #     a demo app with no real schema-change workflow to keep a separately
 #     exported copy in sync with).
-#   - Kafka events reach accounts via a separate container, kafka-bridge
+#   - Kafka events reach transactions via a separate container, kafka-bridge
 #     (see kafka/docker-compose.yml + kafka/bridge/), which consumes the
 #     topic and calls POST /transactions over REST - not an in-process consumer
 #     here, so apps/backend has zero Kafka dependency.
@@ -33,7 +33,7 @@ apps:
 	@echo "  apps:down           - Stop and remove apps containers (MySQL data preserved)"
 	@echo "  apps:status         - Check apps container status"
 	@echo "  apps:restart        - Restart apps containers (MySQL data preserved)"
-	@echo "  apps:reset          - Restart AND wipe MySQL data (fresh database)"
+	@echo "  apps:reset          - Stop AND wipe MySQL data (does not start anything; run apps:up after)"
 	@echo "  apps:open           - Open the frontend (TypeScript UI) in browser"
 	@echo "  apps:sql            - Open the SQL client (phpMyAdmin, already logged in to demo) in browser"
 	@echo "  apps:mysql          - Open a mysql shell on the database (or: make apps:mysql SQL='SELECT ...')"
@@ -103,7 +103,7 @@ apps-restart:
 apps-reset:
 	@echo "Resetting apps (wiping MySQL data)..."
 	@docker compose -p apps -f apps/docker-compose.yml down --remove-orphans --volumes
-	@APPS_BUILD_FLAG= $(MAKE) apps-up
+	@echo "Apps containers and MySQL data removed. Nothing is started - run 'make apps:up' for a fresh database."
 
 apps-open:
 	@bin/open_browser.sh http://localhost:5173

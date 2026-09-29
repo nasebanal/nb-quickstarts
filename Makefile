@@ -41,9 +41,9 @@ all:
 	@echo "  all:down    - Stop them all (apps last)"
 	@echo "  all:restart - all:down then all:up"
 	@echo "  all:status  - Show container status for every module"
-	@echo "  all:test    - Run pytest/vitest/playwright/specmatic in sequence (starts apps:up first)"
+	@echo "  all:test    - Run pytest/vitest/playwright/specmatic/locust in sequence (starts apps:up first)"
 	@echo "  all:report  - Open every existing test report in your browser"
-	@echo "  all:reset   - Wipe apps/kong/kafka/observability persistent state, restart the rest"
+	@echo "  all:reset   - Stop everything, wipe apps/kong/kafka/observability persistent state and every test tool's generated logs/reports (nothing is started afterwards)"
 
 all\:%:
 	@$(MAKE) all-$(subst all:,,$@)
@@ -97,20 +97,23 @@ all-status:
 	@echo "=== observability ==="
 	@$(MAKE) observability-status
 
-# Runs the one-shot `test` modules (pytest/vitest/playwright/specmatic) in
-# sequence - NOT locust, which isn't a `test` verb (see AGENTS.md
-# "Test/verification tool modules"), and NOT zap, deliberately: zap:baseline
-# alone takes noticeably longer than the four below combined, and
-# zap:full-scan/zap:api-scan send real attack payloads - not something to
-# run unattended as a side effect of `all:test`. Run those explicitly.
+# Rule: every module whose verb is `test` runs here (pytest, vitest,
+# playwright, specmatic, locust); modules whose verbs are `scan`/`baseline`
+# (zap) do not. zap is deliberately not named `test`: zap:baseline alone
+# takes longer than the rest combined, and zap:full-scan/zap:api-scan send
+# real attack payloads - not something to run unattended as a side effect
+# of `all:test`. Run those explicitly.
 # playwright/specmatic need apps running, so this brings it up first; it
 # does NOT tear apps down afterward, matching every other module's own test
 # target.
+# locust:test goes last: it is a headless load run that blocks for
+# LOCUST_RUN_TIME (30s here if unset) and fails this target on failed requests.
 all-test: apps-up
 	@$(MAKE) pytest-test
 	@$(MAKE) vitest-test
 	@$(MAKE) playwright-test
 	@$(MAKE) specmatic-test
+	@$(MAKE) locust-test LOCUST_RUN_TIME=$(or $(LOCUST_RUN_TIME),30s)
 
 # Opens every report that's a plain, self-contained file straight away -
 # pytest/specmatic/zap/locust (each module's own -report target explains why
@@ -136,15 +139,23 @@ all-report:
 # see AGENTS.md "Anonymous volumes"/module bullets) and get their own `reset`. locust/
 # keycloak/vault hold no persistent state at all (keycloak re-imports its
 # fixed realm file, vault's dev server is in-memory only), so a plain
-# `restart` already leaves them as fresh as a "reset" would.
+# `down` already leaves them as fresh as a "reset" would.
+# The test tools (locust, pytest, vitest, playwright, specmatic, zap) hold no
+# state either, but leave gitignored logs/reports on disk from past runs; each
+# one's own `reset` deletes just those, so all:reset clears them too.
 all-reset:
+	@$(MAKE) all-down
 	@$(MAKE) apps-reset
-	@$(MAKE) kong-reset
-	@$(MAKE) kafka-reset
-	@$(MAKE) observability-reset
-	@$(MAKE) locust-restart
-	@$(MAKE) keycloak-restart
-	@$(MAKE) vault-restart
+	@$(MAKE) kong-wipe
+	@$(MAKE) kafka-wipe
+	@$(MAKE) observability-wipe
+	@$(MAKE) locust-reset
+	@$(MAKE) pytest-reset
+	@$(MAKE) vitest-reset
+	@$(MAKE) playwright-reset
+	@$(MAKE) specmatic-reset
+	@$(MAKE) zap-reset
+	@echo "All persistent state wiped and every service is stopped - run 'make all:up' for a fresh start."
 
 #################### DEFAULT HELP ###################
 default:

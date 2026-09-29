@@ -10,11 +10,12 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class Account(Base):
+class Transaction(Base):
     """Minimal test-target resource. Event-sourced: each row is one
     quantity-change event (`quantity` is a signed delta, not an absolute
-    value). A name's "balance" is the sum of every event's `quantity` for
-    that name (`account_service.get_balances` / `GET /accounts`).
+    value) - a transaction, exposed as `/transactions`. A name's "balance"
+    is the sum of every event's `quantity` for that name
+    (`account_service.get_balances` / `GET /accounts`).
 
     `source` records who registered this event (currently always "api" -
     see account_service.py). `make kafka:bridge-up` runs a separate consumer
@@ -24,7 +25,7 @@ class Account(Base):
     because this table is event-sourced.
     """
 
-    __tablename__ = "accounts"
+    __tablename__ = "transactions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(128))
@@ -40,7 +41,7 @@ class User(Base):
     Keycloak, whose identity lives in Keycloak (`provider` = "keycloak", no
     `password_hash`, `email` mirrored from the token and not editable here).
 
-    Deliberately not linked to `Account`: an account event is a ledger entry,
+    Deliberately not linked to `Transaction`: a transaction is a ledger entry,
     not owned by a user.
     """
 

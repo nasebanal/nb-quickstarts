@@ -13,4 +13,4 @@ services:
       - ./:/app
     environment:
       BASE_URL: ${PLAYWRIGHT_BASE_URL:-http://localhost:5173}
-    command: sh -c "npm install && npx playwright test"
+    command: sh -c "npm install || exit 70; npx playwright test"

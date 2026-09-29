@@ -8,8 +8,8 @@ export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:80
 
 // Event-sourced: each Transaction is one quantity-change event, not a
 // standalone row with an absolute quantity. `quantity` is a signed delta -
-// see apps/backend/app/models.py (still just "Account" there - the
-// event-sourced storage is one table either way, split into two resources
+// see apps/backend/app/models.py (`Transaction`, the `transactions` table -
+// the event-sourced storage is one table either way, split into two resources
 // only at this API boundary: /transactions is the event log itself, GET
 // from here; /accounts is the balance it adds up to, derived, read-only -
 // see AccountBalance below). A name's current balance is the sum of all

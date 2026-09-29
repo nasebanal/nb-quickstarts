@@ -1,5 +1,5 @@
-"""Read/write logic for the underlying ledger (the `accounts` table, still
-one event-sourced table - see `Account` in models.py). Exposed at the API
+"""Read/write logic for the underlying ledger (the `transactions` table, one
+event-sourced table - see `Transaction` in models.py). Exposed at the API
 boundary as two separate resources: `/transactions` (the event log itself -
 app/routers/transactions.py) and `/accounts` (the balances derived from it -
 app/routers/accounts.py); both REST and GraphQL (app/graphql/schema.py) just
@@ -17,24 +17,24 @@ not used by kafka-bridge.
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Account
+from app.models import Transaction
 from app.schemas import AccountBalance, TransactionCreate
 
 
-def list_transactions(db: Session) -> list[Account]:
-    return list(db.scalars(select(Account).order_by(Account.id)))
+def list_transactions(db: Session) -> list[Transaction]:
+    return list(db.scalars(select(Transaction).order_by(Transaction.id)))
 
 
-def get_transaction(db: Session, transaction_id: int) -> Account | None:
-    return db.get(Account, transaction_id)
+def get_transaction(db: Session, transaction_id: int) -> Transaction | None:
+    return db.get(Transaction, transaction_id)
 
 
-def register_transaction(db: Session, data: TransactionCreate, source: str = "api") -> Account:
-    account = Account(name=data.name, quantity=data.quantity, source=source)
-    db.add(account)
+def register_transaction(db: Session, data: TransactionCreate, source: str = "api") -> Transaction:
+    transaction = Transaction(name=data.name, quantity=data.quantity, source=source)
+    db.add(transaction)
     db.commit()
-    db.refresh(account)
-    return account
+    db.refresh(transaction)
+    return transaction
 
 
 def get_balances(db: Session) -> list[AccountBalance]:
@@ -43,12 +43,12 @@ def get_balances(db: Session) -> list[AccountBalance]:
     how many events contributed to it."""
     rows = db.execute(
         select(
-            Account.name,
-            func.sum(Account.quantity).label("balance"),
+            Transaction.name,
+            func.sum(Transaction.quantity).label("balance"),
             func.count().label("event_count"),
         )
-        .group_by(Account.name)
-        .order_by(Account.name)
+        .group_by(Transaction.name)
+        .order_by(Transaction.name)
     )
     return [
         AccountBalance(name=name, balance=balance, event_count=event_count)

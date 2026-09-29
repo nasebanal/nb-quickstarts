@@ -77,9 +77,13 @@ observability-restart:
 	@$(MAKE) observability-down
 	@$(MAKE) observability-up
 
-observability-reset:
-	@echo "Resetting observability (wiping metrics/traces/logs/alert/Grafana state)..."
+# Stops the stack and wipes its volumes without starting it again (used by all:reset).
+observability-wipe:
+	@echo "Wiping observability (metrics/traces/logs/alert/Grafana state)..."
 	@docker compose -p observability -f observability/docker-compose.yml down --volumes --remove-orphans
+
+observability-reset:
+	@$(MAKE) observability-wipe
 	@$(MAKE) observability-up
 
 observability-open:

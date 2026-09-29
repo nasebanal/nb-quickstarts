@@ -212,7 +212,7 @@ paths:
       # created directly - GET /accounts is a read model derived from this
       # log, not a separate resource this operation writes to; a name with
       # no prior transactions is implicitly created by its first one (see
-      # Account in models.py).
+      # Transaction in models.py).
       summary: Record a Transaction
       operationId: create_transaction_transactions_post
       # Deliberately no requestBody/response `examples:` here, unlike every
@@ -364,7 +364,7 @@ components:
       title: TransactionCreate
       description: >-
         `quantity` is a signed delta (e.g. -3 to record consumption), not an
-        absolute value - see `Account` in models.py.
+        absolute value - see `Transaction` in models.py.
       required: [name]
       properties:
         name:

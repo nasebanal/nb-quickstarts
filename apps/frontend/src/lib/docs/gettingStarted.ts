@@ -69,7 +69,7 @@ export const gettingStarted: LocalizedDocsPage = {
         body: [
           "The easiest way in is the SQL client: make apps:sql opens phpMyAdmin already logged in to " +
             "demo (no password prompt - it connects as root for this local demo), with the two tables, " +
-            "accounts and users, in the left-hand list. It also lets you click through the rows, and " +
+            "transactions and users, in the left-hand list. It also lets you click through the rows, and " +
             "shows mysql.user, where the users Vault creates in Scenario 6 appear.",
           "From the terminal, make apps:mysql opens a mysql shell, or runs one statement:",
         ],
@@ -80,7 +80,7 @@ export const gettingStarted: LocalizedDocsPage = {
         ],
         terminal: {
           lines: [
-            { text: "$ make apps:mysql SQL=\"SELECT id, name, quantity, source FROM accounts ORDER BY id LIMIT 5\"", tone: "muted" },
+            { text: "$ make apps:mysql SQL=\"SELECT id, name, quantity, source FROM transactions ORDER BY id LIMIT 5\"", tone: "muted" },
             { text: "+----+---------------+----------+--------+" },
             { text: "| id | name          | quantity | source |" },
             { text: "+----+---------------+----------+--------+" },
@@ -100,10 +100,10 @@ export const gettingStarted: LocalizedDocsPage = {
           ],
         },
         note:
-          "Real output. Try it in step with the app: record a transaction and a new accounts row appears; " +
+          "Real output. Try it in step with the app: record a transaction and a new transactions row appears; " +
           "save a new display name on the Profile page and the users row changes; log in through Keycloak " +
           "once (Scenario 5) and a keycloak row is created for you. A balance is the SUM of an account's " +
-          "rows: SELECT name, SUM(quantity) FROM accounts GROUP BY name. The Overview page's ER diagram " +
+          "rows: SELECT name, SUM(quantity) FROM transactions GROUP BY name. The Overview page's ER diagram " +
           "shows every column.",
       },
       {
@@ -213,7 +213,7 @@ export const gettingStarted: LocalizedDocsPage = {
         body: [
           "いちばん手軽なのはSQLクライアントです: make apps:sqlでphpMyAdminが、demoにログイン済みの状態で" +
             "開きます(パスワード入力は不要 — このローカルデモではrootで接続します)。左の一覧に2つのテーブル、" +
-            "accountsとusersが並び、行をクリックして辿れます。シナリオ6でVaultが作るユーザーが現れる" +
+            "transactionsとusersが並び、行をクリックして辿れます。シナリオ6でVaultが作るユーザーが現れる" +
             "mysql.userも見られます。",
           "ターミナルからは、make apps:mysqlでmysqlシェルを開くか、SQLを1文だけ実行できます:",
         ],
@@ -224,7 +224,7 @@ export const gettingStarted: LocalizedDocsPage = {
         ],
         terminal: {
           lines: [
-            { text: "$ make apps:mysql SQL=\"SELECT id, name, quantity, source FROM accounts ORDER BY id LIMIT 5\"", tone: "muted" },
+            { text: "$ make apps:mysql SQL=\"SELECT id, name, quantity, source FROM transactions ORDER BY id LIMIT 5\"", tone: "muted" },
             { text: "+----+---------------+----------+--------+" },
             { text: "| id | name          | quantity | source |" },
             { text: "+----+---------------+----------+--------+" },
@@ -244,9 +244,9 @@ export const gettingStarted: LocalizedDocsPage = {
           ],
         },
         note:
-          "実際の出力です。アプリの操作と並べて試してみてください: 取引を記帳するとaccountsに新しい行が増え、" +
+          "実際の出力です。アプリの操作と並べて試してみてください: 取引を記帳するとtransactionsに新しい行が増え、" +
           "プロフィール画面で表示名を保存するとusersの行が変わり、Keycloakで一度ログインすれば(シナリオ5)" +
-          "keycloakの行が自動で作られます。残高は科目の行のSUMです: SELECT name, SUM(quantity) FROM accounts " +
+          "keycloakの行が自動で作られます。残高は科目の行のSUMです: SELECT name, SUM(quantity) FROM transactions " +
           "GROUP BY name。すべてのカラムは概要ページのER図にあります。",
       },
       {

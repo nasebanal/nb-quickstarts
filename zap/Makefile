@@ -30,6 +30,8 @@ zap:
 	@echo "                  needs this instead; also cleans up the container docker compose run"
 	@echo "                  --rm would otherwise leave behind after a hard kill)"
 	@echo ""
+	@echo "  zap:reset     - Delete every generated scan report (zap/report/)"
+	@echo ""
 	@echo "  zap:report    - Open every *-report.html currently in zap/report/ in your browser"
 	@echo "                  (whichever scans have actually been run - not a fixed list, so a"
 	@echo "                  new scan type added later is picked up with no change needed here)"
@@ -62,7 +64,8 @@ zap\:%:
 zap-baseline: apps-network-ensure
 	@echo "Running ZAP baseline scan (passive) against apps/frontend..."
 	@mkdir -p zap/report
-	@docker compose -p zap -f zap/docker-compose.yml run --rm zap \
+	@bin/run_test.sh zap:baseline zap:report -- \
+		docker compose -p zap -f zap/docker-compose.yml run --rm --name nb-zap-$$(openssl rand -hex 3) zap \
 		zap-baseline.py -t http://frontend:5173 \
 		-r baseline-report.html -J baseline-report.json -I
 	@echo "Report: zap/report/baseline-report.html"
@@ -70,7 +73,8 @@ zap-baseline: apps-network-ensure
 zap-full-scan: apps-network-ensure
 	@echo "⚠️  Running ZAP full scan (ACTIVE - sends real attack payloads) against apps/frontend..."
 	@mkdir -p zap/report
-	@docker compose -p zap -f zap/docker-compose.yml run --rm zap \
+	@bin/run_test.sh zap:full-scan zap:report -- \
+		docker compose -p zap -f zap/docker-compose.yml run --rm --name nb-zap-$$(openssl rand -hex 3) zap \
 		zap-full-scan.py -t http://frontend:5173 \
 		-r full-scan-report.html -J full-scan-report.json -I
 	@echo "Report: zap/report/full-scan-report.html"
@@ -98,7 +102,8 @@ zap-stop:
 zap-api-scan: apps-network-ensure
 	@echo "⚠️  Running ZAP API scan (active) against apps/backend's live OpenAPI schema..."
 	@mkdir -p zap/report
-	@docker compose -p zap -f zap/docker-compose.yml run --rm zap \
+	@bin/run_test.sh zap:api-scan zap:report -- \
+		docker compose -p zap -f zap/docker-compose.yml run --rm --name nb-zap-$$(openssl rand -hex 3) zap \
 		zap-api-scan.py -t http://backend:8080/openapi.json -f openapi \
 		-r api-scan-report.html -J api-scan-report.json -I
 	@echo "Report: zap/report/api-scan-report.html"
@@ -136,6 +141,13 @@ zap-scan:
 # does NOT word-split an unquoted variable by default: `for f in $$reports`
 # silently treated the whole multi-line ls output as one argument instead of
 # iterating (caught by actually running this, not just reading it back).
+# Empties zap/report/ (gitignored, each scan overwrites only its own files);
+# the directory itself stays. Doesn't stop a scan that's running - that's
+# zap:stop.
+zap-reset:
+	@find zap/report -mindepth 1 -delete 2>/dev/null; true
+	@echo "ZAP scan reports removed (zap/report/)."
+
 zap-report:
 	@reports=$$(ls zap/report/*-report.html 2>/dev/null); \
 	if [ -z "$$reports" ]; then \

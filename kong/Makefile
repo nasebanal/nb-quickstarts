@@ -61,17 +61,31 @@ kong-up: apps-network-ensure
 	@if [ "$${KONG_DB:-postgres}" = "postgres" ]; then \
 		IS_FIRST_RUN=$$(docker volume ls -q | grep -q '^kong_kong-db-data$$' && echo "no" || echo "yes"); \
 		echo "Starting Kong with PostgreSQL database..."; \
-		KONG_DATABASE=postgres docker-compose -f kong/docker-compose.yml --profile database up -d; \
+		KONG_DATABASE=postgres docker-compose -f kong/docker-compose.yml --profile database up -d kong-database kong-migration-bootstrap; \
 		echo ""; \
 		echo "Waiting for database migration to complete..."; \
-		sleep 5; \
+		MIGRATION_EXIT=$$(docker wait nb-kong-migration-bootstrap); \
 		docker-compose -f kong/docker-compose.yml logs kong-migration-bootstrap | tail -10; \
+		if [ "$$MIGRATION_EXIT" != "0" ]; then \
+			echo "Error: Kong database migration failed (exit $$MIGRATION_EXIT)."; \
+			exit 1; \
+		fi; \
+		KONG_DATABASE=postgres docker-compose -f kong/docker-compose.yml --profile database up -d kong; \
 		echo ""; \
 		echo "Kong started successfully with database!"; \
 		if [ "$$IS_FIRST_RUN" = "yes" ]; then \
 			echo ""; \
 			echo "First run detected. Importing configuration from kong/conf/declarative.yml..."; \
-			sleep 3; \
+			echo "Waiting for the Kong Admin API (migrations may still be running)..."; \
+			READY=no; \
+			for i in $$(seq 1 60); do \
+				if curl -s -o /dev/null "$${KONG_ADMIN_URL:-http://localhost:8001}"; then READY=yes; break; fi; \
+				sleep 2; \
+			done; \
+			if [ "$$READY" != "yes" ]; then \
+				echo "Error: Kong Admin API did not come up within 120s. Check: docker logs nb-kong"; \
+				exit 1; \
+			fi; \
 			./kong/bin/import_config.sh; \
 		else \
 			echo ""; \
@@ -108,6 +122,12 @@ kong-restart:
 
 kong-open:
 	@bin/open_browser.sh http://localhost:8002
+
+# Stops Kong and wipes its Postgres volume without starting it again (used by
+# all:reset). Unlike kong:reset this needs no running Kong.
+kong-wipe:
+	@echo "Wiping Kong (Postgres config - Docker volume: kong_kong-db-data)..."
+	@docker-compose -f kong/docker-compose.yml --profile database down --volumes
 
 kong-reset:
 	@./kong/bin/reset_config.sh

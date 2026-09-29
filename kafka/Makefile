@@ -91,9 +91,13 @@ kafka-restart:
 	@$(MAKE) kafka-down
 	@$(MAKE) kafka-up
 
-kafka-reset:
-	@echo "Resetting Kafka (wiping topic data - Docker volume: kafka_kafka-data)..."
+# Stops Kafka and wipes its volume without starting it again (used by all:reset).
+kafka-wipe:
+	@echo "Wiping Kafka (topic data - Docker volume: kafka_kafka-data)..."
 	@docker-compose -f kafka/docker-compose.yml down --volumes
+
+kafka-reset:
+	@$(MAKE) kafka-wipe
 	@$(MAKE) kafka-up
 
 kafka-add-topics:
