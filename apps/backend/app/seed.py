@@ -1,7 +1,7 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Account, User
+from app.models import Transaction, User
 from app.passwords import hash_password
 
 # A tiny, coherent chart of accounts (not arbitrary "Item A/B/C" labels),
@@ -33,9 +33,9 @@ _SEED_USERS = [
 
 
 def seed_if_empty(db: Session) -> None:
-    if not db.scalar(select(func.count()).select_from(Account)):
+    if not db.scalar(select(func.count()).select_from(Transaction)):
         for data in _SAMPLE_EVENTS:
-            db.add(Account(source="seed", **data))
+            db.add(Transaction(source="seed", **data))
         db.commit()
     # Each seed user is added if missing (by username), not "if the table is
     # empty": a database created before this user existed - or holding only

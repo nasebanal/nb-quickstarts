@@ -7,7 +7,7 @@ from app.schemas import TransactionCreate, TransactionOut
 from app.services import account_service
 
 # The event log itself - one row per signed-delta event posted against a
-# name (see Account in models.py). Split from /accounts (the balances
+# name (see Transaction in models.py). Split from /accounts (the balances
 # derived from it, routers/accounts.py) on purpose: a transaction's own id
 # and an account's identity (its name) are two different things, and this
 # resource's {transaction_id} previously being called "{account_id}" (when

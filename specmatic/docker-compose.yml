@@ -21,7 +21,7 @@ services:
     command:
       - -c
       - >
-        sh bin/prepare_contract.sh &&
+        sh bin/prepare_contract.sh || exit 70;
         specmatic test openapi.json --host backend --port 8080
         --examples=examples --junitReportDir /app/junit
     networks:

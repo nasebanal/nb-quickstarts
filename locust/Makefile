@@ -29,6 +29,7 @@ locust:
 	@echo "  locust:down        - Stop and remove Locust containers"
 	@echo "  locust:status      - Check Locust container status"
 	@echo "  locust:restart     - Restart Locust containers"
+	@echo "  locust:reset       - Delete all past run logs/reports (locust/logs/) - move any you want to keep first"
 	@echo "  locust:open        - Open Locust UI in browser"
 	@echo "  locust:report      - Open the most recent run's report.html in your browser"
 	@echo ""
@@ -62,6 +63,7 @@ locust:
 	@echo "  LOCUST_USERS=10                    # Number of concurrent users (locust:up also lets you set this from the UI)"
 	@echo "  LOCUST_SPAWN_RATE=1                # User spawn rate (users/second) (same)"
 	@echo "  LOCUST_RUN_TIME=                   # Required for locust:test (e.g., 1h30m, 60s); ignored by locust:up"
+	@echo "  LOCUST_MAX_FAIL_RATIO=0            # locust:test: allowed failure ratio (0-1); above it = TEST FAILED (exit 1). Exit 2 = unhandled task exception; 70 = startup/setup failure"
 	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  Web UI: http://localhost:8089"
@@ -86,6 +88,15 @@ locust-test: apps-network-ensure
 		exit 1; \
 	fi
 	@$(MAKE) locust-run LOCUST_HEADLESS_FLAG=--headless
+	@# Headless is a test run, so block until the master exits (after
+	@# LOCUST_RUN_TIME) and propagate its exit code through bin/run_test.sh, which
+	@# classifies it (see there): 0 PASS, 1 TEST FAILED (locust/bin/exit_code.py
+	@# decides: failure ratio over LOCUST_MAX_FAIL_RATIO), 2 = unhandled task exception.
+	@# A non-zero code lets `make all:test` fail on it too.
+	@# Ctrl+C only stops the waiting; the run itself keeps going in Docker.
+	@echo "Waiting for the headless run to finish (LOCUST_RUN_TIME=$${LOCUST_RUN_TIME})..."
+	@bin/run_test.sh locust locust:report -- \
+		sh -c 'c=$$(docker wait nb-locust-master) || exit 70; exit $$c'
 
 locust-run:
 	@# Fail fast on a wrong LOCUST_FILE: the master would otherwise start, log
@@ -93,7 +104,7 @@ locust-run:
 	@if [ ! -f "locust/bin/$${LOCUST_FILE:-locustfile_http.py}" ]; then \
 		echo "Error: LOCUST_FILE '$${LOCUST_FILE:-locustfile_http.py}' not found in locust/bin/"; \
 		echo "Available: $$(ls locust/bin/*.py | xargs -n1 basename | tr '\n' ' ')"; \
-		exit 1; \
+		exit 70; \
 	fi
 	@echo "Starting Locust containers via Docker Compose..."
 	@echo "Using Locust file: $${LOCUST_FILE:-locustfile_http.py}"
@@ -136,7 +147,7 @@ locust-run:
 			LOCUST_LOGLEVEL=DEBUG \
 			LOCUST_CSV_PREFIX=$$CSV_PREFIX \
 			LOCUST_HTML_FILE=$$HTML_FILE \
-			docker compose -p locust -f locust/docker-compose.yml up -d --build --scale worker=$${LOCUST_WORKERS:-1}; \
+			docker compose -p nb-locust -f locust/docker-compose.yml up -d --build --scale worker=$${LOCUST_WORKERS:-1}; \
 		sleep 3; \
 		WORKER_CONTAINER=$$(docker ps --format "{{.Names}}" | grep -E "worker-[0-9]+" | head -1); \
 		if [ "$${LOCUST_DEBUG_MODE:-false}" = "true" ]; then \
@@ -164,7 +175,7 @@ locust-run:
 				docker logs --tail 15 nb-locust-master 2>&1 | sed 's/^/  | /'; \
 				echo ""; \
 				echo "Check LOCUST_FILE ($${LOCUST_FILE:-locustfile_http.py}), LOCUST_TAGS and the locustfile itself, then re-run."; \
-				exit 1 ;; \
+				exit 70 ;; \
 		esac
 	@echo "Locust containers started. Access Locust UI at http://localhost:8089"
 
@@ -178,18 +189,25 @@ locust-down:
 		kill $$(cat locust/.debug_log_pid) 2>/dev/null || true; \
 		rm -f locust/.debug_log_pid; \
 	fi
-	@docker compose -p locust -f locust/docker-compose.yml down --remove-orphans
-	@docker compose -f locust/docker-compose-worker.yml down 2>/dev/null || true
+	@docker compose -p nb-locust -f locust/docker-compose.yml down --remove-orphans
+	@docker compose -p nb-locust -f locust/docker-compose-worker.yml down 2>/dev/null || true
 	@rm -f .locust_cluster_mode
 	@echo "Locust containers stopped and removed. (apps are unaffected; use 'make apps:down' to stop them.)"
 
 locust-status:
 	@echo "Checking Locust container status..."
-	@docker compose -p locust -f locust/docker-compose.yml ps
+	@docker compose -p nb-locust -f locust/docker-compose.yml ps
 
 locust-restart:
 	@$(MAKE) locust-down
 	@$(MAKE) locust-up
+
+# Locust holds no persistent state, only what past runs left on disk: one
+# timestamped directory per run under locust/logs/ (gitignored). Empties it
+# (the directory itself stays); doesn't touch running containers.
+locust-reset:
+	@find locust/logs -mindepth 1 -delete 2>/dev/null; true
+	@echo "Locust run logs/reports removed (locust/logs/)."
 
 locust-open:
 	@bin/open_browser.sh http://localhost:8089
@@ -221,6 +239,6 @@ locust-join-cluster:
 	@echo "Starting $(LOCUST_WORKERS) worker(s) to connect to $(LOCUST_MASTER_HOST)..."
 	@LOCUST_FILE=$(LOCUST_FILE) \
 		LOCUST_MASTER_HOST=$(LOCUST_MASTER_HOST) \
-		docker compose -f locust/docker-compose-worker.yml up -d --build --scale locust-worker=$(LOCUST_WORKERS)
+		docker compose -p nb-locust -f locust/docker-compose-worker.yml up -d --build --scale worker=$(LOCUST_WORKERS)
 	@echo "Workers started and connected to cluster at $(LOCUST_MASTER_HOST)"
 	@echo "Check master UI at http://$(LOCUST_MASTER_HOST):8089"

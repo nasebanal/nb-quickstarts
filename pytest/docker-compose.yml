@@ -8,5 +8,5 @@ services:
       - ./report:/report
     working_dir: /app
     command: >
-      sh -c "pip install --no-cache-dir -r requirements-dev.txt &&
+      sh -c "pip install --no-cache-dir -r requirements-dev.txt || exit 70;
       pytest tests/ -v --html=/report/report.html --self-contained-html"

@@ -16,9 +16,11 @@ DECLARATIVE_CONFIG="kong/conf/declarative.yml"
 
 # Check if Kong is running
 if ! curl -s "${KONG_ADMIN_URL}" > /dev/null 2>&1; then
-    echo -e "${YELLOW}Kong is not running${NC}"
-    echo "Start Kong: make kong:up"
-    exit 1
+    # Not an error: nothing is running, so there is no live config to reset
+    # (and make all:reset must not abort here before resetting the rest).
+    echo -e "${YELLOW}Kong is not running - skipping Kong reset${NC}"
+    echo "Start Kong with 'make kong:up', then re-run 'make kong:reset' if you need to re-import kong/conf/declarative.yml."
+    exit 0
 fi
 
 if [ "${KONG_DB:-postgres}" = "postgres" ]; then

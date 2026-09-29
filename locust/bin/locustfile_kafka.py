@@ -16,6 +16,7 @@ import json
 import os
 import time
 
+import exit_code  # noqa: F401 - exit code: native 0 / 1 (over LOCUST_MAX_FAIL_RATIO) / 2 (task exception)
 import report_on_stop  # noqa: F401 - writes the --html report when a run stops
 
 from kafka import KafkaProducer

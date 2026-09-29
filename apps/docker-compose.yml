@@ -26,7 +26,7 @@ services:
       - apps-db-data:/var/lib/mysql
 
   # A SQL client, already logged in to the database: open
-  # http://localhost:8081 and the tables (accounts, users) are right there.
+  # http://localhost:8081 and the tables (transactions, users) are right there.
   # phpMyAdmin skips its login screen when PMA_USER/PMA_PASSWORD are set. It
   # connects as root on purpose - so it can also show `mysql.user`, where the
   # users Vault creates in the Vault scenario appear. Local demo only: a root
@@ -40,6 +40,9 @@ services:
       PMA_HOST: mysql-server
       PMA_USER: root
       PMA_PASSWORD: ${APPS_MYSQL_ROOT_PASSWORD:-rootpassword}
+    volumes:
+      # Pins the UI language to English (see the file for why).
+      - ./phpmyadmin/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php:ro
     depends_on:
       - mysql-server
     networks:

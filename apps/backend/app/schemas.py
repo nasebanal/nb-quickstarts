@@ -15,7 +15,7 @@ class CamelModel(BaseModel):
 
 class TransactionCreate(CamelModel):
     """`quantity` is a signed delta (e.g. -3 to record consumption), not an
-    absolute value — see `Account` in models.py."""
+    absolute value — see `Transaction` in models.py."""
 
     name: str
     quantity: int = 0

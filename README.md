@@ -319,7 +319,9 @@ Kafka stays flat because `kafka-bridge` drains the topic at its own steady, sequ
 Load tests are driven by `make locust:up` (UI mode - start containers, then
 configure and launch the test from the browser at http://localhost:8089) or
 `make locust:test` (headless - starts immediately, no UI, bounded by
-`LOCUST_RUN_TIME`). Pick the test by setting `LOCUST_FILE` (which test) and
+`LOCUST_RUN_TIME`; the command waits for the run to finish and exits with Locust's
+own code (`0` ok, `1` failed requests above `LOCUST_MAX_FAIL_RATIO`, `2` unhandled task exception) and prints
+whether that means TEST FAILED or TOOL ERROR - same for every test target, see AGENTS.md). Pick the test by setting `LOCUST_FILE` (which test) and
 optionally `LOCUST_TAGS` (which subset) — in `.env` or on the command line.
 To switch test types cleanly, use `make locust:restart` (or `make
 locust:down` then `make locust:up`). For the full list of tunable env vars, see
@@ -477,6 +479,7 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 | `LOCUST_USERS` | `10` | Concurrent simulated users (also settable from the UI in `locust:up`) |
 | `LOCUST_SPAWN_RATE` | `1` | Users spawned per second |
 | `LOCUST_RUN_TIME` | *(empty)* | **Required** for `locust:test` (headless) - e.g. `60s`, `1h30m` |
+| `LOCUST_MAX_FAIL_RATIO` | `0` | `locust:test`: allowed failure ratio (0-1); above it the run is TEST FAILED (exit 1) |
 | `LOCUST_HTTP_HOST` | `http://backend:8080` | Target for the HTTP/GraphQL scenarios |
 | `LOCUST_MYSQL_HOST` | `mysql-server` | Target for the MySQL scenario |
 | `LOCUST_MASTER_HOST` | *(unset)* | Master's IP, for `locust:join-cluster` from another PC - see [Cluster load testing](#cluster-load-testing) |
@@ -542,9 +545,16 @@ Every `make <module>:test` run leaves a browsable report behind. These are all g
 
 `apps`, `kong`, `kafka`, and `observability` each keep their data in a named
 Docker volume, so a plain `down`/`restart` preserves it. Each has its own
-`reset` command that wipes that volume and starts fresh (`make all:reset`
-runs all four, plus a plain restart for `locust`, which holds no
-persistent state to begin with):
+`reset` command that wipes that volume and starts fresh. `make all:reset`
+is different: it runs `all:down`, wipes all four volumes and the test
+tools' logs/reports, and starts nothing - every service is left stopped
+(run `make all:up` afterwards). `make apps:reset` likewise only stops the
+containers and wipes the volume - run `make apps:up` afterwards (which
+recreates and seeds the database). The test tools
+(`locust`, `pytest`, `vitest`, `playwright`, `specmatic`, `zap`) each have a
+`reset` too, which just deletes the gitignored logs/reports their past runs
+left on disk (`locust/logs`, `*/report`, `specmatic/junit`, ...) - copy out
+any you want to keep first, and `make all:reset` runs them all:
 
 | Module | What persists | Docker volume | Reset command |
 | --- | --- | --- | --- |

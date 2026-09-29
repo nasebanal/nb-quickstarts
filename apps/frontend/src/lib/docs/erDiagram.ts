@@ -1,7 +1,7 @@
 import type { Locale } from "@/lib/i18n";
 
 // The MySQL schema (database demo), as the Overview page's ER diagram.
-// Column names/types mirror what `DESCRIBE accounts` / `DESCRIBE users`
+// Column names/types mirror what `DESCRIBE transactions` / `DESCRIBE users`
 // print (app/models.py is the source) - keep this in step when a model changes.
 export interface ErColumn {
   name: string;
@@ -19,7 +19,7 @@ export interface ErEntity {
 
 export const ER_ENTITIES: ErEntity[] = [
   {
-    name: "accounts",
+    name: "transactions",
     summary: {
       en: "The ledger: one row per transaction (event)",
       ja: "台帳: 取引(イベント)1件につき1行",
@@ -82,7 +82,7 @@ export const ER_ENTITIES: ErEntity[] = [
 export const ER_TEXT: Record<Locale, { caption: string; columns: [string, string, string]; legend: string; label: string }> = {
   en: {
     caption:
-      "The MySQL schema (database demo). No foreign key between the two on purpose: an accounts row " +
+      "The MySQL schema (database demo). No foreign key between the two on purpose: a transactions row " +
       "is a ledger entry (a name's balance is the sum of its rows), not something a user owns; users " +
       "holds who can log in - seeded with the demo user, plus a row created on first login for each Keycloak user.",
     columns: ["Column", "Type", "Note"],
@@ -92,7 +92,7 @@ export const ER_TEXT: Record<Locale, { caption: string; columns: [string, string
   ja: {
     caption:
       "MySQLのスキーマ(データベースdemo)です。2つのテーブルの間に外部キーはありません — これは意図的で、" +
-      "accountsの行は台帳のエントリ(科目の残高はその行の合計)であり、ユーザーが所有するものではありません。" +
+      "transactionsの行は台帳のエントリ(科目の残高はその行の合計)であり、ユーザーが所有するものではありません。" +
       "usersはログインできる人を持ち、demoユーザーがシードされ、Keycloakのユーザーは初回ログイン時に行が作られます。",
     columns: ["カラム", "型", "説明"],
     legend: "PK 主キー - UQ 一意 - NULL 空を許可",

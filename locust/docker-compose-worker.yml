@@ -1,5 +1,5 @@
 services:
-  locust-worker:
+  worker:
     image: ${LOCUST_IMAGE:-nb-locust-mysql:latest}
     build:
       context: .
