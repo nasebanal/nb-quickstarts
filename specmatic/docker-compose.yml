@@ -1,6 +1,6 @@
 services:
   specmatic:
-    image: specmatic/specmatic:${SPECMATIC_VERSION:-2.55.0}
+    image: specmatic/specmatic:${SPECMATIC_VERSION:-2.55.1}
     working_dir: /app
     volumes:
       # Specmatic always writes its HTML report to build/reports/specmatic/test/html
@@ -39,7 +39,7 @@ services:
   # the same realistic-looking values, since it can't accidentally pass by
   # relying on one specific example's data.
   specmatic-mock:
-    image: specmatic/specmatic:${SPECMATIC_VERSION:-2.55.0}
+    image: specmatic/specmatic:${SPECMATIC_VERSION:-2.55.1}
     container_name: nb-specmatic-mock
     working_dir: /app
     volumes:

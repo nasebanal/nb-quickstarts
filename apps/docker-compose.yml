@@ -1,6 +1,6 @@
 services:
   mysql-server:
-    image: mysql:${APPS_MYSQL_VERSION:-8.4.7}
+    image: mysql:${APPS_MYSQL_VERSION:-8.4}
     container_name: nb-mysql-server
     ports:
       - "${APPS_MYSQL_PORT:-3306}:3306"

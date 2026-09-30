@@ -1,8 +1,21 @@
-from datetime import datetime
-from typing import Literal
+from datetime import datetime, timezone
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+
+
+def _assume_utc(value: object) -> object:
+    """MySQL's DATETIME has no time zone, so SQLAlchemy hands back naive
+    datetimes even though `_utc_now` stored UTC - and a naive datetime would
+    serialize without an offset, which is not a valid OpenAPI `date-time`
+    (RFC 3339 requires one). Everything is stored as UTC, so tag it as such."""
+    if isinstance(value, datetime) and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+UtcDatetime = Annotated[datetime, BeforeValidator(_assume_utc)]
 
 
 class CamelModel(BaseModel):
@@ -28,7 +41,7 @@ class TransactionOut(CamelModel):
     name: str
     quantity: int
     source: str
-    created_at: datetime
+    created_at: UtcDatetime
 
 
 class AccountBalance(CamelModel):
