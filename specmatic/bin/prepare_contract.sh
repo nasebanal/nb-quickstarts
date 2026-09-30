@@ -24,7 +24,7 @@ TOKEN=$(curl -sf -X POST http://backend:8080/auth/login \
   -H "Content-Type: application/json" -d '{"username": "demo", "password": "demo"}' | jq -r .token)
 
 jq -n --arg token "$TOKEN" \
-  '{"http-request": {"method": "POST", "path": "/transactions", "headers": {"Authorization": ("Bearer " + $token)}, "body": {"name": "Specmatic Test Account", "quantity": 1}}, "http-response": {"status": 201, "body": {"id": 1, "name": "Specmatic Test Account", "quantity": 1, "source": "api", "createdAt": "2024-01-01T00:00:00"}}}' \
+  '{"http-request": {"method": "POST", "path": "/transactions", "headers": {"Authorization": ("Bearer " + $token)}, "body": {"name": "Specmatic Test Account", "quantity": 1}}, "http-response": {"status": 201, "body": {"id": 1, "name": "Specmatic Test Account", "quantity": 1, "source": "api", "createdAt": "2024-01-01T00:00:00Z"}}}' \
   > examples/post-transactions.json
 
 curl -sf http://backend:8080/transactions/1 |

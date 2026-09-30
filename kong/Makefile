@@ -46,18 +46,6 @@ kong\:%:
 #################### KONG ACTIONS ###################
 
 kong-up: apps-network-ensure
-	@echo "Checking Python dependencies..."
-	@if ! python3 -c "import yaml" 2>/dev/null; then \
-		echo "Required Python package 'PyYAML' is not installed."; \
-		echo "This is needed for kong:reset-config with KONG_DB=postgres."; \
-		read -p "Install now? [y/N]: " answer; \
-		if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
-			pip install -r kong/requirements.txt; \
-			echo "Python dependencies installed."; \
-		else \
-			echo "Skipping installation. Some features may not work."; \
-		fi; \
-	fi
 	@if [ "$${KONG_DB:-postgres}" = "postgres" ]; then \
 		IS_FIRST_RUN=$$(docker volume ls -q | grep -q '^kong_kong-db-data$$' && echo "no" || echo "yes"); \
 		echo "Starting Kong with PostgreSQL database..."; \

@@ -422,7 +422,7 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 |---|---|---|
 | `APPS_MYSQL_USER` / `APPS_MYSQL_PASSWORD` | `demo` / `demo` | The application's MySQL login. Used by `apps/backend`, the SQL client, the Vault module and Locust's MySQL scenario. Created when the data volume is first initialised - changing them later needs `make apps:reset`. A blank value falls back to the default; it does **not** mean "no password" |
 | `APPS_MYSQL_DATABASE` / `APPS_MYSQL_ROOT_PASSWORD` | `demo` / `rootpassword` | The database name, and the root password (used by the SQL client and `make apps:mysql`) |
-| `APPS_MYSQL_PORT` / `APPS_MYSQL_VERSION` | `3306` / `8.4.7` | Host-published MySQL port, and the image version |
+| `APPS_MYSQL_PORT` / `APPS_MYSQL_VERSION` | `3306` / `8.4` | Host-published MySQL port, and the image version |
 | `NEXT_PUBLIC_API_BASE` | `http://localhost:8080` | Where `apps/frontend` calls the backend - direct, or `http://localhost:8000/api` to route through Kong instead (needs `kong:up` + `apps:restart`) |
 | `NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL` | `http://localhost:8090` | Where the frontend checks kafka-bridge's health - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
 | `KEYCLOAK_ISSUER` | *(empty = off)* | Turns on Keycloak for `apps/backend` and the login page: `http://localhost:8180/realms/nasebanal` - see [Keycloak](#keycloak) |
@@ -433,7 +433,7 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 | Variable | Default | Description |
 |---|---|---|
 | `KONG_DB` | `postgres` | `postgres` (DB mode - needed for Kong Manager edits to stick) or `off` (DB-less, reads `kong/conf/declarative.yml` only) |
-| `KONG_VERSION` | `3.6.1` | Kong Docker image tag |
+| `KONG_VERSION` | `3.6` | Kong Docker image tag |
 | `KONG_PG_USER` / `KONG_PG_PASSWORD` / `KONG_PG_DATABASE` | `kong` / `kongpass` / `kong` | Postgres credentials, `KONG_DB=postgres` mode only |
 
 ### Kafka

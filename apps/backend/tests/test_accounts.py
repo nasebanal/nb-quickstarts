@@ -103,3 +103,12 @@ def test_a_token_cannot_be_reused_for_another_username(client):
         "/transactions", json={"name": "x", "quantity": 1}, headers={"Authorization": f"Bearer {version}~{other}~{signature}"}
     )
     assert response.status_code == 401
+
+
+def test_created_at_has_a_utc_offset(client):
+    # An OpenAPI `date-time` must carry an offset (RFC 3339). MySQL's DATETIME
+    # has no time zone, so createdAt has to be tagged as UTC on the way out.
+    transactions = client.get("/transactions").json()
+    assert transactions
+    for transaction in transactions:
+        assert transaction["createdAt"].endswith("Z")

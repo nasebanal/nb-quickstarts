@@ -196,12 +196,12 @@ paths:
                       name: Cash
                       quantity: 100000
                       source: seed
-                      createdAt: "2024-01-01T00:00:00"
+                      createdAt: "2024-01-01T00:00:00Z"
                     - id: 2
                       name: Rent Expense
                       quantity: 30000
                       source: seed
-                      createdAt: "2024-01-01T00:00:00"
+                      createdAt: "2024-01-01T00:00:00Z"
     post:
       tags: [transactions]
       # Not "Create Account": quantity is a signed delta (see
@@ -285,7 +285,7 @@ paths:
                     name: Cash
                     quantity: 100000
                     source: seed
-                    createdAt: "2024-01-01T00:00:00"
+                    createdAt: "2024-01-01T00:00:00Z"
         "404":
           description: Transaction not found
           content:

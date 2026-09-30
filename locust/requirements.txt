@@ -1,0 +1,5 @@
+# MySQL connectivity (locustfile_mysql.py).
+pymysql~=1.2.3
+cryptography~=50.0.1
+# Kafka producer connectivity (locustfile_kafka.py).
+kafka-python-ng~=2.2.3

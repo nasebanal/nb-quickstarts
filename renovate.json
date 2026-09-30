@@ -1,18 +1,74 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-
-  "//": "PR 作成頻度を下げるための設定。実行・PR 作成を毎週月曜の朝にまとめ、同時/毎時の本数も絞る。",
-  "schedule": ["before 9am on monday"],
+  "extends": [
+    "config:recommended"
+  ],
+  "description": [
+    "PR 作成頻度を下げるための設定。実行・PR 作成を毎週月曜の朝にまとめ、同時/毎時の本数も絞る。",
+    "バージョンは「マイナー固定(パッチ不定)」が基本方針。マイナータグのあるイメージ(mysql:8.4 など)と package.json の ~ 指定はパッチが自動で入るので PR は出ない。マイナータグが無いイメージ(Kafka・Specmatic・Prometheus・Grafana 等)は完全固定なので、パッチ更新を PR で受ける。",
+    ".env.example の *_VERSION は直前行の `# renovate: depName=...` 注釈で、compose の image: xxx:${VAR:-既定値} は image 名そのものから読む。",
+    "更新をまとめて PR 数を減らす。patch は CI が通れば自動マージ、minor は人が確認する。0.x はパッチでも挙動が変わりうるので patch でも自動マージしない。Playwright は npm パッケージと Docker イメージ(ブラウザ同梱)のバージョンを必ず揃えるため 1 グループにする。"
+  ],
+  "schedule": [
+    "before 9am on monday"
+  ],
   "prHourlyLimit": 1,
   "prConcurrentLimit": 3,
-
-  "//2": "更新をまとめて1つの PR にし、PR 数自体を減らす。",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/(^|\\/)\\.env\\.example$/"
+      ],
+      "matchStrings": [
+        "#\\s*renovate:\\s*depName=(?<depName>\\S+)\\s*\\n[A-Z0-9_]+_VERSION=(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/(^|\\/)docker-compose[^\\/]*\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "image:\\s*(?<depName>[^\\s:$]+):\\$\\{[A-Z0-9_]+_VERSION:-(?<currentValue>[^}]+)\\}"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "groupName": "all non-major dependencies",
-      "groupSlug": "all-minor-patch"
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "groupName": "all patch",
+      "groupSlug": "all-patch",
+      "automerge": true
+    },
+    {
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "matchCurrentVersion": "/^v?0\\./",
+      "automerge": false
+    },
+    {
+      "matchUpdateTypes": [
+        "minor",
+        "pin",
+        "digest"
+      ],
+      "groupName": "all minor",
+      "groupSlug": "all-minor"
+    },
+    {
+      "matchPackageNames": [
+        "@playwright/test",
+        "mcr.microsoft.com/playwright"
+      ],
+      "groupName": "playwright",
+      "groupSlug": "playwright",
+      "automerge": false
     }
   ]
 }

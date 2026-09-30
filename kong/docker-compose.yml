@@ -1,6 +1,6 @@
 services:
   kong-database:
-    image: postgres:13.23
+    image: postgres:13
     container_name: nb-kong-database
     environment:
       POSTGRES_USER: ${KONG_PG_USER:-kong}
@@ -19,7 +19,7 @@ services:
       - database
 
   kong-migration-bootstrap:
-    image: kong:${KONG_VERSION:-3.6.1}
+    image: kong:${KONG_VERSION:-3.6}
     container_name: nb-kong-migration-bootstrap
     command: kong migrations bootstrap
     environment:
@@ -38,7 +38,7 @@ services:
     restart: on-failure
 
   kong:
-    image: kong:${KONG_VERSION:-3.6.1}
+    image: kong:${KONG_VERSION:-3.6}
     container_name: nb-kong
     environment:
       # Database settings (for database mode)
