@@ -12,7 +12,7 @@ specmatic:
 	@echo "Specmatic - OpenAPI-driven contract testing. Here testing the running backend against its own live OpenAPI schema, and mocking that same contract for consumer-side testing."
 	@echo ""
 	@echo "Test Commands (Provider - does the backend honor its own contract?):"
-	@echo "  specmatic:test - Contract-test the running backend against its live /openapi.json"
+	@echo "  specmatic:test - Contract-test the running backend against shared/openapi/openapi.yaml + examples"
 	@echo ""
 	@echo "Container Management (Consumer - mock the contract for apps/frontend to test against):"
 	@echo "  specmatic:mock-up   - Start a mock server built from the same contract + examples"
@@ -24,7 +24,7 @@ specmatic:
 	@echo "Endpoints once started:"
 	@echo "  Mock server: http://localhost:$${SPECMATIC_MOCK_PORT:-9091}"
 	@echo ""
-	@echo "Note: both require apps to be running first - make apps:up."
+	@echo "Note: specmatic:test requires apps to be running first - make apps:up. The mock does not."
 	@echo ""
 	@echo "Report: specmatic/report/test/html/index.html (also specmatic/junit/TEST-junit-jupiter.xml)"
 	@echo ""
@@ -58,7 +58,7 @@ specmatic-reset:
 	@echo "Specmatic report and JUnit output removed (specmatic/report/, specmatic/junit/)."
 
 specmatic-mock-up: apps-network-ensure
-	@echo "Starting Specmatic mock (mock server built from apps/backend/openapi.yaml + examples)..."
+	@echo "Starting Specmatic mock (mock server built from shared/openapi/openapi.yaml + examples)..."
 	@docker compose -p specmatic -f specmatic/docker-compose.yml up -d --build specmatic-mock
 	@echo "Mock server: http://localhost:$${SPECMATIC_MOCK_PORT:-9091}"
 

@@ -11,10 +11,10 @@ endif
 
 agentgateway:
 	@echo "🚀 agentgateway"
-	@echo "agentgateway - open-source gateway for AI agent connectivity (MCP/A2A). Here exposing apps/backend's REST API as MCP tools, built live from its OpenAPI schema (apps/backend/openapi.yaml) - the same contract Specmatic/Kong already build against."
+	@echo "agentgateway - open-source gateway for AI agent connectivity (MCP/A2A). Here exposing apps/backend's REST API as MCP tools, built from the OpenAPI contract (shared/openapi/openapi.yaml) - the same file Specmatic and the backend use."
 	@echo ""
 	@echo "Container Management:"
-	@echo "  agentgateway:up      - Start agentgateway (needs apps:up - it fetches apps/backend's live OpenAPI schema)"
+	@echo "  agentgateway:up      - Start agentgateway (reads shared/openapi/openapi.yaml; tool calls need apps:up)"
 	@echo "  agentgateway:down    - Stop and remove it"
 	@echo "  agentgateway:status  - Check container status"
 	@echo "  agentgateway:restart - Restart it"

@@ -1,8 +1,12 @@
 # The contract. This file is the source of truth for apps/backend's REST
 # API - authored and versioned by hand, not generated from the FastAPI
-# route code. apps/backend loads this file at startup and serves it
-# verbatim at GET /openapi.json (see app/main.py) instead of letting
-# FastAPI derive a schema from its own routes.
+# route code. It lives in shared/ and is mounted read-only by every module
+# that needs it (apps/backend, apps/frontend's /api-specs, Specmatic,
+# agentgateway) - none of them has to go through the backend to read it.
+# apps/backend loads it at startup and serves it verbatim at GET
+# /openapi.json (see app/main.py) instead of letting FastAPI derive a
+# schema from its own routes. Its examples for Specmatic (the ones that
+# need a bearer token or an error response) live in examples/ next to it.
 #
 # This is a deliberate reversal of this repo's earlier "no checked-in
 # schema, always live-generated" stance: a schema generated FROM the
@@ -115,7 +119,7 @@ paths:
       # Like POST /transactions: needs a bearer token, which an OpenAPI
       # example can't carry - so no inline examples;
       # specmatic:test covers it with externalized examples that send a real
-      # token (see specmatic/bin/prepare_contract.sh).
+      # token (see examples/get-me.json).
       security:
         - HTTPBearer: []
       responses:
@@ -219,8 +223,8 @@ paths:
       # other operation - this one needs a real bearer token (see auth.py),
       # which an OpenAPI example has no way to carry (it's a header, not
       # part of the body). specmatic:test already covers this operation via
-      # its own dynamically-generated externalized example, with a real
-      # token fetched at test time (see specmatic/bin/prepare_contract.sh);
+      # its externalized example (examples/put-me-profile.json), with the
+      # demo user's token;
       # an inline example here would give Specmatic a second, competing
       # scenario for the same operation with no way to authenticate it,
       # always failing with 401.

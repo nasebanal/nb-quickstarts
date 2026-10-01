@@ -84,7 +84,7 @@ export interface DocsSequence {
 }
 
 /** The content blocks a section - or a subsection of it - can carry. Rendered in this order:
- * paragraphs, bullets, code, table, sequence diagram, terminal, charts, images, callout. */
+ * paragraphs, bullets, code, table, sequence diagram, terminal, charts, images, video, callout. */
 export interface DocsBlock {
   /** Each entry is one paragraph. `[label](href)` becomes a link - an internal path ("/docs/...") or an https URL. */
   body?: string[];
@@ -99,6 +99,8 @@ export interface DocsBlock {
   /** Real screenshot(s) of a GUI this scenario actually produces (Kong Manager, Grafana, a
    * report file, ...) - one item renders full-width, several lay out as a responsive grid. */
   images?: DocsImage[];
+  /** An embedded YouTube video (the 11-character id from the URL). Needs internet access - nothing is shown offline. */
+  video?: { id: string; title: string };
   /** A callout box - a caveat, warning, or aside worth setting apart from the main prose. */
   note?: string;
   /** Bold heading of the callout above (e.g. "What is event sourcing"), optionally a link - the same shape as nb-landing-page's blog notes. */

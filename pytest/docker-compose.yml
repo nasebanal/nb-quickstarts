@@ -5,6 +5,7 @@ services:
     image: nb-pytest
     volumes:
       - ../apps/backend:/app
+      - ../shared:/shared:ro
       - ./report:/report
     working_dir: /app
     command: >

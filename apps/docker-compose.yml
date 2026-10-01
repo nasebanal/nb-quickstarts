@@ -56,6 +56,9 @@ services:
       - "8080:8080"
     volumes:
       - ./backend:/app
+      # The contract (shared/openapi/openapi.yaml) - read-only, see AGENTS.md
+      # "shared/". Served at GET /openapi.json.
+      - ../shared:/shared:ro
     environment:
       MYSQL_HOST: mysql-server
       MYSQL_PORT: 3306
@@ -108,6 +111,8 @@ services:
       - "5173:5173"
     volumes:
       - ./frontend:/app
+      # /api-specs reads the contract straight from here (no backend needed).
+      - ../shared:/shared:ro
       - frontend-node-modules:/app/node_modules
     environment:
       # URL called from the browser. The browser is outside the Docker

@@ -1,0 +1,31 @@
+{
+  "http-request": {
+    "method": "PUT",
+    "path": "/me/profile",
+    "headers": {
+      "Authorization": "Bearer nb1~ZGVtbw~o8ULBzbbQm6Lrym32BZVUdAXhtlQYQJL1emk2ZCkMqY"
+    },
+    "body": {
+      "language": "fr"
+    }
+  },
+  "http-response": {
+    "status": 422,
+    "body": {
+      "detail": [
+        {
+          "type": "literal_error",
+          "loc": [
+            "body",
+            "language"
+          ],
+          "msg": "Input should be 'ja' or 'en'",
+          "input": "fr",
+          "ctx": {
+            "expected": "'ja' or 'en'"
+          }
+        }
+      ]
+    }
+  }
+}

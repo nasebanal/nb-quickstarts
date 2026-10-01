@@ -132,6 +132,18 @@ function BlockMedia({ block }: { block: DocsBlock }) {
           ))}
         </div>
       )}
+      {block.video && (
+        <div className="nb-docs-video">
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${block.video.id}`}
+            title={block.video.title}
+            loading="lazy"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
+        </div>
+      )}
       {block.note && (
         <aside className="nb-docs-note" data-testid="docs-note">
           {block.noteTitle && (

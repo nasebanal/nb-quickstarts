@@ -1,0 +1,12 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/transactions/999999"
+  },
+  "http-response": {
+    "status": 404,
+    "body": {
+      "detail": "transaction not found"
+    }
+  }
+}

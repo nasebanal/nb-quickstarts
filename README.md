@@ -2,6 +2,10 @@
 
 **NASEBANAL Quickstarts helps you verify how the [NASEBANAL Stack](https://www.nasebanal.com) actually behaves** — the proven open-source technologies NASEBANAL builds on, not a scaffold for every technology out there. Each module spins up one piece of that stack (or a tool that verifies it) via Docker Compose + `make`, so you can try it, test against it, and see how the pieces fit together. Like the constituents of the NASEBANAL Stack itself, which modules are here may change as the stack evolves.
 
+[![NASEBANAL Quickstarts - Quick Demo (YouTube)](https://img.youtube.com/vi/Yf3kcHc-vGQ/hqdefault.jpg)](https://youtu.be/Yf3kcHc-vGQ)
+
+▶ [Watch the quick demo on YouTube](https://youtu.be/Yf3kcHc-vGQ)
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
@@ -35,7 +39,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Module | Endpoint | Host-published | Container network hostname | Notes |
 |---|---|---|---|---|
 | apps | Frontend | http://localhost:5173 | `frontend:5173` | Next.js |
-| apps | API docs (Scalar) | http://localhost:5173/api-specs | `frontend:5173/api-specs` | Reads the backend's live OpenAPI schema |
+| apps | API docs (Scalar) | http://localhost:5173/api-specs | `frontend:5173/api-specs` | Reads the contract straight from `shared/openapi/openapi.yaml` (no backend needed) |
 | apps | Docs | http://localhost:5173/docs | `frontend:5173/docs` | Overview (purpose, structure, scenarios), Getting Started and seven scenarios starting with verification of the demo app - same Header/Footer as `/`, opens in a new tab from the header's "Docs" link |
 | apps | Backend REST | http://localhost:8080 | `backend:8080` | FastAPI |
 | apps | Backend GraphQL | http://localhost:8080/graphql | `backend:8080/graphql` | Strawberry |
@@ -53,7 +57,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Keycloak | Token endpoint (realm `nasebanal`) | http://localhost:8180/realms/nasebanal/... | `keycloak:8080/realms/nasebanal/...` | Client `apps-demo`, user `keycloak-demo` / `nasebanal-demo` - see [Keycloak: a real login, and a real token the backend verifies](#keycloak-a-real-login-and-a-real-token-the-backend-verifies) |
 | Vault | UI / API | http://localhost:8200 | `vault:8200` | `VAULT_PORT`; dev-mode root token `VAULT_ROOT_TOKEN` |
 | Locust | Web UI | http://localhost:8089 | `locust-master:8089` | |
-| agentgateway | MCP (Streamable HTTP) | http://localhost:8010/mcp | `agentgateway:3000/mcp` | `AGENTGATEWAY_PORT`; needs `apps:up` (fetches `apps/backend`'s live OpenAPI schema) |
+| agentgateway | MCP (Streamable HTTP) | http://localhost:8010/mcp | `agentgateway:3000/mcp` | `AGENTGATEWAY_PORT`; reads `shared/openapi/openapi.yaml`; tool calls need `apps:up` |
 | agentgateway | Dashboard UI | http://localhost:15000 | `agentgateway:15000` | `AGENTGATEWAY_ADMIN_PORT`; redirects to `/ui` |
 | Observability | Grafana | http://localhost:3030 | `grafana:3000` | `GRAFANA_PORT`; anonymous Admin, no login; dashboard "Apps backend (OpenTelemetry)" is pre-provisioned |
 | Observability | Prometheus | http://localhost:9094 | `prometheus:9090` | `PROMETHEUS_PORT` |
@@ -148,7 +152,7 @@ make apps:mysql SQL="SELECT username, email, display_name, language, provider FR
 
 ### Specmatic: contract testing (Provider and Consumer)
 
-`apps/backend/openapi.yaml` is the contract — a checked-in, hand-maintained OpenAPI file, not one generated from the route code (`app/main.py` serves it verbatim at `GET /openapi.json`). That's a deliberate reversal from earlier in this repo's history: a schema generated *from* the implementation can never structurally disagree with it, so a provider verification test run against it can only ever catch behavioral bugs, never real contract drift. A physically separate file makes "does the implementation still honor this contract" a real, failable question — the actual point of Contract-Driven Development, where a Consumer and a Provider both build against one shared file independently. The tradeoff: `openapi.yaml` can drift from what the code actually does if you change one and forget the other — keeping them in sync by hand is the ongoing cost, and `specmatic:test` is what catches it when they diverge.
+`shared/openapi/openapi.yaml` is the contract — a checked-in, hand-maintained OpenAPI file, not one generated from the route code. It lives in `shared/` (mounted read-only by every module that needs it: the backend, the frontend's `/api-specs`, Specmatic, agentgateway), so none of them has to go through the backend to read it; the backend serves it verbatim at `GET /openapi.json`. That's a deliberate reversal from earlier in this repo's history: a schema generated *from* the implementation can never structurally disagree with it, so a provider verification test run against it can only ever catch behavioral bugs, never real contract drift. A physically separate file makes "does the implementation still honor this contract" a real, failable question — the actual point of Contract-Driven Development, where a Consumer and a Provider both build against one shared file independently. The tradeoff: `openapi.yaml` can drift from what the code actually does if you change one and forget the other — keeping them in sync by hand is the ongoing cost, and `specmatic:test` is what catches it when they diverge.
 
 Specmatic checks the contract from both directions:
 
@@ -158,12 +162,11 @@ make specmatic:test          # Provider: real requests against the real running 
 ```
 
 ```bash
-make apps:up                 # needed once, to seed the mock's schema + examples
 make specmatic:mock-up       # mock server built from the same contract (localhost:9091)
 make vitest:contract-test    # Consumer: apps/frontend's real api.ts calls against the mock, not a mocked fetch or the real backend
 ```
 
-`specmatic/bin/prepare_contract.sh` (shared by both `specmatic:test` and `specmatic:mock-up`) fetches the live schema and builds 7 externalized examples fresh on every run — a real bearer token, an id that actually exists, and deliberately-invalid requests covering every documented non-2xx response — so Specmatic's own coverage report reaches 100%. See `AGENTS.md`'s Specmatic section for the full story, including a dead end (Specmatic's own security-token config parses correctly but has no effect on generated requests) and why `SPECMATIC_GENERATIVE_TESTS` was tried and rejected in favor of explicit negative examples.
+`shared/openapi/examples/` holds 13 checked-in externalized examples (shared by both `specmatic:test` and `specmatic:mock-up`) — a bearer token (the demo token is deterministic: it's an HMAC of `demo` with `TOKEN_SECRET`'s default, so the file stays valid as long as that default isn't overridden), an id that actually exists, and deliberately-invalid requests covering every documented non-2xx response — so Specmatic's own coverage report reaches 100%. They are plain files: edit them by hand next to the contract. See `AGENTS.md`'s Specmatic section for the full story, including a dead end (Specmatic's own security-token config parses correctly but has no effect on generated requests) and why `SPECMATIC_GENERATIVE_TESTS` was tried and rejected in favor of explicit negative examples.
 
 ### Kong: routing to the real backend, or to a contract mock instead
 
@@ -247,7 +250,7 @@ make agentgateway:open   # http://localhost:15000 -> redirects to /ui
 
 Its admin port binds to loopback-only inside the container by default (`config.adminAddr`, unset) - unreachable from the host even with the port published, confirmed directly (`308` then nothing). `agentgateway/config.yaml` sets `config.adminAddr: 0.0.0.0:15000` so it actually answers on the port `docker-compose.yml` publishes.
 
-agentgateway fetches `apps/backend`'s OpenAPI schema once, at its own startup - not lazily on first request. If `apps/backend` isn't actually accepting connections yet at that exact moment (e.g. it just restarted), agentgateway exits with `Error: fetch http://backend:8080/openapi.json ... Connection refused` instead of retrying - confirmed directly. `make agentgateway:restart` once `apps:up`'s backend is confirmed healthy resolves it.
+agentgateway reads the OpenAPI contract from the mounted `shared/openapi/openapi.yaml` (`schema.file`), so it starts without `apps/backend` running; only calling a tool needs the backend. (It used to fetch the live `/openapi.json` at startup and exit with `Connection refused` if the backend wasn't up yet.)
 
 ### Observability: OpenTelemetry, Prometheus, Tempo and Grafana
 
@@ -384,7 +387,7 @@ make zap:baseline    # passive scan of apps/frontend - spiders + observes, never
 ```
 
 ```bash
-make zap:api-scan    # scans apps/backend directly from its live OpenAPI schema (apps/backend/openapi.yaml) - endpoint-aware, so it exercises every documented route, not just what a spider happens to crawl
+make zap:api-scan    # scans apps/backend directly from its live OpenAPI schema (shared/openapi/openapi.yaml) - endpoint-aware, so it exercises every documented route, not just what a spider happens to crawl
 ```
 
 ```bash
@@ -580,7 +583,7 @@ make apps:up                # start the apps under test first
 make pytest:test            # apps/backend unit tests (in-memory SQLite, apps:up not required)
 make vitest:test            # apps/frontend unit tests (fetch mocked, apps:up not required)
 make playwright:test        # E2E browser test against the running frontend (requires apps:up)
-make specmatic:test         # Provider contract test: does the backend honor apps/backend/openapi.yaml? (requires apps:up)
+make specmatic:test         # Provider contract test: does the backend honor shared/openapi/openapi.yaml? (requires apps:up)
 
 make specmatic:mock-up      # mock server built from the same contract (requires apps:up)
 make vitest:contract-test   # Consumer contract test: does the frontend's API usage hold up against it?
