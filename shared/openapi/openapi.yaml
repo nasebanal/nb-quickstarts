@@ -28,7 +28,7 @@
 # change - that's the tradeoff for the contract actually meaning something.
 openapi: 3.0.3
 info:
-  title: nb-quickstarts apps backend
+  title: NASEBANAL Quickstarts API
   # English, not localized: OpenAPI has no per-field i18n mechanism (every
   # description/summary is a single string), and Scalar's own UI chrome is
   # deliberately pinned to English too (see ScalarDoc.tsx) - keeping this
