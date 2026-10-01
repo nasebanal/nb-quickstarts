@@ -24,6 +24,9 @@ export function ScalarDoc({ url, server }: { url: string; server: string }) {
       <ApiReferenceReact
         configuration={{
           url,
+          // Names the document: Scalar uses the slug for the download file name
+          // (otherwise an auto-generated "api-1").
+          slug: "nasebanal-quickstarts-api",
           servers: [{ url: server, description: "apps/backend" }],
           layout: "modern",
           hideClientButton: true,
