@@ -18,7 +18,7 @@ export const scenarioTesting: LocalizedDocsPage = {
         body: [
           "The same running apps stack is verified from several angles, each by a separate open-source tool. " +
             "For each tool, this page describes how to check its results and how those results are evaluated.",
-          "apps/backend/openapi.yaml is maintained by hand rather than generated from the code, so it can diverge " +
+          "shared/openapi/openapi.yaml is maintained by hand rather than generated from the code, so it can diverge " +
             "from the implementation, which is what makes checking it worthwhile. Specmatic verifies the provider " +
             "side (the real backend answers as the contract specifies) and serves a mock for the consumer side " +
             "(the frontend's calls are made against a mock built from the same file, with no real backend). " +
@@ -137,12 +137,12 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "Checking the results",
             body: [
-              "Specmatic reads openapi.yaml and sends requests to the running backend (run make apps:up first), then reports coverage per " +
+              "Specmatic reads shared/openapi/openapi.yaml and sends requests to the running backend (run make apps:up first), then reports coverage per " +
                 "path, method and response code, including the error responses (401, 404, 422) that the normal " +
                 "flow does not reach. The report is specmatic/report/test/html/index.html (HTML and JUnit files).",
               "The consumer side is checked against a mock built from the same contract: the frontend's own API " +
-                "calls run against it; the mock reads the live schema from the backend, so start the apps stack first, " +
-                "then the mock. Its report is vitest/report-contract/index.html.",
+                "calls run against it; the mock reads the contract and examples from shared/openapi, so only the mock needs to be " +
+                "started (not the apps stack). Its report is vitest/report-contract/index.html.",
             ],
             code: [
               { label: "Provider", code: "make apps:up\nmake specmatic:test" },
@@ -160,8 +160,8 @@ export const scenarioTesting: LocalizedDocsPage = {
             heading: "Evaluation",
             body: [
               "All 18 scenarios pass, and 100% of paths, methods and response codes are covered. The scenarios are " +
-                "the requests built from the contract plus 7 examples that prepare_contract.sh generates on every " +
-                "run, so the error cases and the authenticated calls are exercised as well.",
+                "the requests built from the contract plus 13 examples checked in next to it (shared/openapi/examples), " +
+                "so the error cases and the authenticated calls are exercised as well.",
             ],
           },
         ],
@@ -253,7 +253,7 @@ export const scenarioTesting: LocalizedDocsPage = {
         body: [
           "同じ稼働中のappsスタックを、それぞれ別のオープンソースのツールで、複数の観点から検証します。" +
             "本ページでは、ツールごとに、結果の確認方法と、その結果の評価を記載します。",
-          "apps/backend/openapi.yamlはコードから生成せず手で保守しているため、実装と食い違う可能性があり、" +
+          "shared/openapi/openapi.yamlはコードから生成せず手で保守しているため、実装と食い違う可能性があり、" +
             "それが確認する意味を生みます。Specmaticはプロバイダー側(実際のbackendがコントラクトどおりに" +
             "応答するか)を検証し、コンシューマー側にはmockを提供します(frontendの呼び出しを、同じファイルから" +
             "作ったモックに対して行い、実際のbackendは使いません)。" +
@@ -372,11 +372,11 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "確認方法",
             body: [
-              "Specmaticはopenapi.yamlを読み、稼働中のbackendへ(先にmake apps:up)リクエストを送って、パス・メソッド・レスポンスコード" +
+              "Specmaticはshared/openapi/openapi.yamlを読み、稼働中のbackendへ(先にmake apps:up)リクエストを送って、パス・メソッド・レスポンスコード" +
                 "ごとのカバレッジを報告します。正常系では届かないエラーレスポンス(401・404・422)も含みます。" +
                 "レポートは specmatic/report/test/html/index.html です(HTMLとJUnitのファイル)。",
               "コンシューマー側は、同じコントラクトから作ったmockに対して、frontend自身のAPI呼び出しを実行して" +
-                "確認します。mockはbackendから稼働中のスキーマを取得するため、先にappsスタックを、次にmockを起動します。" +
+                "確認します。mockはshared/openapiのコントラクトとexampleを読むため、mockだけ起動すれば足ります(appsスタックは不要)。" +
                 "レポートは vitest/report-contract/index.html です。",
             ],
             code: [
@@ -395,7 +395,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             heading: "評価結果",
             body: [
               "18シナリオすべてが成功し、パス・メソッド・レスポンスコードの100%をカバーしました。シナリオは、" +
-                "コントラクトから作ったリクエストと、prepare_contract.shが実行のたびに作る7つのexampleで構成されるため、" +
+                "コントラクトから作ったリクエストと、同じ場所(shared/openapi/examples)にチェックインした13個のexampleで構成されるため、" +
                 "エラーケースと認証つきの呼び出しも実行されます。",
             ],
           },

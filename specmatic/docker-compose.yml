@@ -1,4 +1,9 @@
 services:
+  # Provider test: does the running backend honor the contract?
+  # The contract and its examples live in shared/openapi/ (checked in,
+  # mounted read-only) - read straight from there, never fetched from the
+  # backend, so what the backend is verified against can't be whatever the
+  # backend happens to say about itself.
   specmatic:
     image: specmatic/specmatic:${SPECMATIC_VERSION:-2.55.1}
     working_dir: /app
@@ -8,51 +13,40 @@ services:
       # subtree straight onto the host instead.
       - ./report:/app/build/reports/specmatic
       - ./junit:/app/junit
-      - ./bin:/app/bin:ro
-    entrypoint: sh
-    # Fetches the spec live from the backend it's about to test (this is a
-    # demo app with no real schema-change workflow, so there's no reason to
-    # keep a separately-exported copy in sync by hand - and specmatic-test
-    # already requires apps:up to make the actual test requests anyway).
-    # See bin/prepare_contract.sh for the version relabel, the /graphql
-    # exclusion, and the 5 externalized examples it builds fresh every run -
-    # shared with the specmatic-mock service below, which needs the exact
-    # same contract to mock.
+      - ../shared:/shared:ro
     command:
-      - -c
-      - >
-        sh bin/prepare_contract.sh || exit 70;
-        specmatic test openapi.json --host backend --port 8080
-        --examples=examples --junitReportDir /app/junit
+      - test
+      - /shared/openapi/openapi.yaml
+      - --host=backend
+      - --port=8080
+      - --examples=/shared/openapi/examples
+      - --junitReportDir=/app/junit
     networks:
       - apps-network
 
   # A mock server built from the same contract (schema + examples) that
   # specmatic:test verifies the real backend against - so apps/frontend can
   # be tested as a Consumer against the *contract*, independent of whatever
-  # the real backend happens to be doing right now. Requests that match one
-  # of prepare_contract.sh's examples get that example's exact response;
-  # anything else gets a schema-valid response with randomly generated
-  # values (confirmed: GET /transactions with no matching example returns a
-  # real Transaction shape with a random id/name/quantity, not a canned one) -
-  # which is actually a stronger check for a consumer than always seeing
-  # the same realistic-looking values, since it can't accidentally pass by
-  # relying on one specific example's data.
+  # the real backend happens to be doing right now, and without the backend
+  # running at all. Requests that match one of the examples get that
+  # example's exact response; anything else gets a schema-valid response
+  # with randomly generated values - which is actually a stronger check for
+  # a consumer than always seeing the same realistic-looking values, since
+  # it can't accidentally pass by relying on one specific example's data.
   specmatic-mock:
     image: specmatic/specmatic:${SPECMATIC_VERSION:-2.55.1}
     container_name: nb-specmatic-mock
     working_dir: /app
     volumes:
-      - ./bin:/app/bin:ro
-    entrypoint: sh
+      - ../shared:/shared:ro
     ports:
       - "${SPECMATIC_MOCK_PORT:-9091}:9091"
     command:
-      - -c
-      - >
-        sh bin/prepare_contract.sh &&
-        specmatic mock openapi.json --host 0.0.0.0 --port 9091
-        --examples=examples
+      - mock
+      - /shared/openapi/openapi.yaml
+      - --host=0.0.0.0
+      - --port=9091
+      - --examples=/shared/openapi/examples
     networks:
       - apps-network
 

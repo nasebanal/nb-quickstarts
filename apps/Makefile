@@ -9,11 +9,9 @@ endif
 #################### APPS (TEST TARGETS) ###################
 # apps is the actual test target itself: MySQL + backend (Python/FastAPI,
 # REST+GraphQL) + frontend (TypeScript/Next.js).
-#   - backend reads/writes transactions in MySQL. No OpenAPI schema is checked
-#     in - Specmatic and the frontend's /api-specs page both fetch
-#     the backend's live /openapi.json at the point of use instead (this is
-#     a demo app with no real schema-change workflow to keep a separately
-#     exported copy in sync with).
+#   - backend reads/writes transactions in MySQL. The OpenAPI contract lives
+#     in ../shared/openapi/ (mounted read-only by backend and frontend, as
+#     well as Specmatic and agentgateway) - nobody needs the backend to read it.
 #   - Kafka events reach transactions via a separate container, kafka-bridge
 #     (see kafka/docker-compose.yml + kafka/bridge/), which consumes the
 #     topic and calls POST /transactions over REST - not an in-process consumer

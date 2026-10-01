@@ -1,0 +1,26 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/transactions",
+    "headers": {
+      "Authorization": "Bearer nb1~ZGVtbw~o8ULBzbbQm6Lrym32BZVUdAXhtlQYQJL1emk2ZCkMqY"
+    },
+    "body": {}
+  },
+  "http-response": {
+    "status": 422,
+    "body": {
+      "detail": [
+        {
+          "type": "missing",
+          "loc": [
+            "body",
+            "name"
+          ],
+          "msg": "Field required",
+          "input": {}
+        }
+      ]
+    }
+  }
+}

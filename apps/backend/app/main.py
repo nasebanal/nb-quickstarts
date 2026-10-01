@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -12,7 +13,12 @@ from app.routers import accounts, auth, health, me, transactions
 from app.seed import seed_if_empty
 from app.telemetry import setup_telemetry
 
-OPENAPI_SPEC_PATH = Path(__file__).resolve().parent.parent / "openapi.yaml"
+# shared/openapi/openapi.yaml, mounted read-only at /shared (see
+# apps/docker-compose.yml). OPENAPI_SPEC_PATH overrides it; without Docker
+# (a plain checkout) the same file is found relative to this one.
+_SHARED_SPEC = Path("/shared/openapi/openapi.yaml")
+_CHECKOUT_SPEC = Path(__file__).resolve().parent.parent.parent.parent / "shared" / "openapi" / "openapi.yaml"
+OPENAPI_SPEC_PATH = Path(os.getenv("OPENAPI_SPEC_PATH") or (_SHARED_SPEC if _SHARED_SPEC.exists() else _CHECKOUT_SPEC))
 
 
 @asynccontextmanager
@@ -28,7 +34,7 @@ app = FastAPI(lifespan=lifespan)
 setup_telemetry(app, engine)
 
 
-# The contract (openapi.yaml) is the source of truth, not this app's own
+# The contract (shared/openapi/openapi.yaml) is the source of truth, not this app's own
 # routes - see that file's header comment for why. FastAPI normally derives
 # GET /openapi.json from the registered routes/Pydantic models on first
 # request (and caches it on app.openapi_schema); overriding app.openapi

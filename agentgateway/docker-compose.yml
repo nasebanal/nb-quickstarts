@@ -4,6 +4,7 @@ services:
     container_name: nb-agentgateway
     volumes:
       - ./config.yaml:/config/config.yaml:ro
+      - ../shared:/shared:ro
     command: ["-f", "/config/config.yaml"]
     ports:
       # Host-published port defaults to 8010, not agentgateway's own 3000

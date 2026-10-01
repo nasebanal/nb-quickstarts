@@ -1,0 +1,23 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/transactions",
+    "headers": {
+      "Authorization": "Bearer nb1~ZGVtbw~o8ULBzbbQm6Lrym32BZVUdAXhtlQYQJL1emk2ZCkMqY"
+    },
+    "body": {
+      "name": "Specmatic Test Account",
+      "quantity": 1
+    }
+  },
+  "http-response": {
+    "status": 201,
+    "body": {
+      "id": 1,
+      "name": "Specmatic Test Account",
+      "quantity": 1,
+      "source": "api",
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
+  }
+}

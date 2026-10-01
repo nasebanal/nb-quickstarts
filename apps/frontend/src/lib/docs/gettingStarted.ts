@@ -9,6 +9,11 @@ export const gettingStarted: LocalizedDocsPage = {
       "covers the commands you need before touching any scenario.",
     sections: [
       {
+        heading: "Quick demo",
+        body: ["A short video of NASEBANAL Quickstarts running, before you start it yourself."],
+        video: { id: "Yf3kcHc-vGQ", title: "NASEBANAL Quickstarts - Quick Demo" },
+      },
+      {
         heading: "Start / stop the apps stack",
         body: [
           "apps:up starts MySQL (seeded with a small chart of accounts), the backend and this " +
@@ -153,6 +158,11 @@ export const gettingStarted: LocalizedDocsPage = {
       "アクションなしで(make apps、make kongのように)実行すると自分自身のヘルプも表示するので、この" +
       "ページではどのシナリオに入る前にも必要になる最低限のコマンドだけを扱います。",
     sections: [
+      {
+        heading: "クイックデモ",
+        body: ["実際に起動する前に、NASEBANAL Quickstartsが動いている様子を短い動画で確認できます。"],
+        video: { id: "Yf3kcHc-vGQ", title: "NASEBANAL Quickstarts - Quick Demo" },
+      },
       {
         heading: "appsスタックの起動・停止",
         body: [

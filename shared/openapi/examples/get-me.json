@@ -1,0 +1,19 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/me",
+    "headers": {
+      "Authorization": "Bearer nb1~ZGVtbw~o8ULBzbbQm6Lrym32BZVUdAXhtlQYQJL1emk2ZCkMqY"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "username": "demo",
+      "email": "demo@nasebanal.com",
+      "displayName": "Demo User",
+      "language": "ja",
+      "provider": "demo"
+    }
+  }
+}

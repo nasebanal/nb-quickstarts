@@ -1,0 +1,18 @@
+{
+  "http-request": {
+    "method": "PUT",
+    "path": "/me/profile",
+    "headers": {
+      "Authorization": "Bearer invalid-token"
+    },
+    "body": {
+      "language": "en"
+    }
+  },
+  "http-response": {
+    "status": 401,
+    "body": {
+      "detail": "invalid or missing token"
+    }
+  }
+}

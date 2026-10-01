@@ -1,0 +1,16 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/transactions/1"
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 1,
+      "name": "Cash",
+      "quantity": 100000,
+      "source": "seed",
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
+  }
+}

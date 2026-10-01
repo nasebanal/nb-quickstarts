@@ -7,7 +7,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       "The backend already mounts its own MCP server natively at /mcp (via fastapi-mcp, auto-derived " +
       "from its REST routes). agentgateway is a different way to get there: instead of backend-side " +
       "MCP code, it builds MCP tools entirely from the OpenAPI contract (openapi.yaml) - the same " +
-      "contract Specmatic/Kong already build against, fetched live from /openapi.json.",
+      "contract Specmatic and the backend use, read from shared/openapi/openapi.yaml.",
     sections: [
       {
         heading: "Why agentgateway",
@@ -123,8 +123,8 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
     description:
       "backendはすでに、自身のREST routesから自動生成されたMCPサーバーをfastapi-mcp経由で/mcpにネイティブ" +
       "にマウントしています。agentgatewayはそこに至るもう一つの経路です — backend側のMCP用コードではなく、" +
-      "OpenAPIの契約(openapi.yaml、Specmatic/Kongがすでに使っているのと同じ契約)から、/openapi.json" +
-      "をライブに取得してMCPツールを丸ごと構築します。",
+      "OpenAPIの契約(openapi.yaml、Specmaticやbackendが使っているのと同じ契約)を" +
+      "shared/openapi/openapi.yamlから直接読み込んでMCPツールを丸ごと構築します。",
     sections: [
       {
         heading: "agentgatewayを使うメリット",

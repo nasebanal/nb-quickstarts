@@ -2,8 +2,8 @@
 // entirely and never touches a real server) or Playwright's E2E tests
 // (which exercise the real, currently-running backend), this file makes
 // real HTTP requests against a Specmatic mock built from apps/backend's
-// checked-in contract (apps/backend/openapi.yaml) - see
-// specmatic/bin/prepare_contract.sh. That answers a different question
+// checked-in contract (shared/openapi/openapi.yaml) and its
+// examples - see shared/openapi/examples/. That answers a different question
 // than either of those: "does this frontend's actual API usage - the
 // paths it calls, the request shapes it sends, the response shapes it
 // expects to parse - hold up against the *contract*, independent of
@@ -15,9 +15,8 @@
 // assertions here check shape/type, not specific values, except where an
 // example guarantees one.
 //
-// Requires: make apps:up (the mock still needs the real backend once, to
-// fetch the schema + build examples from - see specmatic:mock-up) and
-// make specmatic:mock-up. Run via `make vitest:contract-test`, not
+// Requires: make specmatic:mock-up (the mock reads the contract and its
+// examples from shared/openapi/ - no real backend needed). Run via `make vitest:contract-test`, not
 // `vitest:test` - this is deliberately a separate, opt-in command, since
 // unlike every other vitest test it isn't self-contained (see vitest's
 // own Makefile Note).
@@ -56,7 +55,7 @@ describe("api client against the Specmatic contract mock", () => {
   });
 
   it("createTransaction with a valid token returns the created Transaction", async () => {
-    // Body must match prepare_contract.sh's post-transactions.json example
+    // Body must match shared/openapi/examples/post-transactions.json
     // exactly - the mock only returns its canned 201 for a matching body,
     // regardless of the token's actual value (confirmed empirically: the
     // mock doesn't validate auth, it dispatches purely on method+path+body
@@ -72,8 +71,8 @@ describe("api client against the Specmatic contract mock", () => {
   });
 
   it("createTransaction with an invalid token throws UnauthorizedError", async () => {
-    // Body *and* Authorization header must match prepare_contract.sh's
-    // post-transactions-401.json example exactly - **discovered directly**,
+    // Body *and* Authorization header must match
+    // shared/openapi/examples/post-transactions-401.json exactly - **discovered directly**,
     // contradicting this test's own former comment (and, going by git
     // history, apparently every run since this example was introduced):
     // the mock does key off the header value too, not just the body -

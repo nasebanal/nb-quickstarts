@@ -4,9 +4,9 @@ import { ApiReferenceReact } from "@scalar/api-reference-react";
 import "@scalar/api-reference-react/style.css";
 
 // Same Scalar setup as nb-api-specs' ScalarDoc.tsx (modern layout, no
-// client-generator button). Unlike nb-api-specs, the backend serves its own
-// live openapi.json, so this points Scalar at that URL directly instead of
-// bundling a spec file at build time.
+// client-generator button). Unlike nb-api-specs, the spec isn't bundled at
+// build time: it's read from shared/openapi/openapi.yaml (mounted into the
+// container) by the /api-specs/openapi.yaml route, so no backend is needed.
 //
 // Deliberately not locale-aware: Scalar's own UI chrome (search, nav
 // labels, "Test Request", ...) ships no built-in Japanese translation (its

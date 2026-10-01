@@ -1,0 +1,16 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/auth/login",
+    "body": {
+      "username": "demo",
+      "password": "wrong"
+    }
+  },
+  "http-response": {
+    "status": 401,
+    "body": {
+      "detail": "invalid username or password"
+    }
+  }
+}
