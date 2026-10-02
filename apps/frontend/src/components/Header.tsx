@@ -17,7 +17,7 @@ const GITHUB_URL = "https://github.com/nasebanal/nb-quickstarts";
 
 // Self-contained: no external/private package (works air-gapped). The logo
 // asset lives locally at public/logo.png. Title wording/colors match
-// nb-dentiscope's navbar ("NASEBANAL" in --nb-logo-fg, "Demo" in the shared
+// nb-dentiscope's navbar ("NASEBANAL" in --nb-logo-fg, "Tools" in the shared
 // .nb-nav-brand-demo lime) without depending on @nasebanal/shared-navigation.
 export function Header() {
   const { t, localePath, navigate } = useLocale();
@@ -59,7 +59,7 @@ export function Header() {
         >
           <Image src="/logo.png" alt="NASEBANAL" width={36} height={36} priority />
           <span className="nb-header-title">
-            NASEBANAL <span className="nb-nav-brand-demo">Demo</span>
+            NASEBANAL <span className="nb-nav-brand-demo">Tools</span>
           </span>
         </button>
         <div className="nb-header-actions">

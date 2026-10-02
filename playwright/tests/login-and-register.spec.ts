@@ -97,7 +97,7 @@ test("logo click from /accounts navigates home and keeps the session", async ({ 
   // see Header.tsx. AuthProvider persists the token to sessionStorage
   // (see AuthProvider.tsx), so that navigation keeps the viewer logged in
   // rather than bouncing them back to a logged-out state.
-  await page.getByRole("button", { name: "NASEBANAL Demo" }).click();
+  await page.getByRole("button", { name: "NASEBANAL Tools" }).click();
 
   await expect(page).toHaveURL(/\/(en|ja)$/);
   await page.getByTestId("user-menu-button").click();
