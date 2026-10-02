@@ -10,6 +10,7 @@
   --nb-accent: #2563eb;
   --nb-accent-hover: #1d4ed8;
   --nb-logo-fg: #475569; /* nav wordmark (NASEBANAL) */
+  --nb-brand-sub: #64748b; /* nav sub-word (Tools): mid slate, legible on both themes */
   --nb-header-bg: rgba(255, 255, 255, 0.95);
   --nb-page-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   --nb-surface: #ffffff;
@@ -28,6 +29,7 @@
   --nb-accent: #3b82f6;
   --nb-accent-hover: #60a5fa;
   --nb-logo-fg: #e2e8f0;
+  --nb-brand-sub: #64748b;
   --nb-header-bg: rgba(20, 22, 27, 0.95);
   --nb-page-gradient: linear-gradient(135deg, #14161a 0%, #1b2430 100%);
   --nb-surface: #1a1d23;
@@ -48,6 +50,7 @@
     --nb-accent: #3b82f6;
     --nb-accent-hover: #60a5fa;
     --nb-logo-fg: #e2e8f0;
+    --nb-brand-sub: #64748b;
     --nb-header-bg: rgba(20, 22, 27, 0.95);
     --nb-page-gradient: linear-gradient(135deg, #14161a 0%, #1b2430 100%);
     --nb-surface: #1a1d23;
@@ -313,12 +316,12 @@ h1 {
   white-space: nowrap;
 }
 
-/* "Demo" sub-word color — same class/value as nb-shared-navigation's
-   .nb-nav-brand-demo, used by nb-dentiscope for "NASEBANAL Demo". Stays
-   lime in both themes, same as the shared component. */
+/* Sub-word ("Tools") color. The class name matches nb-shared-navigation's
+   .nb-nav-brand-demo (nb-dentiscope's lime "Demo"), but this app deliberately
+   uses its own --nb-brand-sub (mid slate, same in both themes). */
 .nb-nav-brand-demo {
   font-weight: 800;
-  color: #65a30d;
+  color: var(--nb-brand-sub);
 }
 
 .nb-header-actions {
