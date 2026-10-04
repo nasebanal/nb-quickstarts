@@ -1,0 +1,19 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/transactions",
+    "headers": {
+      "Authorization": "(string)"
+    },
+    "body": {
+      "name": "(string)",
+      "quantity": "(number)"
+    }
+  },
+  "http-response": {
+    "status": 401,
+    "body": {
+      "detail": "invalid or missing token"
+    }
+  }
+}

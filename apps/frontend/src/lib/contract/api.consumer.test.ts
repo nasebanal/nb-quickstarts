@@ -21,13 +21,19 @@
 // unlike every other vitest test it isn't self-contained (see vitest's
 // own Makefile Note).
 import { describe, expect, it } from "vitest";
-import { createTransaction, listAccounts, listTransactions, login, UnauthorizedError } from "../api";
+import { API_BASE, createTransaction, listAccounts, listTransactions, login, UnauthorizedError } from "../api";
 
 describe("api client against the Specmatic contract mock", () => {
   it("login returns a token and username", async () => {
     const result = await login("demo", "demo");
     expect(typeof result.token).toBe("string");
     expect(typeof result.username).toBe("string");
+  });
+
+  it("login with an incorrect password throws UnauthorizedError", async () => {
+    const result = login("demo", "wrong");
+    await expect(result).rejects.toBeInstanceOf(UnauthorizedError);
+    await expect(result).rejects.toThrow("invalid username or password");
   });
 
   it("listTransactions returns an array shaped like Transaction[]", async () => {
@@ -55,32 +61,38 @@ describe("api client against the Specmatic contract mock", () => {
   });
 
   it("createTransaction with a valid token returns the created Transaction", async () => {
-    // Body must match shared/openapi/examples/post-transactions.json
-    // exactly - the mock only returns its canned 201 for a matching body,
-    // regardless of the token's actual value (confirmed empirically: the
-    // mock doesn't validate auth, it dispatches purely on method+path+body
-    // shape/value, falling back to a schema-random response - not
-    // necessarily 201 - for anything that doesn't match an example).
+    // The body and Authorization header must match
+    // shared/openapi/examples/post-transactions.json. Check the exact
+    // example response so a generated fallback cannot silently pass.
     const { token } = await login("demo", "demo");
     const transaction = await createTransaction(token, { name: "Specmatic Test Account", quantity: 1 });
-    expect(typeof transaction.id).toBe("number");
-    expect(typeof transaction.name).toBe("string");
-    expect(typeof transaction.quantity).toBe("number");
-    expect(typeof transaction.source).toBe("string");
-    expect(typeof transaction.createdAt).toBe("string");
+    expect(transaction).toEqual({
+      id: 1,
+      name: "Specmatic Test Account",
+      quantity: 1,
+      source: "api",
+      createdAt: "2024-01-01T00:00:00Z",
+    });
   });
 
-  it("createTransaction with an invalid token throws UnauthorizedError", async () => {
-    // Body *and* Authorization header must match
-    // shared/openapi/examples/post-transactions-401.json exactly - **discovered directly**,
-    // contradicting this test's own former comment (and, going by git
-    // history, apparently every run since this example was introduced):
-    // the mock does key off the header value too, not just the body -
-    // confirmed by hand with curl, token-for-token, once this specific
-    // test started actually failing (body-only matching would have made
-    // any nonsense token 401 the same way; only this exact literal does).
-    await expect(createTransaction("invalid-token", { name: "x", quantity: 1 })).rejects.toThrow(
-      UnauthorizedError,
-    );
+  it.each(["invalid-token", "unrecognised-token", "nb1~ZGVtbw~invalid-signature"])(
+    "createTransaction with token %s throws UnauthorizedError",
+    async (token) => {
+      // Use the successful example's body to check token matching independently.
+      await expect(
+        createTransaction(token, { name: "Specmatic Test Account", quantity: 1 }),
+      ).rejects.toThrow(UnauthorizedError);
+    },
+  );
+
+  it("POST /transactions without Authorization returns 401", async () => {
+    // The API client always sends a bearer header, so send this request directly.
+    const response = await fetch(`${API_BASE}/transactions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Specmatic Test Account", quantity: 1 }),
+    });
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ detail: "invalid or missing token" });
   });
 });
