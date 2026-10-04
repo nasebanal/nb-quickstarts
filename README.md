@@ -52,7 +52,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Kong | Manager UI | http://localhost:8002 | `kong:8002` | HTTPS: 8445 (host), `kong:8445` (in-network); edits need DB mode (the default) |
 | Kafka | Broker | localhost:9092 | `kafka:29092` | `KAFKA_PORT`; the in-network listener is a *different* port (`29092`, `PLAINTEXT_INTERNAL`) than the host-published one (`9092`, `PLAINTEXT`) - see `kafka/docker-compose.yml`'s `KAFKA_LISTENERS` comment |
 | Kafka | kafka-bridge health | http://localhost:8090/health | `kafka-bridge:8090/health` | Only once `kafka:bridge-up` has run; `KAFKA_BRIDGE_HEALTH_PORT` |
-| Specmatic | Mock server | http://localhost:9091 | `specmatic-mock:9091` | `SPECMATIC_MOCK_PORT`; needs `apps:up` first (`make specmatic:mock-up`) |
+| Specmatic | Mock server | http://localhost:9091 | `specmatic-mock:9091` | `SPECMATIC_MOCK_PORT`; reads the checked-in shared contract and starts without `apps:up` (`make specmatic:mock-up`) |
 | Keycloak | Admin console | http://localhost:8180/admin | `keycloak:8080/admin` | `KEYCLOAK_PORT`; realm `nasebanal`, admin/admin by default |
 | Keycloak | Token endpoint (realm `nasebanal`) | http://localhost:8180/realms/nasebanal/... | `keycloak:8080/realms/nasebanal/...` | Client `apps-demo`, user `keycloak-demo` / `nasebanal-demo` - see [Keycloak: a real login, and a real token the backend verifies](#keycloak-a-real-login-and-a-real-token-the-backend-verifies) |
 | Vault | UI / API | http://localhost:8200 | `vault:8200` | `VAULT_PORT`; dev-mode root token `VAULT_ROOT_TOKEN` |
@@ -230,15 +230,15 @@ Vault's dev server is in-memory only — everything written to it is gone on `va
 
 ### agentgateway: exposing apps/backend as MCP tools
 
-`apps/backend` already mounts its own MCP server natively at `/mcp` (via `fastapi-mcp`, auto-derived from its REST routes - see [Endpoints](#endpoints)). agentgateway is a different way to get there: instead of backend-side MCP code, it builds MCP tools *entirely from the OpenAPI contract* (`apps/backend/openapi.yaml`) - the same contract Specmatic/Kong already build against, fetched live from `/openapi.json` (`agentgateway/config.yaml`'s `schema.url`, no separate fetch step needed).
+`apps/backend` already mounts its own MCP server natively at `/mcp` (via `fastapi-mcp`, auto-derived from its REST routes - see [Endpoints](#endpoints)). agentgateway is a different way to get there: instead of backend-side MCP code, it builds MCP tools *entirely from the checked-in OpenAPI contract* (`shared/openapi/openapi.yaml`) - the same contract Specmatic uses, read directly from the shared mount (`agentgateway/config.yaml`'s `schema.file`).
 
 ```bash
-make apps:up
 make agentgateway:up
 make agentgateway:tools   # does the MCP handshake by hand, lists what's actually being served
+make apps:up            # needed when calling the listed tools
 ```
 
-Verified end-to-end: `agentgateway:tools` lists six tools - `health_health_get`, `login_auth_login_post`, `list_transactions_transactions_get`, `create_transaction_transactions_post`, `get_transaction_transactions__transaction_id__get`, `list_accounts_accounts_get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_accounts_accounts_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
+Verified end-to-end: `agentgateway:tools` lists eight tools - `health_health_get`, `login_auth_login_post`, `get_me_me_get`, `update_profile_me_profile_put`, `list_transactions_transactions_get`, `create_transaction_transactions_post`, `get_transaction_transactions__transaction_id__get`, `list_accounts_accounts_get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_accounts_accounts_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
 
 Point an MCP client (Claude Desktop, [mcp-inspector](https://github.com/modelcontextprotocol/inspector), ...) at `http://localhost:8010/mcp` to use it interactively. `create_transaction_transactions_post` needs a real bearer token, same as `POST /transactions` itself does everywhere else - call `login_auth_login_post` first and pass its token back as an `Authorization` header, or the tool call 401s the same way an unauthenticated `curl` would.
 
@@ -578,16 +578,14 @@ image at `~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw`.
 These are separate modules from `apps` (see `AGENTS.md` for the full design). Long-running services follow the usual `build`/`up`/`down`/`status`/`restart`/`open` pattern; one-shot test runners use a single `test` target instead (`docker compose run --rm`, no `up`/`down`).
 
 ```bash
-make apps:up                # start the apps under test first
-
 make pytest:test            # apps/backend unit tests (in-memory SQLite, apps:up not required)
 make vitest:test            # apps/frontend unit tests (fetch mocked, apps:up not required)
-make playwright:test        # E2E browser test against the running frontend (requires apps:up)
-make specmatic:test         # Provider contract test: does the backend honor shared/openapi/openapi.yaml? (requires apps:up)
-
-make specmatic:mock-up      # mock server built from the same contract (requires apps:up)
+make specmatic:mock-up      # mock server built from the shared contract (apps:up not required)
 make vitest:contract-test   # Consumer contract test: does the frontend's API usage hold up against it?
 
+make apps:up                # start the apps for tests that exercise the running backend or frontend
+make specmatic:test         # Provider contract test: does the backend honor shared/openapi/openapi.yaml? (requires apps:up)
+make playwright:test        # E2E browser test against the running frontend (requires apps:up)
 ```
 
 ## 📝 License

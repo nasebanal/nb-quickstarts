@@ -146,7 +146,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             ],
             code: [
               { label: "Provider", code: "make apps:up\nmake specmatic:test" },
-              { label: "Consumer", code: "make apps:up\nmake specmatic:mock-up\nmake vitest:contract-test" },
+              { label: "Consumer", code: "make specmatic:mock-up\nmake vitest:contract-test" },
             ],
             images: [
               {
@@ -381,7 +381,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             ],
             code: [
               { label: "プロバイダー", code: "make apps:up\nmake specmatic:test" },
-              { label: "コンシューマー", code: "make apps:up\nmake specmatic:mock-up\nmake vitest:contract-test" },
+              { label: "コンシューマー", code: "make specmatic:mock-up\nmake vitest:contract-test" },
             ],
             images: [
               {

@@ -1,7 +1,7 @@
 // A Consumer-side contract test: unlike api.test.ts (which mocks fetch
 // entirely and never touches a real server) or Playwright's E2E tests
 // (which exercise the real, currently-running backend), this file makes
-// real HTTP requests against a Specmatic mock built from apps/backend's
+// real HTTP requests against a Specmatic mock built from the shared
 // checked-in contract (shared/openapi/openapi.yaml) and its
 // examples - see shared/openapi/examples/. That answers a different question
 // than either of those: "does this frontend's actual API usage - the
