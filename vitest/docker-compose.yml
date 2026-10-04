@@ -25,7 +25,7 @@ services:
       - ./report-contract:/report
     working_dir: /app
     environment:
-      NEXT_PUBLIC_API_BASE: http://specmatic-mock:${SPECMATIC_MOCK_PORT:-9091}
+      NEXT_PUBLIC_API_BASE: http://specmatic-mock:9091
     command: npm run test:contract-report
     networks:
       - apps-network
