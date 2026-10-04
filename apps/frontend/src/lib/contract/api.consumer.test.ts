@@ -1,69 +1,50 @@
-// A Consumer-side contract test: unlike api.test.ts (which mocks fetch
-// entirely and never touches a real server) or Playwright's E2E tests
-// (which exercise the real, currently-running backend), this file makes
-// real HTTP requests against a Specmatic mock built from the shared
-// checked-in contract (shared/openapi/openapi.yaml) and its
-// examples - see shared/openapi/examples/. That answers a different question
-// than either of those: "does this frontend's actual API usage - the
-// paths it calls, the request shapes it sends, the response shapes it
-// expects to parse - hold up against the *contract*, independent of
-// whatever the real backend happens to be doing right now?"
-//
-// The mock returns our examples' exact values for requests that match one
-// (e.g. GET /transactions/1), and schema-valid *random* values for
-// anything else (e.g. plain GET /transactions or GET /accounts) - so most
-// assertions here check shape/type, not specific values, except where an
-// example guarantees one.
-//
-// Requires: make specmatic:mock-up (the mock reads the contract and its
-// examples from shared/openapi/ - no real backend needed). Run via `make vitest:contract-test`, not
-// `vitest:test` - this is deliberately a separate, opt-in command, since
-// unlike every other vitest test it isn't self-contained (see vitest's
-// own Makefile Note).
+// Consumer contract tests make real HTTP requests through the frontend's
+// API client against Specmatic's mock of shared/openapi/openapi.yaml.
+// Expected values are hardcoded to match the shared examples, so a
+// schema-valid generated response cannot silently pass these tests.
+// Requires: make specmatic:mock-up, then make vitest:contract-test.
 import { describe, expect, it } from "vitest";
 import { API_BASE, createTransaction, listAccounts, listTransactions, login, UnauthorizedError } from "../api";
+
+async function expectUnauthorized(result: Promise<unknown>, detail: string) {
+  const error = await result.catch((error: unknown) => error);
+  expect(error).toBeInstanceOf(UnauthorizedError);
+  const message = (error as UnauthorizedError).message;
+  const separator = message.indexOf(": ");
+  expect(message.slice(0, separator)).toBe("401 Unauthorized");
+  // Compare the complete JSON body independently of the mock's formatting.
+  expect(JSON.parse(message.slice(separator + 2))).toEqual({ detail });
+}
 
 describe("api client against the Specmatic contract mock", () => {
   it("login returns a token and username", async () => {
     const result = await login("demo", "demo");
-    expect(typeof result.token).toBe("string");
-    expect(typeof result.username).toBe("string");
+    expect(result).toEqual({
+      token: "nb1~ZGVtbw~o8ULBzbbQm6Lrym32BZVUdAXhtlQYQJL1emk2ZCkMqY",
+      username: "demo",
+    });
   });
 
   it("login with an incorrect password throws UnauthorizedError", async () => {
-    const result = login("demo", "wrong");
-    await expect(result).rejects.toBeInstanceOf(UnauthorizedError);
-    await expect(result).rejects.toThrow("invalid username or password");
+    await expectUnauthorized(login("demo", "wrong"), "invalid username or password");
   });
 
-  it("listTransactions returns an array shaped like Transaction[]", async () => {
-    const transactions = await listTransactions();
-    expect(Array.isArray(transactions)).toBe(true);
-    expect(transactions.length).toBeGreaterThan(0);
-    for (const transaction of transactions) {
-      expect(typeof transaction.id).toBe("number");
-      expect(typeof transaction.name).toBe("string");
-      expect(typeof transaction.quantity).toBe("number");
-      expect(typeof transaction.source).toBe("string");
-      expect(typeof transaction.createdAt).toBe("string");
-    }
+  it("listTransactions returns an array of Transactions", async () => {
+    expect(await listTransactions()).toEqual([
+      { id: 1, name: "Cash", quantity: 100000, source: "seed", createdAt: "2024-01-01T00:00:00Z" },
+      { id: 2, name: "Rent Expense", quantity: 30000, source: "seed", createdAt: "2024-01-01T00:00:00Z" },
+    ]);
   });
 
-  it("listAccounts returns an array shaped like AccountBalance[]", async () => {
-    const balances = await listAccounts();
-    expect(Array.isArray(balances)).toBe(true);
-    expect(balances.length).toBeGreaterThan(0);
-    for (const balance of balances) {
-      expect(typeof balance.name).toBe("string");
-      expect(typeof balance.balance).toBe("number");
-      expect(typeof balance.eventCount).toBe("number");
-    }
+  it("listAccounts returns an array of AccountBalance", async () => {
+    expect(await listAccounts()).toEqual([
+      { name: "Cash", balance: 120000, eventCount: 3 },
+      { name: "Rent Expense", balance: 30000, eventCount: 1 },
+      { name: "Sales Revenue", balance: 50000, eventCount: 1 },
+    ]);
   });
 
   it("createTransaction with a valid token returns the created Transaction", async () => {
-    // The body and Authorization header must match
-    // shared/openapi/examples/post-transactions.json. Check the exact
-    // example response so a generated fallback cannot silently pass.
     const { token } = await login("demo", "demo");
     const transaction = await createTransaction(token, { name: "Specmatic Test Account", quantity: 1 });
     expect(transaction).toEqual({
@@ -79,9 +60,10 @@ describe("api client against the Specmatic contract mock", () => {
     "createTransaction with token %s throws UnauthorizedError",
     async (token) => {
       // Use the successful example's body to check token matching independently.
-      await expect(
+      await expectUnauthorized(
         createTransaction(token, { name: "Specmatic Test Account", quantity: 1 }),
-      ).rejects.toThrow(UnauthorizedError);
+        "invalid or missing token",
+      );
     },
   );
 

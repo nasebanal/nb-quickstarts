@@ -142,7 +142,8 @@ export const scenarioTesting: LocalizedDocsPage = {
                 "flow does not reach. The report is specmatic/report/test/html/index.html (HTML and JUnit files).",
               "The consumer side is checked against a mock built from the same contract: the frontend's own API " +
                 "calls run against it; the mock reads the contract and examples from shared/openapi, so only the mock needs to be " +
-                "started (not the apps stack). Its report is vitest/report-contract/index.html.",
+                "started (not the apps stack). The tests compare complete response values and error bodies. " +
+                "Its report is vitest/report-contract/index.html.",
             ],
             code: [
               { label: "Provider", code: "make apps:up\nmake specmatic:test" },
@@ -377,6 +378,7 @@ export const scenarioTesting: LocalizedDocsPage = {
                 "レポートは specmatic/report/test/html/index.html です(HTMLとJUnitのファイル)。",
               "コンシューマー側は、同じコントラクトから作ったmockに対して、frontend自身のAPI呼び出しを実行して" +
                 "確認します。mockはshared/openapiのコントラクトとexampleを読むため、mockだけ起動すれば足ります(appsスタックは不要)。" +
+                "テストは、レスポンスの全値とエラーの本文を比較します。" +
                 "レポートは vitest/report-contract/index.html です。",
             ],
             code: [

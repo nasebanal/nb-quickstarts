@@ -195,19 +195,17 @@ both:
   happens to be doing right now? `specmatic:mock-up` starts a mock server
   built from that same contract (schema + examples - anything that matches
   an example gets that example's exact response; anything else gets a
-  schema-valid response with *randomly generated* values, confirmed
-  empirically, which is actually a stronger check than always seeing
-  realistic canned data). `vitest:contract-test` then runs
+  schema-valid response with *randomly generated* values).
+  `vitest:contract-test` then runs
   `apps/frontend/src/lib/contract/api.consumer.test.ts` - real HTTP calls
   through `api.ts`, not a mocked `fetch` (that's `vitest:test`, a different,
   unrelated suite) and not the real backend (that's Playwright) - against
-  that mock, and checks the responses parse into the shapes `api.ts`'s
-  TypeScript types expect. `vitest.config.mts` excludes
-  `src/lib/contract/**` from the default `vitest:test` run (spreading
-  Vitest's own `defaultExclude` rather than replacing it) precisely because
-  this suite isn't self-contained the way every other vitest test is - it
-  needs `make specmatic:mock-up` first (no `apps:up` - the mock reads
-  `shared/openapi/` directly).
+  that mock, and compares complete success responses and error bodies.
+  `vitest.config.mts` excludes `src/lib/contract/**` from the default
+  `vitest:test` run (spreading Vitest's own `defaultExclude` rather than
+  replacing it) precisely because this suite isn't self-contained the way
+  every other vitest test is - it needs `make specmatic:mock-up` first
+  (no `apps:up` - the mock reads `shared/openapi/` directly).
 
 Both the `specmatic` service and the `specmatic-mock` service in
 `specmatic/docker-compose.yml` mount `shared/` read-only and run against
