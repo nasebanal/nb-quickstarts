@@ -44,7 +44,7 @@ all:
 	@echo "  all:status  - Show container status for every module"
 	@echo "  all:test    - Run pytest/vitest/playwright/specmatic in sequence (starts apps:up first; not locust/zap - see locust:load)"
 	@echo "  all:report  - Open every existing test report in your browser"
-	@echo "  all:report-upload - Upload the last pytest/vitest/playwright/specmatic/locust run to NASEBANAL Assurance (see .env: NB_TOKEN; zap has its own zap:report-upload)"
+	@echo "  all:report-upload - Upload the last pytest/vitest/playwright/specmatic run to NASEBANAL Assurance (see .env: NB_TOKEN; locust and zap have their own locust:report-upload / zap:report-upload)"
 	@echo "  all:reset   - Stop everything, wipe apps/kong/kafka/observability persistent state and every test tool's generated logs/reports (nothing is started afterwards)"
 
 all\:%:
@@ -135,14 +135,15 @@ all-report:
 	@echo "  make playwright:report"
 
 # Uploads the last run of every tool `all:test` runs (see bin/report_upload.sh;
-# zap is not part of all:test either, so it has its own `zap:report-upload`; vitest's mock-based contract run is a dev-phase
+# locust (locust:load) and zap are not part of all:test either, so they have their own
+# `locust:report-upload` / `zap:report-upload`; vitest's mock-based contract run is a dev-phase
 # check and is not uploaded). A module whose test has not run yet must not
 # stop the others, so each one is attempted and the failures are reported at
 # the end.
 all-report-upload:
 	@bin/ensure_nb_auth.sh || exit 1
 	@failed=""; \
-	for t in pytest vitest playwright specmatic locust; do \
+	for t in pytest vitest playwright specmatic; do \
 		$(MAKE) $$t-report-upload || failed="$$failed $$t"; \
 	done; \
 	if [ -n "$$failed" ]; then echo "❌ Upload failed for:$$failed"; exit 1; fi; \

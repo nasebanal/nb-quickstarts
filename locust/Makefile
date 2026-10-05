@@ -31,7 +31,7 @@ locust:
 	@echo "  locust:restart     - Restart Locust containers"
 	@echo "  locust:reset       - Delete all past run logs/reports (locust/logs/) - move any you want to keep first"
 	@echo "  locust:open        - Open Locust UI in browser"
-	@echo "  locust:report-upload - Upload the most recent locust:test run to NASEBANAL Assurance (see .env: NB_TOKEN; pass/fail by LOCUST_MAX_FAIL_RATIO)"
+	@echo "  locust:report-upload - Upload the most recent locust:load run to NASEBANAL Assurance (see .env: NB_TOKEN; pass/fail by LOCUST_MAX_FAIL_RATIO)"
 	@echo "  locust:report      - Open the most recent run's report.html in your browser"
 	@echo ""
 	@echo "Load Testing (configure via .env or CLI, then run locust:up or locust:load):"
@@ -246,6 +246,6 @@ locust-join-cluster:
 
 # Sends the most recent run's summary (locust/logs/<timestamp>/locust_stats.csv and
 # its siblings) to NASEBANAL Assurance - see bin/report_upload.sh. nb applies the
-# same LOCUST_MAX_FAIL_RATIO rule as locust:test (exit_code.py).
+# same LOCUST_MAX_FAIL_RATIO rule as locust:load (exit_code.py).
 locust-report-upload:
-	@bin/report_upload.sh locust:test load locust http locust/logs
+	@bin/report_upload.sh locust:load load locust http locust/logs
