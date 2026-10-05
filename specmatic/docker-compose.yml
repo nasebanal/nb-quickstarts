@@ -5,7 +5,7 @@ services:
   # backend, so what the backend is verified against can't be whatever the
   # backend happens to say about itself.
   specmatic:
-    image: specmatic/specmatic:${SPECMATIC_VERSION:-2.55.1}
+    image: specmatic/specmatic:${SPECMATIC_VERSION:-2.55.2}
     working_dir: /app
     volumes:
       # Specmatic always writes its HTML report to build/reports/specmatic/test/html
@@ -34,7 +34,7 @@ services:
   # a consumer than always seeing the same realistic-looking values, since
   # it can't accidentally pass by relying on one specific example's data.
   specmatic-mock:
-    image: specmatic/specmatic:${SPECMATIC_VERSION:-2.55.1}
+    image: specmatic/specmatic:${SPECMATIC_VERSION:-2.55.2}
     container_name: nb-specmatic-mock
     working_dir: /app
     volumes:
