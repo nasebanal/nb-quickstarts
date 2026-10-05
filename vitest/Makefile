@@ -30,6 +30,7 @@ vitest:
 	@echo ""
 	@echo "  vitest:report          - Serve + open vitest/report/index.html (Ctrl+C to stop serving)"
 	@echo "  vitest:report-contract - Same, for vitest/report-contract/index.html"
+	@echo "  vitest:report-upload   - Upload the last vitest:test run (vitest/report/junit.xml) to NASEBANAL Assurance (see .env: NB_TOKEN)"
 	@echo "  vitest:reset           - Delete both generated reports (vitest/report/, vitest/report-contract/)"
 
 vitest\:%:
@@ -72,3 +73,7 @@ _vitest-serve-report:
 	@echo "Serving $(DIR) at http://localhost:$(PORT) (Ctrl+C to stop)..."
 	@(sleep 1 && bin/open_browser.sh http://localhost:$(PORT)) &
 	@python3 -m http.server $(PORT) --directory $(DIR)
+
+# Send the last run's summary to NASEBANAL Assurance - see bin/report_upload.sh.
+vitest-report-upload:
+	@bin/report_upload.sh vitest:test unit vitest frontend vitest/report/junit.xml

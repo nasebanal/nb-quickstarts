@@ -606,13 +606,15 @@ Every `make <module>:test` run leaves a browsable report behind. These are all g
 
 | Module | Report file(s) |
 |---|---|
-| `pytest` | `pytest/report/report.html` |
-| `vitest` | `vitest/report/index.html` |
-| `vitest:contract-test` | `vitest/report-contract/index.html` |
-| `playwright` | `playwright/report/index.html` |
+| `pytest` | `pytest/report/report.html`, plus `junit.xml` |
+| `vitest` | `vitest/report/index.html`, plus `junit.xml` |
+| `vitest:contract-test` | `vitest/report-contract/index.html`, plus `junit.xml` |
+| `playwright` | `playwright/report/index.html`, plus `playwright/junit/junit.xml` |
 | `specmatic` | `specmatic/report/test/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml` |
 | `locust` | `locust/logs/<timestamp>/report.html`, plus the files below |
 | `zap` | `zap/report/<scan>-report.html` (also `.json`) - `baseline`/`full-scan`/`api-scan`, overwritten each run |
+
+**Send a run to NASEBANAL Assurance:** `make pytest:report-upload` (likewise `vitest:report-upload`, `playwright:report-upload`, `specmatic:report-upload`, `locust:report-upload`, `zap:report-upload`) uploads the last run's summary through the `nb` CLI. With no `NB_TOKEN` and no stored session it opens the browser for `nb auth login` (CI / no terminal: set `NB_TOKEN`). For production instead of a local `nb-assurance-api`, set for production instead of a local `nb-assurance-api`, `NB_BASE_URL` in `.env` - see `.env.example`. Everything uploaded for one commit on one day lands in one Assurance run (project `ASSURANCE_PROJECT`, default `nb-quickstarts`). `zap:report-upload` uploads every scan in `zap/report/` (converted to JUnit by `bin/zap_to_junit.mjs`, kind `security`, one suite per scan; an alert of Low or above counts as a failure) and is not part of `all:report-upload`, just as ZAP is not part of `all:test`.
 
 **Locust** writes a whole timestamped directory per run, `locust/logs/YYYYMMDD_HHMMSS/`:
 

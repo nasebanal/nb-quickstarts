@@ -8,6 +8,8 @@ const htmlReportDir = process.env.VITEST_HTML_REPORT;
 export default defineConfig({
   test: {
     include: ["src/lib/contract/**/*.test.ts"],
-    reporters: htmlReportDir ? ["default", ["html", { outputDir: htmlReportDir }]] : ["default"],
+    reporters: htmlReportDir
+      ? ["default", ["html", { outputDir: htmlReportDir }], ["junit", { outputFile: `${htmlReportDir}/junit.xml` }]]
+      : ["default"],
   },
 });

@@ -31,6 +31,7 @@ locust:
 	@echo "  locust:restart     - Restart Locust containers"
 	@echo "  locust:reset       - Delete all past run logs/reports (locust/logs/) - move any you want to keep first"
 	@echo "  locust:open        - Open Locust UI in browser"
+	@echo "  locust:report-upload - Upload the most recent locust:test run to NASEBANAL Assurance (see .env: NB_TOKEN; pass/fail by LOCUST_MAX_FAIL_RATIO)"
 	@echo "  locust:report      - Open the most recent run's report.html in your browser"
 	@echo ""
 	@echo "Load Testing (configure via .env or CLI, then run locust:up or locust:load):"
@@ -242,3 +243,9 @@ locust-join-cluster:
 		docker compose -p nb-locust -f locust/docker-compose-worker.yml up -d --build --scale worker=$(LOCUST_WORKERS)
 	@echo "Workers started and connected to cluster at $(LOCUST_MASTER_HOST)"
 	@echo "Check master UI at http://$(LOCUST_MASTER_HOST):8089"
+
+# Sends the most recent run's summary (locust/logs/<timestamp>/locust_stats.csv and
+# its siblings) to NASEBANAL Assurance - see bin/report_upload.sh. nb applies the
+# same LOCUST_MAX_FAIL_RATIO rule as locust:test (exit_code.py).
+locust-report-upload:
+	@bin/report_upload.sh locust:test load locust http locust/logs

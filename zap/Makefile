@@ -33,6 +33,7 @@ zap:
 	@echo "  zap:reset     - Delete every generated scan report (zap/report/)"
 	@echo ""
 	@echo "  zap:report    - Open every *-report.html currently in zap/report/ in your browser"
+	@echo "  zap:report-upload - Upload every scan in zap/report/ (*-report.json, one suite per scan) to NASEBANAL Assurance (see .env: NB_TOKEN)"
 	@echo "                  (whichever scans have actually been run - not a fixed list, so a"
 	@echo "                  new scan type added later is picked up with no change needed here)"
 	@echo ""
@@ -104,7 +105,7 @@ zap-api-scan: apps-network-ensure
 	@mkdir -p zap/report
 	@bin/run_test.sh zap:api-scan zap:report -- \
 		docker compose -p zap -f zap/docker-compose.yml run --rm --name nb-zap-$$(openssl rand -hex 3) zap \
-		zap-api-scan.py -t http://backend:8080/openapi.json -f openapi \
+		zap-api-scan.py -t http://backend:8080/openapi.json -f openapi -z "-silent" \
 		-r api-scan-report.html -J api-scan-report.json -I
 	@echo "Report: zap/report/api-scan-report.html"
 
@@ -155,3 +156,22 @@ zap-report:
 		exit 1; \
 	fi; \
 	echo "$$reports" | while IFS= read -r f; do bin/open_browser.sh "$$f"; done
+
+# `nb` reads JUnit and Locust only, so each scan's JSON is first converted to
+# JUnit (bin/zap_to_junit.mjs: an alert of Low or above is a failed case, INFO
+# passes) and uploaded as kind `security`, one suite per scan (baseline,
+# api-scan, full-scan). Whichever scans have been run are uploaded; one that
+# fails to upload does not stop the others.
+zap-report-upload:
+	@if ! ls zap/report/*-report.json >/dev/null 2>&1; then \
+		echo "No report yet - run 'make zap:baseline' (or :full-scan/:api-scan) first."; \
+		exit 1; \
+	fi; \
+	failed=""; \
+	for f in zap/report/*-report.json; do \
+		scan=$$(basename $$f -report.json); \
+		node bin/zap_to_junit.mjs $$f zap/report/$$scan-junit.xml \
+			&& bin/report_upload.sh zap:$$scan security zap $$scan zap/report/$$scan-junit.xml \
+			|| failed="$$failed $$scan"; \
+	done; \
+	if [ -n "$$failed" ]; then echo "❌ Upload failed for:$$failed"; exit 1; fi

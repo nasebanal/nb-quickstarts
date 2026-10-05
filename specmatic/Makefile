@@ -29,6 +29,7 @@ specmatic:
 	@echo "Report: specmatic/report/test/html/index.html (also specmatic/junit/TEST-junit-jupiter.xml)"
 	@echo ""
 	@echo "  specmatic:report - Open that report in your browser"
+	@echo "  specmatic:report-upload - Upload the last specmatic:test run (specmatic/junit/TEST-junit-jupiter.xml) to NASEBANAL Assurance (see .env: NB_TOKEN)"
 	@echo "  specmatic:reset  - Delete the generated report and JUnit output (specmatic/report/, specmatic/junit/)"
 
 specmatic\:%:
@@ -66,3 +67,7 @@ specmatic-mock-down:
 	@echo "Stopping Specmatic mock..."
 	@docker compose -p specmatic -f specmatic/docker-compose.yml rm -f -s specmatic-mock
 	@echo "Specmatic mock stopped and removed."
+
+# Sends the last provider-test run's summary to NASEBANAL Assurance - see bin/report_upload.sh.
+specmatic-report-upload:
+	@bin/report_upload.sh specmatic:test contract specmatic backend-provider specmatic/junit/TEST-junit-jupiter.xml
