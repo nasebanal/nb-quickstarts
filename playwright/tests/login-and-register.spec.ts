@@ -123,7 +123,7 @@ test("profile: shows the recorded email, saves display name and language", async
   // Pinned to /en explicitly (rather than "/", whose Accept-Language-based
   // redirect target isn't deterministic) so this test's own expectations
   // don't depend on it - see AuthProvider.tsx's profile-language sync: the
-  // URL's own /en segment wins over the seeded Japanese profile language for
+  // URL's own /en segment wins over a saved Japanese profile language for
   // what's *displayed*, on purpose, so staying on /en throughout keeps every
   // displayed-text assertion below stable regardless of what's saved.
   await page.goto("/en");
@@ -142,25 +142,26 @@ test("profile: shows the recorded email, saves display name and language", async
   await expect(page.getByTestId("profile-email")).toHaveAttribute("readonly", "");
 
   // The language <select> reflects what's actually saved in the backend
-  // (the seed data's "ja") independent of the page's own displayed
-  // language, which stays English here because the URL says /en.
-  await expect(page.getByTestId("profile-language")).toHaveValue("ja");
+  // (the seed data's "en") independent of the page's own displayed
+  // language, which is whatever the URL says (/en here).
+  await expect(page.getByTestId("profile-language")).toHaveValue("en");
   await expect(page.locator("h1")).toHaveText("Profile");
 
   await page.getByTestId("profile-display-name").fill("Second Tester");
-  await page.getByTestId("profile-language").selectOption("en");
+  await page.getByTestId("profile-language").selectOption("ja");
   await page.getByTestId("profile-save").click();
   await expect(page.getByTestId("profile-status")).toBeVisible();
 
-  // It stuck: a reload reads it back from the backend.
+  // It stuck: a reload reads it back from the backend (the page itself stays
+  // English - the URL's /en wins over the saved language).
   await page.reload();
   await expect(page.getByTestId("profile-display-name")).toHaveValue("Second Tester");
-  await expect(page.getByTestId("profile-language")).toHaveValue("en");
+  await expect(page.getByTestId("profile-language")).toHaveValue("ja");
   await expect(page.locator("h1")).toHaveText("Profile");
 
   // Put the demo user back as the seed data has it, so the test can run again.
   await page.getByTestId("profile-display-name").fill("Demo User");
-  await page.getByTestId("profile-language").selectOption("ja");
+  await page.getByTestId("profile-language").selectOption("en");
   await page.getByTestId("profile-save").click();
   await expect(page.getByTestId("profile-status")).toBeVisible();
 });

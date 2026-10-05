@@ -28,7 +28,7 @@ _SAMPLE_EVENTS = [
 # credential to protect. The hash is stored, never the password itself.
 DEMO_PASSWORD = "demo"
 _SEED_USERS = [
-    {"username": "demo", "email": "demo@nasebanal.com", "display_name": "Demo User", "language": "ja"},
+    {"username": "demo", "email": "demo@nasebanal.com", "display_name": "Demo User", "language": "en"},
 ]
 
 

@@ -55,7 +55,7 @@ export const scenarioKafka: LocalizedDocsPage = {
         ],
         code: [
           {
-            code: "make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
+            code: "make locust:load LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
           },
         ],
         note:
@@ -77,7 +77,7 @@ export const scenarioKafka: LocalizedDocsPage = {
         heading: "4. The same load through Kafka",
         code: [
           {
-            code: "make locust:test LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
+            code: "make locust:load LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
           },
         ],
         note:
@@ -205,7 +205,7 @@ export const scenarioKafka: LocalizedDocsPage = {
         ],
         code: [
           {
-            code: "make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
+            code: "make locust:load LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
           },
         ],
         note:
@@ -227,7 +227,7 @@ export const scenarioKafka: LocalizedDocsPage = {
         heading: "4. 同じ負荷をKafka経由で",
         code: [
           {
-            code: "make locust:test LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
+            code: "make locust:load LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
           },
         ],
         note:

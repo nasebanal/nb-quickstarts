@@ -87,7 +87,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         ],
         code: [
           {
-            code: "make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
+            code: "make locust:load LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
           },
         ],
         images: [
@@ -360,7 +360,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         ],
         code: [
           {
-            code: "make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
+            code: "make locust:load LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
           },
         ],
         images: [

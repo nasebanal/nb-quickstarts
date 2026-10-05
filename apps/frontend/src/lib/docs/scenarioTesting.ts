@@ -44,7 +44,8 @@ export const scenarioTesting: LocalizedDocsPage = {
         note:
           "The unit tests require no running services and can be run first: make pytest:test and " +
           "make vitest:test. make all:test runs pytest, Vitest, Playwright and Specmatic in sequence, starting " +
-          "the apps stack beforehand. On GitHub, CI runs static checks only - Python lint, Dockerfile lint and " +
+          "the apps stack beforehand; the load test (make locust:load) and ZAP are not part of it - a sustained load run " +
+          "and attack payloads are run explicitly. On GitHub, CI runs static checks only - Python lint, Dockerfile lint and " +
           "build, shell syntax, frontend type check and compose validation. The tests on this page require the " +
           "running stack and are run locally.",
       },
@@ -176,9 +177,10 @@ export const scenarioTesting: LocalizedDocsPage = {
               "Locust runs against the running apps stack (make apps:up first) and reports response times and failures per endpoint. The available scenarios are HTTP, GraphQL " +
                 "and MySQL, an overload scenario, and the same overload sent through Kafka; [Scenario 3](/docs/scenario-kafka) " +
                 "and [Scenario 4](/docs/scenario-observability) use it to show the effect of an overload and how " +
-                "Kafka and observability each respond. The report is locust/logs/<timestamp>/report.html.",
+                "Kafka and observability each respond. The report is locust/logs/<timestamp>/report.html. " +
+                "make locust:load is a separate command from the test targets (and is not run by make all:test), since it puts sustained load on the stack.",
             ],
-            code: [{ code: "make apps:up\nmake locust:test LOCUST_FILE=locustfile_http.py LOCUST_USERS=10 LOCUST_SPAWN_RATE=5 LOCUST_RUN_TIME=20s" }],
+            code: [{ code: "make apps:up\nmake locust:load LOCUST_FILE=locustfile_http.py LOCUST_USERS=10 LOCUST_SPAWN_RATE=5 LOCUST_RUN_TIME=20s" }],
             images: [
               {
                 src: "/docs/screenshots/report-locust.png",
@@ -279,6 +281,7 @@ export const scenarioTesting: LocalizedDocsPage = {
         note:
           "ユニットテストは稼働中のサービスを必要とせず、最初に実行できます: make pytest:test と make vitest:test。" +
           "make all:test は、pytest・Vitest・Playwright・Specmaticを順に実行します(先にappsスタックを起動します)。" +
+          "負荷テスト(make locust:load)とZAPは対象外です — 持続的な負荷や攻撃ペイロードは、明示的に実行します。" +
           "GitHubのCIが実行するのは静的チェック — Pythonのlint、Dockerfileのlintとビルド、シェルの構文、" +
           "frontendの型チェック、composeの検証 — のみです。本ページのテストは稼働中のスタックが必要なため、" +
           "ローカルで実行します。",
@@ -412,9 +415,10 @@ export const scenarioTesting: LocalizedDocsPage = {
               "Locustは、稼働中のappsスタック(先にmake apps:up)に対して実行し、エンドポイントごとの応答時間と失敗を報告します。用意されているシナリオは、HTTP・GraphQL・MySQL、" +
                 "overloadシナリオ、同じ負荷をKafka経由にしたものです。[シナリオ3](/docs/scenario-kafka)と" +
                 "[シナリオ4](/docs/scenario-observability)は、これを使って、過負荷が何を起こし、Kafkaとオブザーバビリティが" +
-                "それぞれどう応えるかを示します。レポートは locust/logs/<タイムスタンプ>/report.html です。",
+                "それぞれどう応えるかを示します。レポートは locust/logs/<タイムスタンプ>/report.html です。" +
+                "make locust:load はtest系のターゲットとは別のコマンドで(make all:testでは実行されません)、スタックに持続的な負荷をかけるためです。",
             ],
-            code: [{ code: "make apps:up\nmake locust:test LOCUST_FILE=locustfile_http.py LOCUST_USERS=10 LOCUST_SPAWN_RATE=5 LOCUST_RUN_TIME=20s" }],
+            code: [{ code: "make apps:up\nmake locust:load LOCUST_FILE=locustfile_http.py LOCUST_USERS=10 LOCUST_SPAWN_RATE=5 LOCUST_RUN_TIME=20s" }],
             images: [
               {
                 src: "/docs/screenshots/report-locust.png",

@@ -74,13 +74,29 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
           "Authorization header, or the tool call 401s the same way an unauthenticated curl would.",
       },
       {
-        heading: "3. Use it from a real MCP client",
+        heading: "3. Try it in MCP Inspector",
+        code: [{ code: "make apps:mcp   # opens MCP Inspector at http://localhost:6274" }],
         body: [
-          "Point an MCP client (Claude Desktop, mcp-inspector, ...) at http://localhost:8010/mcp " +
-            "(Streamable HTTP) to use it interactively, the same way you'd connect one to the backend's " +
-            "own native /mcp mount at http://localhost:8080/mcp - two independent paths to the same " +
-            "eight operations.",
+          "MCP Inspector (started with apps:up) lists agentgateway next to the backend's own /mcp. " +
+            "How to connect and call a tool is shown with the backend in [Getting Started](/docs/getting-started); " +
+            "here, do the same through the gateway: flip the switch on the agentgateway card, open the " +
+            "Tools tab, pick list_accounts_accounts_get and press Execute Tool. The server name in the " +
+            "header is rmcp (agentgateway's own MCP implementation), the tools come with titles taken from " +
+            "the OpenAPI contract, and the result is the same account list - this time proxied through the " +
+            "gateway (its access log, and Tempo's trace if observability is up, show the call).",
         ],
+        imagesLayout: "stack",
+        images: [
+          {
+            src: "/docs/screenshots/mcp-inspector-agentgateway.png",
+            alt: "MCP Inspector connected to agentgateway (rmcp) with List Accounts executed and its JSON result",
+            caption: "Connected to agentgateway: titled tools built from the OpenAPI contract, same account data.",
+          },
+        ],
+        note:
+          "The backend's native /mcp also exposes its two GraphQL routes as tools, so its tool list is longer " +
+          "than the eight agentgateway builds from the OpenAPI contract. Claude Code and Claude Desktop can use the " +
+          "gateway too - see [Getting Started](/docs/getting-started).",
       },
       {
         heading: "The dashboard",
@@ -192,13 +208,29 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
           "として渡してください。渡さなければ、認証なしのcurlと同じように401になります。",
       },
       {
-        heading: "3. 実際のMCPクライアントから使う",
+        heading: "3. MCP Inspectorで試す",
+        code: [{ code: "make apps:mcp   # MCP Inspectorを開く(http://localhost:6274)" }],
         body: [
-          "MCPクライアント(Claude Desktop・mcp-inspectorなど)をhttp://localhost:8010/mcp" +
-            "(Streamable HTTP)に向ければ、対話的に使えます — backend自身がネイティブにマウントしている" +
-            "http://localhost:8080/mcpに接続するのとまったく同じ要領で、同じ8個のオペレーションへの独立した" +
-            "2つの経路になります。",
+          "MCP Inspector(apps:upと一緒に起動)には、backend自身の/mcpと並んでagentgatewayが載っています。" +
+            "接続とツール呼び出しの手順はbackendを例に[Getting Started](/docs/getting-started)で示しているので、" +
+            "ここではゲートウェイ経由で同じことを行います: agentgatewayカードのスイッチをオンにし、Toolsタブで" +
+            "list_accounts_accounts_getを選んでExecute Toolを押します。ヘッダーのサーバー名はrmcp(agentgateway" +
+            "自身のMCP実装)で、ツールにはOpenAPI契約から取られたタイトルが付き、結果は同じ勘定科目一覧です — " +
+            "ただし今回はゲートウェイを経由しています(agentgatewayのアクセスログや、observabilityを起動していれば" +
+            "Tempoのトレースにも呼び出しが残ります)。",
         ],
+        imagesLayout: "stack",
+        images: [
+          {
+            src: "/docs/screenshots/mcp-inspector-agentgateway.png",
+            alt: "agentgateway(rmcp)に接続したMCP Inspector。List Accountsを実行し、JSONの結果が表示されている",
+            caption: "agentgatewayに接続した状態: OpenAPI契約から作られたタイトル付きのツールと、同じ勘定科目データ。",
+          },
+        ],
+        note:
+          "backendのネイティブな/mcpはGraphQLの2つのルートもツールとして公開するため、OpenAPI契約からagentgatewayが作る8個より" +
+          "ツール数が多くなります。Claude CodeやClaude Desktopからもゲートウェイを使えます — " +
+          "[Getting Started](/docs/getting-started)を参照してください。",
       },
       {
         heading: "ダッシュボード",

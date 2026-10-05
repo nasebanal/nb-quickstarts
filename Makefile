@@ -30,8 +30,9 @@ include observability/Makefile
 # `make vault:verify-apps` to recreate backend with them) - same
 # opt-in-integration shape.
 # locust:up (which all:up calls) always starts in UI mode and does NOT run
-# a load test on its own - use `make locust:test` separately (headless,
-# LOCUST_RUN_TIME-bounded) to actually generate load against apps.
+# a load test on its own - use `make locust:load` separately (headless,
+# LOCUST_RUN_TIME-bounded) to actually generate load against apps. It is
+# deliberately not part of all:test either (see the rule above it).
 
 all:
 	@echo "🚀 All"
@@ -41,7 +42,7 @@ all:
 	@echo "  all:down    - Stop them all (apps last)"
 	@echo "  all:restart - all:down then all:up"
 	@echo "  all:status  - Show container status for every module"
-	@echo "  all:test    - Run pytest/vitest/playwright/specmatic/locust in sequence (starts apps:up first)"
+	@echo "  all:test    - Run pytest/vitest/playwright/specmatic in sequence (starts apps:up first; not locust/zap - see locust:load)"
 	@echo "  all:report  - Open every existing test report in your browser"
 	@echo "  all:reset   - Stop everything, wipe apps/kong/kafka/observability persistent state and every test tool's generated logs/reports (nothing is started afterwards)"
 
@@ -98,22 +99,20 @@ all-status:
 	@$(MAKE) observability-status
 
 # Rule: every module whose verb is `test` runs here (pytest, vitest,
-# playwright, specmatic, locust); modules whose verbs are `scan`/`baseline`
-# (zap) do not. zap is deliberately not named `test`: zap:baseline alone
-# takes longer than the rest combined, and zap:full-scan/zap:api-scan send
-# real attack payloads - not something to run unattended as a side effect
-# of `all:test`. Run those explicitly.
+# playwright, specmatic); modules whose verbs are `load` (locust) or
+# `scan`/`baseline` (zap) do not. locust and zap are deliberately not named
+# `test`: locust:load is a sustained load run (every all:test would put real
+# load on apps), zap:baseline alone takes longer than the rest combined, and
+# zap:full-scan/zap:api-scan send real attack payloads - not something to
+# run unattended as a side effect of `all:test`. Run those explicitly.
 # playwright/specmatic need apps running, so this brings it up first; it
 # does NOT tear apps down afterward, matching every other module's own test
 # target.
-# locust:test goes last: it is a headless load run that blocks for
-# LOCUST_RUN_TIME (30s here if unset) and fails this target on failed requests.
 all-test: apps-up
 	@$(MAKE) pytest-test
 	@$(MAKE) vitest-test
 	@$(MAKE) playwright-test
 	@$(MAKE) specmatic-test
-	@$(MAKE) locust-test LOCUST_RUN_TIME=$(or $(LOCUST_RUN_TIME),30s)
 
 # Opens every report that's a plain, self-contained file straight away -
 # pytest/specmatic/zap/locust (each module's own -report target explains why

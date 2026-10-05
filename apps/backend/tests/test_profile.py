@@ -16,7 +16,7 @@ def token(client):
     tests that change it don't leak into the next one (there is one user)."""
     token = _login(client)
     yield token
-    client.put("/me/profile", json={"displayName": "Demo User", "language": "ja"}, headers=_auth(token))
+    client.put("/me/profile", json={"displayName": "Demo User", "language": "en"}, headers=_auth(token))
 
 
 def test_me_requires_a_token(client):
@@ -30,7 +30,7 @@ def test_me_returns_the_seeded_profile(client, token):
         "username": "demo",
         "email": "demo@nasebanal.com",
         "displayName": "Demo User",
-        "language": "ja",
+        "language": "en",
         "provider": "demo",
     }
 
@@ -38,13 +38,13 @@ def test_me_returns_the_seeded_profile(client, token):
 def test_update_profile_changes_display_name_and_language_only(client, token):
     response = client.put(
         "/me/profile",
-        json={"displayName": "Second Name", "language": "en", "email": "hacker@example.com"},
+        json={"displayName": "Second Name", "language": "ja", "email": "hacker@example.com"},
         headers=_auth(token),
     )
     assert response.status_code == 200
     body = response.json()
     assert body["displayName"] == "Second Name"
-    assert body["language"] == "en"
+    assert body["language"] == "ja"
     # The email is recorded but not editable - a sent value is ignored.
     assert body["email"] == "demo@nasebanal.com"
     # And it stuck.
@@ -52,9 +52,9 @@ def test_update_profile_changes_display_name_and_language_only(client, token):
 
 
 def test_update_profile_leaves_omitted_fields_alone(client, token):
-    client.put("/me/profile", json={"language": "en"}, headers=_auth(token))
+    client.put("/me/profile", json={"language": "ja"}, headers=_auth(token))
     body = client.get("/me", headers=_auth(token)).json()
-    assert body["language"] == "en"
+    assert body["language"] == "ja"
     assert body["displayName"] == "Demo User"
 
 
