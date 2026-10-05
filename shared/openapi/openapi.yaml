@@ -93,7 +93,8 @@ paths:
               examples:
                 demo_login:
                   value:
-                    token: example-token-abc123
+                    # Matches the demo token in authenticated external examples.
+                    token: nb1~ZGVtbw~o8ULBzbbQm6Lrym32BZVUdAXhtlQYQJL1emk2ZCkMqY
                     username: demo
         "401":
           description: Unknown username or wrong password

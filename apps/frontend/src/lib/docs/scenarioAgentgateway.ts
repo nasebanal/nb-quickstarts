@@ -24,12 +24,12 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         heading: "1. Start it and verify what it actually serves",
         code: [
           {
-            code: "make apps:up\nmake agentgateway:up\nmake agentgateway:tools",
+            code: "make agentgateway:up\nmake agentgateway:tools",
           },
         ],
         body: [
           "agentgateway:tools does the MCP handshake by hand and lists what's being served - the real " +
-            "verification that it's actually reading openapi.yaml, not a hardcoded example: six tools, " +
+            "verification that it's actually reading openapi.yaml, not a hardcoded example: eight tools, " +
             "one per operation, named and described straight from the contract.",
         ],
         terminal: {
@@ -40,6 +40,8 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
             },
             { text: "  health_health_get - Health", tone: "success" },
             { text: "  login_auth_login_post - Login", tone: "success" },
+            { text: "  get_me_me_get - Get Me", tone: "success" },
+            { text: "  update_profile_me_profile_put - Changes the display name and/or language; fields left out stay as they are. The email is recorded but not editable here.", tone: "success" },
             {
               text: "  list_transactions_transactions_get - List Transactions",
               tone: "success",
@@ -62,7 +64,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "2. Call a tool through the gateway",
         body: [
-          "Calling list_accounts_accounts_get through the gateway returns the same live data " +
+          "Run make apps:up before calling a tool. Calling list_accounts_accounts_get through the gateway returns the same live data " +
             "GET /accounts itself does - it's a real proxy to the running backend, not a " +
             "static description of it.",
         ],
@@ -77,7 +79,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
           "Point an MCP client (Claude Desktop, mcp-inspector, ...) at http://localhost:8010/mcp " +
             "(Streamable HTTP) to use it interactively, the same way you'd connect one to the backend's " +
             "own native /mcp mount at http://localhost:8080/mcp - two independent paths to the same " +
-            "six operations.",
+            "eight operations.",
         ],
       },
       {
@@ -103,14 +105,12 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "One gotcha to know about",
+        heading: "Contract and backend availability",
         body: [
-          "agentgateway fetches the backend's OpenAPI schema once, at its own startup - not lazily on " +
-            "first request. If the backend isn't actually accepting connections yet at that exact " +
-            "moment (e.g. it just restarted), agentgateway exits with a connection-refused error " +
-            "instead of retrying.",
+          "agentgateway reads shared/openapi/openapi.yaml from a read-only mount when it starts, " +
+            "so the backend can be down while the gateway starts and lists its tools. " +
+            "Tool calls still need the backend to be running.",
         ],
-        note: "make agentgateway:restart once apps:up's backend is confirmed healthy resolves it.",
       },
       {
         heading: "Cleanup",
@@ -141,14 +141,14 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         heading: "1. 起動し、実際に何を提供しているか確認する",
         code: [
           {
-            code: "make apps:up\nmake agentgateway:up\nmake agentgateway:tools",
+            code: "make agentgateway:up\nmake agentgateway:tools",
           },
         ],
         body: [
           "agentgateway:toolsは手動でMCPハンドシェイクを行い、提供中のツールを一覧表示します — " +
             "これが「本当にopenapi.yamlを読んでいる」ことの実際の確認であり、ハードコードされた例では" +
             "ありません。openapi.yamlの1オペレーションにつき1ツール、名前も説明もそこからそのまま取ら" +
-            "れた、6個のツールです。",
+            "れた、8個のツールです。",
         ],
         terminal: {
           lines: [
@@ -158,6 +158,8 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
             },
             { text: "  health_health_get - Health", tone: "success" },
             { text: "  login_auth_login_post - Login", tone: "success" },
+            { text: "  get_me_me_get - Get Me", tone: "success" },
+            { text: "  update_profile_me_profile_put - Changes the display name and/or language; fields left out stay as they are. The email is recorded but not editable here.", tone: "success" },
             {
               text: "  list_transactions_transactions_get - List Transactions",
               tone: "success",
@@ -180,7 +182,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "2. ゲートウェイ経由でツールを呼び出す",
         body: [
-          "list_accounts_accounts_getをゲートウェイ経由で呼び出すと、GET /accounts自体" +
+          "ツールを呼び出す前にmake apps:upを実行します。list_accounts_accounts_getをゲートウェイ経由で呼び出すと、GET /accounts自体" +
             "が返すのと同じライブなデータが返ります — 静的な説明ではなく、稼働中のbackendへの本物のプロキシ" +
             "です。",
         ],
@@ -194,7 +196,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         body: [
           "MCPクライアント(Claude Desktop・mcp-inspectorなど)をhttp://localhost:8010/mcp" +
             "(Streamable HTTP)に向ければ、対話的に使えます — backend自身がネイティブにマウントしている" +
-            "http://localhost:8080/mcpに接続するのとまったく同じ要領で、同じ6個のオペレーションへの独立した" +
+            "http://localhost:8080/mcpに接続するのとまったく同じ要領で、同じ8個のオペレーションへの独立した" +
             "2つの経路になります。",
         ],
       },
@@ -221,13 +223,11 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "知っておくべき注意点",
+        heading: "コントラクトとbackendの起動状態",
         body: [
-          "agentgatewayは、backendのOpenAPIスキーマを自身の起動時に一度だけ取得します — リクエストの" +
-            "たびに遅延取得するわけではありません。ちょうどそのタイミングでbackendがまだ接続を受け付けて" +
-            "いない場合(再起動直後など)、agentgatewayはリトライせずconnection refusedエラーで終了します。",
+          "agentgatewayは起動時にshared/openapi/openapi.yamlを読み取り専用のマウントから直接読み込みます。" +
+            "backendが停止していても起動とツール一覧の表示ができますが、ツールの呼び出しには稼働中のbackendが必要です。",
         ],
-        note: "apps:upのbackendが正常であることを確認してからmake agentgateway:restartすれば解決します。",
       },
       {
         heading: "環境のクリーンアップ",

@@ -35,8 +35,8 @@ export const scenarioTesting: LocalizedDocsPage = {
             ["Unit (backend)", "pytest", "22 tests: accounts and balances, password login, profile, Keycloak JWT validation (including forged and tampered tokens). Uses an in-memory database."],
             ["Unit (frontend)", "Vitest", "20 tests: the API client, the OIDC PKCE flow, and the backend resolver (round robin, fallback to the next instance)."],
             ["End to end", "Playwright", "9 tests in a real browser: login and logout, profile, a wrong password, the frontend server's resolver API."],
-            ["Contract (provider)", "Specmatic", "18 scenarios: does the real backend honour openapi.yaml? 100% of paths, methods and response codes covered."],
-            ["Contract (consumer)", "Vitest + Specmatic mock", "Does the frontend's own API usage hold up against a mock built from the same contract?"],
+            ["Contract (provider)", "Specmatic", "20 scenarios: does the real backend honour openapi.yaml? 100% of paths, methods and response codes covered."],
+            ["Contract (consumer)", "Vitest + Specmatic mock", "Using 9 tests verifies if the frontend's own API usage hold up against a mock built from the same contract?"],
             ["Load", "Locust", "HTTP, GraphQL and MySQL scenarios, an overload scenario, and the same overload sent through Kafka."],
             ["Security", "OWASP ZAP", "A passive scan of the frontend, an active scan, and an OpenAPI-driven scan of every backend route."],
           ],
@@ -142,25 +142,26 @@ export const scenarioTesting: LocalizedDocsPage = {
                 "flow does not reach. The report is specmatic/report/test/html/index.html (HTML and JUnit files).",
               "The consumer side is checked against a mock built from the same contract: the frontend's own API " +
                 "calls run against it; the mock reads the contract and examples from shared/openapi, so only the mock needs to be " +
-                "started (not the apps stack). Its report is vitest/report-contract/index.html.",
+                "started (not the apps stack). The tests compare complete response values and error bodies. " +
+                "Its report is vitest/report-contract/index.html.",
             ],
             code: [
               { label: "Provider", code: "make apps:up\nmake specmatic:test" },
-              { label: "Consumer", code: "make apps:up\nmake specmatic:mock-up\nmake vitest:contract-test" },
+              { label: "Consumer", code: "make specmatic:mock-up\nmake vitest:contract-test" },
             ],
             images: [
               {
                 src: "/docs/screenshots/report-specmatic.png",
-                alt: "Specmatic contract test results: 100% API coverage, 18 successes, and a table of every path, method and response code marked Covered",
-                caption: "Specmatic: 18 of 18 scenarios passed, 100% API coverage, broken down by path, method and response code.",
+                alt: "Specmatic contract test results: 100% API coverage, 20 successes, and a table of every path, method and response code marked Covered",
+                caption: "Specmatic: 20 of 20 scenarios passed, 100% API coverage, broken down by path, method and response code.",
               },
             ],
           },
           {
             heading: "Evaluation",
             body: [
-              "All 18 scenarios pass, and 100% of paths, methods and response codes are covered. The scenarios are " +
-                "the requests built from the contract plus 13 examples checked in next to it (shared/openapi/examples), " +
+              "All 20 scenarios pass, and 100% of paths, methods and response codes are covered. The scenarios are " +
+                "the requests built from the contract plus 15 examples checked in next to it (shared/openapi/examples), " +
                 "so the error cases and the authenticated calls are exercised as well.",
             ],
           },
@@ -269,7 +270,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             ["ユニット(backend)", "pytest", "22件: 口座と残高、パスワードログイン、プロフィール、KeycloakのJWT検証(偽造・改ざんトークンを含む)。インメモリDBを使う。"],
             ["ユニット(frontend)", "Vitest", "20件: APIクライアント、OIDCのPKCEフロー、backend resolver(ラウンドロビンと次のインスタンスへのフォールバック)。"],
             ["E2E", "Playwright", "実ブラウザで9件: ログイン・ログアウト、プロフィール、誤ったパスワード、frontendサーバーのresolver API。"],
-            ["コントラクト(プロバイダー)", "Specmatic", "18シナリオ: 実際のbackendがopenapi.yamlどおりに応答するか。パス・メソッド・レスポンスコードの100%をカバー。"],
+            ["コントラクト(プロバイダー)", "Specmatic", "20シナリオ: 実際のbackendがopenapi.yamlどおりに応答するか。パス・メソッド・レスポンスコードの100%をカバー。"],
             ["コントラクト(コンシューマー)", "Vitest + Specmaticのmock", "frontend自身のAPI利用が、同じコントラクトから作ったモックに対して成立するか。"],
             ["負荷", "Locust", "HTTP・GraphQL・MySQLのシナリオ、overloadシナリオ、同じ負荷をKafka経由にしたもの。"],
             ["セキュリティ", "OWASP ZAP", "frontendのパッシブスキャン、アクティブスキャン、backendの全ルートを対象にしたOpenAPI駆動のスキャン。"],
@@ -377,25 +378,26 @@ export const scenarioTesting: LocalizedDocsPage = {
                 "レポートは specmatic/report/test/html/index.html です(HTMLとJUnitのファイル)。",
               "コンシューマー側は、同じコントラクトから作ったmockに対して、frontend自身のAPI呼び出しを実行して" +
                 "確認します。mockはshared/openapiのコントラクトとexampleを読むため、mockだけ起動すれば足ります(appsスタックは不要)。" +
+                "テストは、レスポンスの全値とエラーの本文を比較します。" +
                 "レポートは vitest/report-contract/index.html です。",
             ],
             code: [
               { label: "プロバイダー", code: "make apps:up\nmake specmatic:test" },
-              { label: "コンシューマー", code: "make apps:up\nmake specmatic:mock-up\nmake vitest:contract-test" },
+              { label: "コンシューマー", code: "make specmatic:mock-up\nmake vitest:contract-test" },
             ],
             images: [
               {
                 src: "/docs/screenshots/report-specmatic.png",
-                alt: "Specmaticのコントラクトテスト結果。APIカバレッジ100%、成功18件で、全パス・メソッド・レスポンスコードがCoveredの表",
-                caption: "Specmatic: 18シナリオ中18件が成功、APIカバレッジ100%。パス・メソッド・レスポンスコード別の内訳付き。",
+                alt: "Specmaticのコントラクトテスト結果。APIカバレッジ100%、成功20件で、全パス・メソッド・レスポンスコードがCoveredの表",
+                caption: "Specmatic: 20シナリオ中20件が成功、APIカバレッジ100%。パス・メソッド・レスポンスコード別の内訳付き。",
               },
             ],
           },
           {
             heading: "評価結果",
             body: [
-              "18シナリオすべてが成功し、パス・メソッド・レスポンスコードの100%をカバーしました。シナリオは、" +
-                "コントラクトから作ったリクエストと、同じ場所(shared/openapi/examples)にチェックインした13個のexampleで構成されるため、" +
+              "20シナリオすべてが成功し、パス・メソッド・レスポンスコードの100%をカバーしました。シナリオは、" +
+                "コントラクトから作ったリクエストと、同じ場所(shared/openapi/examples)にチェックインした15個のexampleで構成されるため、" +
                 "エラーケースと認証つきの呼び出しも実行されます。",
             ],
           },
