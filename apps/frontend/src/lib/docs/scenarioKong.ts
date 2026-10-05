@@ -46,7 +46,7 @@ export const scenarioKong: LocalizedDocsPage = {
         code: [
           {
             label:
-              "Specmatic's mock (needs apps:up first, to seed its schema+examples):",
+              "Specmatic's mock (reads the checked-in shared contract and examples):",
             code: "make specmatic:mock-up",
           },
         ],
@@ -191,7 +191,7 @@ export const scenarioKong: LocalizedDocsPage = {
         code: [
           {
             label:
-              "Specmaticのモック(先にapps:upが必要 — スキーマ/exampleを取り込むため):",
+              "Specmaticのモック(共有コントラクトとexampleを直接読み込み、apps:upは不要):",
             code: "make specmatic:mock-up",
           },
         ],

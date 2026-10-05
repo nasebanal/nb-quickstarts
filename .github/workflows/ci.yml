@@ -44,7 +44,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       # Pinned in requirements-dev.txt so an upstream ruff release cannot
       # change what CI enforces without a commit here (Renovate raises the
@@ -118,7 +118,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Hadolint
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.5.0
         with:
           dockerfile: ${{ matrix.dockerfile }}
           # ARG のバージョン固定など軽微な指摘は失敗扱いにしない

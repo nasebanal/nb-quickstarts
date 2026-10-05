@@ -47,7 +47,7 @@ apps:
 	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  Frontend:        http://localhost:5173"
-	@echo "  API docs:        http://localhost:5173/api-specs (Scalar, reads the backend's live OpenAPI schema)"
+	@echo "  API docs:        http://localhost:5173/api-specs (Scalar, reads the shared OpenAPI contract directly)"
 	@echo "  Docs:            http://localhost:5173/docs (architecture, data model, auth/secrets, tooling)"
 	@echo "  Backend REST:    http://localhost:8080"
 	@echo "  Backend GraphQL: http://localhost:8080/graphql"

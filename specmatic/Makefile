@@ -9,9 +9,9 @@ endif
 
 specmatic:
 	@echo "🚀 Specmatic"
-	@echo "Specmatic - OpenAPI-driven contract testing. Here testing the running backend against its own live OpenAPI schema, and mocking that same contract for consumer-side testing."
+	@echo "Specmatic - OpenAPI-driven contract testing. Test the running backend against the checked-in shared contract, and mock that same contract for consumer-side testing."
 	@echo ""
-	@echo "Test Commands (Provider - does the backend honor its own contract?):"
+	@echo "Test Commands (Provider - does the backend honor the shared contract?):"
 	@echo "  specmatic:test - Contract-test the running backend against shared/openapi/openapi.yaml + examples"
 	@echo ""
 	@echo "Container Management (Consumer - mock the contract for apps/frontend to test against):"
