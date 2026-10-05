@@ -143,6 +143,34 @@ services:
     networks:
       - apps-network
 
+  # MCP Inspector (official image, v2): a browser UI for calling MCP servers by
+  # hand. Its server list is the read-only mcp-inspector/config.json - the
+  # backend's native /mcp and agentgateway's /mcp, both reached over
+  # apps-network by container name (the Inspector's own server process makes
+  # the MCP calls, not your browser). agentgateway shows up there as a server
+  # but only answers once `make agentgateway:up` is running.
+  # MCP_INSPECTOR_API_TOKEN pins the UI's auth token (it is random on every
+  # start otherwise); `make apps:mcp` opens the UI with it already in the URL.
+  # Local demo only - the token is a fixed, public default.
+  mcp-inspector:
+    image: ghcr.io/modelcontextprotocol/inspector:${MCP_INSPECTOR_VERSION:-2.9}
+    container_name: nb-mcp-inspector
+    command: ["--web", "--config", "/config/config.json"]
+    ports:
+      - "${MCP_INSPECTOR_PORT:-6274}:6274"
+      # Sandbox origin for MCP Apps rendered by the UI.
+      - "${MCP_INSPECTOR_SANDBOX_PORT:-6275}:6275"
+    environment:
+      MCP_INSPECTOR_API_TOKEN: ${MCP_INSPECTOR_TOKEN:-nb-mcp-inspector-token}
+      # No OS keychain in a container; secrets stay in memory (nothing to save).
+      MCP_INSPECTOR_SECRET_STORE: memory
+    volumes:
+      - ./mcp-inspector/config.json:/config/config.json:ro
+    depends_on:
+      - backend
+    networks:
+      - apps-network
+
 networks:
   # apps-network は compose ではなく `apps-network-ensure` (apps/Makefile) が
   # 冪等に作成する。apps/locust 等どちらが先に起動しても壊れないようにするため。

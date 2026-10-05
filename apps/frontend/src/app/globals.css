@@ -1059,6 +1059,10 @@ h1 {
   margin: 16px 0;
 }
 
+.nb-docs-figure-grid-stack {
+  grid-template-columns: 1fr;
+}
+
 /* A real screenshot of a GUI this scenario produces (Kong Manager,
    Grafana, a report file, ...) - a plain bordered frame, no card shadow of
    its own (it already sits inside the .nb-docs-content card). */

@@ -99,6 +99,8 @@ export interface DocsBlock {
   /** Real screenshot(s) of a GUI this scenario actually produces (Kong Manager, Grafana, a
    * report file, ...) - one item renders full-width, several lay out as a responsive grid. */
   images?: DocsImage[];
+  /** "stack" puts each image on its own row at full width (default: side by side when they fit) - for screenshots whose text is unreadable at half width. */
+  imagesLayout?: "stack";
   /** An embedded YouTube video (the 11-character id from the URL). Needs internet access - nothing is shown offline. */
   video?: { id: string; title: string };
   /** A callout box - a caveat, warning, or aside worth setting apart from the main prose. */

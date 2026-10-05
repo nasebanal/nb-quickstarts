@@ -25,7 +25,7 @@ locust:
 	@echo ""
 	@echo "Container Management:"
 	@echo "  locust:up          - Build (if needed) and start Locust with its Web UI (no auto-run)"
-	@echo "  locust:test        - Same, but headless: starts the load test immediately, no UI"
+	@echo "  locust:load        - Same, but headless: starts the load test immediately, no UI"
 	@echo "  locust:down        - Stop and remove Locust containers"
 	@echo "  locust:status      - Check Locust container status"
 	@echo "  locust:restart     - Restart Locust containers"
@@ -33,10 +33,10 @@ locust:
 	@echo "  locust:open        - Open Locust UI in browser"
 	@echo "  locust:report      - Open the most recent run's report.html in your browser"
 	@echo ""
-	@echo "Load Testing (configure via .env or CLI, then run locust:up or locust:test):"
+	@echo "Load Testing (configure via .env or CLI, then run locust:up or locust:load):"
 	@echo "  make apps:up                                            # start test target apps (once)"
 	@echo "  make locust:up                                          # UI mode - uses .env settings, start the test from the browser"
-	@echo "  make locust:test LOCUST_RUN_TIME=60s                    # headless - starts immediately, stops after LOCUST_RUN_TIME"
+	@echo "  make locust:load LOCUST_RUN_TIME=60s                    # headless - starts immediately, stops after LOCUST_RUN_TIME"
 	@echo "  make locust:up LOCUST_FILE=locustfile_http.py"
 	@echo "  make locust:up LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS=graphql-query"
 	@echo "  make locust:up LOCUST_FILE=locustfile_mysql.py   LOCUST_TAGS=mysql-select"
@@ -62,8 +62,8 @@ locust:
 	@echo "  LOCUST_MYSQL_CARTESIAN_LIMIT=10000 # Cartesian join LIMIT value"
 	@echo "  LOCUST_USERS=10                    # Number of concurrent users (locust:up also lets you set this from the UI)"
 	@echo "  LOCUST_SPAWN_RATE=1                # User spawn rate (users/second) (same)"
-	@echo "  LOCUST_RUN_TIME=                   # Required for locust:test (e.g., 1h30m, 60s); ignored by locust:up"
-	@echo "  LOCUST_MAX_FAIL_RATIO=0            # locust:test: allowed failure ratio (0-1); above it = TEST FAILED (exit 1). Exit 2 = unhandled task exception; 70 = startup/setup failure"
+	@echo "  LOCUST_RUN_TIME=                   # Required for locust:load (e.g., 1h30m, 60s); ignored by locust:up"
+	@echo "  LOCUST_MAX_FAIL_RATIO=0            # locust:load: allowed failure ratio (0-1); above it = TEST FAILED (exit 1). Exit 2 = unhandled task exception; 70 = startup/setup failure"
 	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  Web UI: http://localhost:8089"
@@ -76,15 +76,15 @@ locust\:%:
 #################### LOCUST ACTIONS ###################
 
 # make locust:up   -> UI mode, no --headless: start containers and pick users/spawn-rate/run-time from the browser.
-# make locust:test -> headless: starts the load test immediately with no UI, bounded by LOCUST_RUN_TIME.
+# make locust:load -> headless: starts the load test immediately with no UI, bounded by LOCUST_RUN_TIME.
 # Both funnel into locust-run below; only the headless flag differs.
 locust-up: apps-network-ensure
 	@$(MAKE) locust-run LOCUST_HEADLESS_FLAG=
 
-locust-test: apps-network-ensure
+locust-load: apps-network-ensure
 	@if [ -z "$${LOCUST_RUN_TIME}" ]; then \
-		echo "Error: LOCUST_RUN_TIME is required for locust:test (headless mode)"; \
-		echo "Set it via .env or: make locust:test LOCUST_RUN_TIME=60s"; \
+		echo "Error: LOCUST_RUN_TIME is required for locust:load (headless mode)"; \
+		echo "Set it via .env or: make locust:load LOCUST_RUN_TIME=60s"; \
 		exit 1; \
 	fi
 	@$(MAKE) locust-run LOCUST_HEADLESS_FLAG=--headless
@@ -92,7 +92,7 @@ locust-test: apps-network-ensure
 	@# LOCUST_RUN_TIME) and propagate its exit code through bin/run_test.sh, which
 	@# classifies it (see there): 0 PASS, 1 TEST FAILED (locust/bin/exit_code.py
 	@# decides: failure ratio over LOCUST_MAX_FAIL_RATIO), 2 = unhandled task exception.
-	@# A non-zero code lets `make all:test` fail on it too.
+	@# A non-zero code makes the run (and any caller) fail.
 	@# Ctrl+C only stops the waiting; the run itself keeps going in Docker.
 	@echo "Waiting for the headless run to finish (LOCUST_RUN_TIME=$${LOCUST_RUN_TIME})..."
 	@bin/run_test.sh locust locust:report -- \
@@ -212,7 +212,7 @@ locust-reset:
 locust-open:
 	@bin/open_browser.sh http://localhost:8089
 
-# Unlike every other module's fixed single report path, locust:test writes a
+# Unlike every other module's fixed single report path, locust:load writes a
 # fresh locust/logs/<timestamp>/report.html on every run and never overwrites
 # an older one (see AGENTS.md's "Report files" section) - so there's no one
 # path to hardcode. The YYYYMMDD_HHMMSS directory names sort correctly as
@@ -222,7 +222,7 @@ locust-open:
 locust-report:
 	@latest=$$(ls -d locust/logs/*/ 2>/dev/null | sort | tail -1); \
 	if [ -z "$$latest" ] || [ ! -f "$$latest/report.html" ]; then \
-		echo "No report yet - run 'make locust:test' (or locust:up and let a run finish) first."; \
+		echo "No report yet - run 'make locust:load' (or locust:up and let a run finish) first."; \
 		exit 1; \
 	fi; \
 	echo "Opening $${latest}report.html (most recent run)..."; \

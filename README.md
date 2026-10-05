@@ -57,6 +57,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Keycloak | Token endpoint (realm `nasebanal`) | http://localhost:8180/realms/nasebanal/... | `keycloak:8080/realms/nasebanal/...` | Client `apps-demo`, user `keycloak-demo` / `nasebanal-demo` - see [Keycloak: a real login, and a real token the backend verifies](#keycloak-a-real-login-and-a-real-token-the-backend-verifies) |
 | Vault | UI / API | http://localhost:8200 | `vault:8200` | `VAULT_PORT`; dev-mode root token `VAULT_ROOT_TOKEN` |
 | Locust | Web UI | http://localhost:8089 | `locust-master:8089` | |
+| MCP Inspector | Web UI | http://localhost:6274 | `mcp-inspector:6274` | `MCP_INSPECTOR_PORT`; started by `apps:up`, opened by `make apps:mcp`; lists the backend's `/mcp` and agentgateway's `/mcp` (`apps/mcp-inspector/config.json`) |
 | agentgateway | MCP (Streamable HTTP) | http://localhost:8010/mcp | `agentgateway:3000/mcp` | `AGENTGATEWAY_PORT`; reads `shared/openapi/openapi.yaml`; tool calls need `apps:up` |
 | agentgateway | Dashboard UI | http://localhost:15000 | `agentgateway:15000` | `AGENTGATEWAY_ADMIN_PORT`; redirects to `/ui` |
 | Observability | Grafana | http://localhost:3030 | `grafana:3000` | `GRAFANA_PORT`; anonymous Admin, no login; dashboard "Apps backend (OpenTelemetry)" is pre-provisioned |
@@ -87,6 +88,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
    # Apps (test target apps: MySQL + Python backend + Next.js frontend)
    make apps:up
    make apps:down
+   make apps:mcp     # MCP Inspector: try the backend's /mcp and agentgateway's /mcp
 
    # Test/verification tools against apps (see "Test/verification tools" below)
    make pytest:test
@@ -142,13 +144,76 @@ Hands-on, scenario-based walkthroughs for each tool - what to run, in what order
 
 ### Login, profile and the database
 
-The login takes a username and password, checked against the `users` table in MySQL: one user is seeded (`apps/backend/app/seed.py`): `demo`, password `demo`, `demo@nasebanal.com`. After logging in, the header's user menu leads to a **Profile** page — the email is shown (recorded, not editable), the display name and language can be changed and are saved with `PUT /me/profile`. The database is easy to look at:
+The login takes a username and password, checked against the `users` table in MySQL: one user is seeded (`apps/backend/app/seed.py`): `demo`, password `demo`, `demo@nasebanal.com`. After logging in, the header's user menu leads to a **Profile** page — the email is shown (recorded, not editable), the display name and language can be changed and are saved with `PUT /me/profile`.
+
+Try it end to end: log in at http://localhost:5173 (`make apps:open`), and on the accounts page record a transaction - pick an account (e.g. Cash), enter a signed quantity (1000) and press **Record**. The balance table updates by itself (+1000, and one more transaction):
+
+![Before recording: Cash and 1000 entered](apps/frontend/public/docs/screenshots/app-record.png)
+![After recording: Cash 121000, 4 transactions](apps/frontend/public/docs/screenshots/app-recorded.png)
+
+(Numbers shown are from a freshly reset stack, `make all:reset`.) The entry is now a row in MySQL - `source` is `api` since it came through the REST API; the first five rows are seed data. The database is easy to look at:
 
 ```bash
 make apps:sql                                   # phpMyAdmin at http://localhost:8081, already logged in to demo
 make apps:mysql                                 # a mysql shell
 make apps:mysql SQL="SELECT username, email, display_name, language, provider FROM users"
 ```
+
+![phpMyAdmin showing the transactions table with the new Cash 1000 row](apps/frontend/public/docs/screenshots/mysql-transactions.png)
+
+### MCP: trying the backend's MCP server
+
+`apps/backend` serves MCP natively at `/mcp`, and MCP Inspector (started by `apps:up`, official image) is the quickest way to try it. `make apps:mcp` opens it with two servers listed - `apps-backend` (this one) and `agentgateway` (see [below](#agentgateway-exposing-appsbackend-as-mcp-tools); it only connects while `make agentgateway:up` is running). Its server list is the read-only `apps/mcp-inspector/config.json`, reached over `apps-network` by the Inspector's own server process; its UI token is pinned (`MCP_INSPECTOR_TOKEN`) and `apps:mcp` puts it in the URL.
+
+1. `make apps:mcp` opens the Inspector with both servers listed (disconnected):
+
+   ![MCP Inspector's Servers screen](apps/frontend/public/docs/screenshots/mcp-inspector-servers.png)
+
+2. Flip the switch on `apps-backend` - the card turns green (Connected) and the log on the right shows the `initialize` / `tools/list` handshake:
+
+   ![apps-backend connected](apps/frontend/public/docs/screenshots/mcp-inspector-connected.png)
+
+3. Open the **Tools** tab and pick `list_accounts_accounts_get`:
+
+   ![Tools tab](apps/frontend/public/docs/screenshots/mcp-inspector-tools.png)
+
+4. Press **Execute Tool** - the Results panel shows the same data `GET /accounts` returns:
+
+   ![Tool result](apps/frontend/public/docs/screenshots/mcp-inspector-result.png)
+
+#### Also from Claude (or another MCP client)
+
+MCP Inspector is only one client - any MCP client that speaks Streamable HTTP can use the same endpoints (agentgateway's needs `make agentgateway:up`):
+
+| | Claude Code | Claude Desktop |
+|---|---|---|
+| How it connects | Directly - Streamable HTTP is supported as is | Through the `mcp-remote` bridge (a local `http://` address can't be a custom connector, which needs a public https URL) |
+| How to add | `claude mcp add --transport http <name> <url>` | An `mcpServers` entry in `claude_desktop_config.json` (use `http://localhost:8010/mcp` for agentgateway) |
+| Then | Start (or restart) Claude Code | Restart Claude Desktop |
+| Check | `/mcp` lists the servers and their tools | The servers' tools show up in a new chat |
+
+**Claude Code:**
+
+```bash
+claude mcp add --transport http apps-backend http://localhost:8080/mcp
+claude mcp add --transport http agentgateway http://localhost:8010/mcp
+claude mcp list
+```
+
+**Claude Desktop** (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "apps-backend": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:8080/mcp"]
+    }
+  }
+}
+```
+
+Then ask e.g. "list the accounts and their balances" - Claude calls `list_accounts_accounts_get` after you approve it. Remove the Claude Code entries afterwards with `claude mcp remove <name>`.
 
 ### Specmatic: contract testing (Provider and Consumer)
 
@@ -236,7 +301,16 @@ Vault's dev server is in-memory only — everything written to it is gone on `va
 make apps:up
 make agentgateway:up
 make agentgateway:tools   # does the MCP handshake by hand, lists what's actually being served
+make apps:mcp             # opens MCP Inspector - see "MCP: trying the backend's MCP server"
 ```
+
+Verify it the same way as the backend (steps in [MCP: trying the backend's MCP server](#mcp-trying-the-backends-mcp-server)):
+
+Switch `agentgateway` on, open **Tools**, pick `list_accounts_accounts_get` and press **Execute Tool**. The server name is now `rmcp` (agentgateway's own MCP implementation) and the result is the same account list, this time through the gateway:
+
+![Through agentgateway](apps/frontend/public/docs/screenshots/mcp-inspector-agentgateway.png)
+
+(The backend's native `/mcp` also exposes the `/me` and GraphQL routes, so its tool list is longer than the six agentgateway builds from the contract.)
 
 Verified end-to-end: `agentgateway:tools` lists six tools - `health_health_get`, `login_auth_login_post`, `list_transactions_transactions_get`, `create_transaction_transactions_post`, `get_transaction_transactions__transaction_id__get`, `list_accounts_accounts_get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_accounts_accounts_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
 
@@ -262,7 +336,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
 
 make observability:up
 make apps:restart          # backend reads the endpoint at startup
-make locust:test           # or just click around the frontend
+make locust:load           # or just click around the frontend
 make observability:verify  # each component ready + nb-backend metrics/traces arrived
 make observability:open    # Grafana -> NASEBANAL -> "Apps backend (OpenTelemetry)"
 ```
@@ -301,7 +375,7 @@ Two matching Locust scenarios make the case for putting Kafka in front of a writ
    ```
 2. **Direct REST - this is the one that errors:**
    ```bash
-   make locust:test LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s
+   make locust:load LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s
    ```
    Or with the UI: `make locust:up LOCUST_FILE=locustfile_http_overload.py`, then enter `300` / `100` at http://localhost:8089.
 3. **Wait for the backend to recover** before the next run. After a run this heavy it stays unresponsive for ~90s, until the DB-pool waits queued behind it time out:
@@ -310,7 +384,7 @@ Two matching Locust scenarios make the case for putting Kafka in front of a writ
    ```
 4. **The same load through Kafka:**
    ```bash
-   make locust:test LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s
+   make locust:load LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s
    ```
    (`make locust:up LOCUST_FILE=locustfile_kafka.py` + the same `300` / `100` in the UI works too. To switch between the two cleanly in UI mode, use `make locust:restart`.)
 5. **Compare**: `Failure Count` per row in `locust/logs/<timestamp>/locust_stats.csv` (or that run's `report.html`), and `curl -w '%{time_total}\n' http://localhost:8080/health` while each runs. In Grafana ("Apps backend (OpenTelemetry)"): 5xx ratio, p95 latency and DB connections used spike during step 2 and stay flat during step 4.
@@ -321,7 +395,7 @@ Kafka stays flat because `kafka-bridge` drains the topic at its own steady, sequ
 
 Load tests are driven by `make locust:up` (UI mode - start containers, then
 configure and launch the test from the browser at http://localhost:8089) or
-`make locust:test` (headless - starts immediately, no UI, bounded by
+`make locust:load` (headless - starts immediately, no UI, bounded by
 `LOCUST_RUN_TIME`; the command waits for the run to finish and exits with Locust's
 own code (`0` ok, `1` failed requests above `LOCUST_MAX_FAIL_RATIO`, `2` unhandled task exception) and prints
 whether that means TEST FAILED or TOOL ERROR - same for every test target, see AGENTS.md). Pick the test by setting `LOCUST_FILE` (which test) and
@@ -351,10 +425,12 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_TAGS=mysql-cartesian
 > first to target the bundled apps, or point `LOCUST_HTTP_HOST`/
 > `LOCUST_MYSQL_HOST` at an external host instead.
 
-> **Warning: `make locust:test` runs without user intervention.**
+> **Note: `make locust:load` is not part of `make all:test`** (it was `locust:test`, and `all:test` used to end with it) - a sustained load run isn't something every `all:test` should do. Run it explicitly.
+
+> **Warning: `make locust:load` runs without user intervention.**
 > It starts the load test automatically (headless, no UI) and continues until explicitly stopped.
 > **Always set `LOCUST_RUN_TIME`** to limit the test duration and prevent unintended sustained load on the target system.
-> If `LOCUST_RUN_TIME` is not set, `make locust:test` will exit with an error to avoid runaway load tests.
+> If `LOCUST_RUN_TIME` is not set, `make locust:load` will exit with an error to avoid runaway load tests.
 
 ### Cluster load testing
 
@@ -426,6 +502,9 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 | `APPS_MYSQL_USER` / `APPS_MYSQL_PASSWORD` | `demo` / `demo` | The application's MySQL login. Used by `apps/backend`, the SQL client, the Vault module and Locust's MySQL scenario. Created when the data volume is first initialised - changing them later needs `make apps:reset`. A blank value falls back to the default; it does **not** mean "no password" |
 | `APPS_MYSQL_DATABASE` / `APPS_MYSQL_ROOT_PASSWORD` | `demo` / `rootpassword` | The database name, and the root password (used by the SQL client and `make apps:mysql`) |
 | `APPS_MYSQL_PORT` / `APPS_MYSQL_VERSION` | `3306` / `8.4` | Host-published MySQL port, and the image version |
+| `MCP_INSPECTOR_PORT` / `MCP_INSPECTOR_VERSION` | `6274` / `2.9` | Host-published MCP Inspector UI port, and the image tag (minor-pinned) |
+| `MCP_INSPECTOR_SANDBOX_PORT` | `6275` | Host-published port of the Inspector's MCP Apps sandbox |
+| `MCP_INSPECTOR_TOKEN` | `nb-mcp-inspector-token` | The Inspector UI's auth token, pinned (random per start otherwise) and put in the URL by `make apps:mcp`. A fixed public default - local demo only |
 | `NEXT_PUBLIC_API_BASE` | `http://localhost:8080` | Where `apps/frontend` calls the backend - direct, or `http://localhost:8000/api` to route through Kong instead (needs `kong:up` + `apps:restart`) |
 | `NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL` | `http://localhost:8090` | Where the frontend checks kafka-bridge's health - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
 | `KEYCLOAK_ISSUER` | *(empty = off)* | Turns on Keycloak for `apps/backend` and the login page: `http://localhost:8180/realms/nasebanal` - see [Keycloak](#keycloak) |
@@ -481,8 +560,8 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 | `LOCUST_WORKERS` | `5` | Number of worker containers |
 | `LOCUST_USERS` | `10` | Concurrent simulated users (also settable from the UI in `locust:up`) |
 | `LOCUST_SPAWN_RATE` | `1` | Users spawned per second |
-| `LOCUST_RUN_TIME` | *(empty)* | **Required** for `locust:test` (headless) - e.g. `60s`, `1h30m` |
-| `LOCUST_MAX_FAIL_RATIO` | `0` | `locust:test`: allowed failure ratio (0-1); above it the run is TEST FAILED (exit 1) |
+| `LOCUST_RUN_TIME` | *(empty)* | **Required** for `locust:load` (headless) - e.g. `60s`, `1h30m` |
+| `LOCUST_MAX_FAIL_RATIO` | `0` | `locust:load`: allowed failure ratio (0-1); above it the run is TEST FAILED (exit 1) |
 | `LOCUST_HTTP_HOST` | `http://backend:8080` | Target for the HTTP/GraphQL scenarios |
 | `LOCUST_MYSQL_HOST` | `mysql-server` | Target for the MySQL scenario |
 | `LOCUST_MASTER_HOST` | *(unset)* | Master's IP, for `locust:join-cluster` from another PC - see [Cluster load testing](#cluster-load-testing) |
@@ -575,7 +654,7 @@ image at `~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw`.
 
 ### Test/verification tools
 
-These are separate modules from `apps` (see `AGENTS.md` for the full design). Long-running services follow the usual `build`/`up`/`down`/`status`/`restart`/`open` pattern; one-shot test runners use a single `test` target instead (`docker compose run --rm`, no `up`/`down`).
+These are separate modules from `apps` (see `AGENTS.md` for the full design). Long-running services follow the usual `build`/`up`/`down`/`status`/`restart`/`open` pattern; one-shot test runners use a single `test` target instead (`docker compose run --rm`, no `up`/`down`). `make all:test` runs every `test` target (pytest, vitest, playwright, specmatic) and nothing else: Locust's headless run is `locust:load` and ZAP's are `zap:baseline`/`zap:api-scan`/`zap:full-scan` - deliberately not named `test`, because a sustained load run and attack payloads shouldn't happen as a side effect of `all:test`; run them explicitly.
 
 ```bash
 make apps:up                # start the apps under test first

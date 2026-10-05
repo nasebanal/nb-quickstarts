@@ -29,7 +29,7 @@ observability:
 	@echo "Sending apps/backend's telemetry here (off by default):"
 	@echo "  1. Set OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 in .env"
 	@echo "  2. make apps:restart   # backend reads it at startup"
-	@echo "  3. Generate traffic (make locust:test, or just use the frontend)"
+	@echo "  3. Generate traffic (make locust:load, or just use the frontend)"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  GRAFANA_PORT=3030       # Host-published Grafana port"

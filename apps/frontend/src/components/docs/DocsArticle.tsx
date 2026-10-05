@@ -123,7 +123,7 @@ function BlockMedia({ block }: { block: DocsBlock }) {
         </div>
       )}
       {block.images && block.images.length > 0 && (
-        <div className="nb-docs-figure-grid">
+        <div className={block.imagesLayout === "stack" ? "nb-docs-figure-grid nb-docs-figure-grid-stack" : "nb-docs-figure-grid"}>
           {block.images.map((image) => (
             <figure key={image.src} className="nb-docs-figure">
               <ZoomableImage src={image.src} alt={image.alt} />
