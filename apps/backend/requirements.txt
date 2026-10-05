@@ -10,13 +10,13 @@ cryptography~=50.0.1
 # Keycloak JWT validation (app/auth.py) - only exercised when
 # KEYCLOAK_ISSUER is set; a bare opaque token never reaches PyJWKClient.
 pyjwt~=2.15.1
-strawberry-graphql[fastapi]~=0.327.7
+strawberry-graphql[fastapi]~=0.331.1
 fastapi-mcp~=0.4.0
 # fastapi-mcp 0.4.0 calls mcp's Server(name, description) positionally;
 # every mcp release newer than this made `description` keyword-only
 # (TypeError at import time). Pin to fastapi-mcp's stated minimum, the
 # last version confirmed to still accept it positionally.
-mcp==1.12.0
+mcp==1.30.0
 # OpenTelemetry - only activated when OTEL_EXPORTER_OTLP_ENDPOINT is set
 # (see app/telemetry.py), so these are inert unless `observability` is up.
 opentelemetry-sdk~=1.45.0

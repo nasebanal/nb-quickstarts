@@ -1,6 +1,6 @@
 services:
   agentgateway:
-    image: cr.agentgateway.dev/agentgateway:${AGENTGATEWAY_VERSION:-v1.5.0}
+    image: cr.agentgateway.dev/agentgateway:${AGENTGATEWAY_VERSION:-v1.6.0}
     container_name: nb-agentgateway
     volumes:
       - ./config.yaml:/config/config.yaml:ro

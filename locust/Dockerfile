@@ -1,4 +1,4 @@
-ARG LOCUSTIO_VERSION=2.44.1
+ARG LOCUSTIO_VERSION=2.46.7
 FROM locustio/locust:${LOCUSTIO_VERSION}
 
 # Installed from requirements.txt so the versions are pinned in one place
