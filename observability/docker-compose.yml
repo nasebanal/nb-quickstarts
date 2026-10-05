@@ -5,7 +5,7 @@ services:
   # NewRelic, which also ingests OTLP) is a change to otel-collector.yaml
   # only - the apps' instrumentation stays the same.
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:${OTEL_COLLECTOR_VERSION:-0.116.1}
+    image: otel/opentelemetry-collector-contrib:${OTEL_COLLECTOR_VERSION:-0.161.0}
     container_name: nb-otel-collector
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
@@ -21,7 +21,7 @@ services:
       - apps-network
 
   prometheus:
-    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.1.0}
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.15.0}
     container_name: nb-prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -40,7 +40,7 @@ services:
       - apps-network
 
   tempo:
-    image: grafana/tempo:${TEMPO_VERSION:-2.7.1}
+    image: grafana/tempo:${TEMPO_VERSION:-2.10.8}
     container_name: nb-tempo
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     # Named volumes are created root-owned but Tempo runs as a non-root
@@ -57,7 +57,7 @@ services:
   # Application logs. Receives OTLP logs from the collector on its native
   # /otlp endpoint; Grafana queries it (LogQL) alongside metrics and traces.
   loki:
-    image: grafana/loki:${LOKI_VERSION:-3.3.2}
+    image: grafana/loki:${LOKI_VERSION:-3.7.8}
     container_name: nb-loki
     command: ["-config.file=/etc/loki/loki.yaml"]
     # Same reason as tempo above: root-owned named volume, non-root process.
@@ -73,7 +73,7 @@ services:
   # Receives alerts from Prometheus (alert-rules.yml), groups/dedupes them and
   # routes them to a receiver (alertmanager.yml).
   alertmanager:
-    image: prom/alertmanager:${ALERTMANAGER_VERSION:-v0.28.0}
+    image: prom/alertmanager:${ALERTMANAGER_VERSION:-v0.34.1}
     container_name: nb-alertmanager
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
@@ -93,7 +93,7 @@ services:
   # Webhook receiver standing in for Slack/email/etc. Prints each alert it
   # is sent; see bin/alert_sink.py.
   alert-sink:
-    image: python:3.13-alpine
+    image: python:3.14-alpine
     container_name: nb-alert-sink
     command: ["python", "-u", "/app/alert_sink.py"]
     volumes:
@@ -102,7 +102,7 @@ services:
       - observability-net
 
   grafana:
-    image: grafana/grafana:${GRAFANA_VERSION:-11.4.0}
+    image: grafana/grafana:${GRAFANA_VERSION:-11.6.16}
     container_name: nb-grafana
     environment:
       # Local-only quickstart: anonymous access as Admin, no login screen.
