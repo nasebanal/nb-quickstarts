@@ -57,7 +57,7 @@ export function Header() {
             }
           }}
         >
-          <Image src="/logo.png" alt="NASEBANAL" width={36} height={36} priority />
+          <Image src="/logo.png" alt="NASEBANAL" width={40} height={40} priority />
           <span className="nb-header-title">
             NASEBANAL <span className="nb-nav-brand-demo">Tools</span>
           </span>

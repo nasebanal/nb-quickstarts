@@ -172,15 +172,21 @@ specmatic, also a `junit/`) directory back onto the host, so every `make
 
 | Module | Report file                                                                                                              |
 | --- |--------------------------------------------------------------------------------------------------------------------------|
-| `pytest` | `pytest/report/report.html` (`pytest-html`, self-contained)                                                              |
-| `vitest` | `vitest/report/index.html` (Vitest's built-in `html` reporter)                                                           |
-| `vitest:contract-test` | `vitest/report-contract/index.html` (same reporter, separate output dir)                                                 |
-| `playwright` | `playwright/report/index.html` (Playwright's built-in `html` reporter)                                                   |
+| `pytest` | `pytest/report/report.html` (`pytest-html`, self-contained), plus `pytest/report/junit.xml`                              |
+| `vitest` | `vitest/report/index.html` (Vitest's built-in `html` reporter), plus `vitest/report/junit.xml`                           |
+| `vitest:contract-test` | `vitest/report-contract/index.html` (same reporter, separate output dir), plus `junit.xml` there                          |
+| `playwright` | `playwright/report/index.html` (Playwright's built-in `html` reporter), plus `playwright/junit/junit.xml`               |
 | `specmatic` | `specmatic/report/test/html/index.html`, plus `specmatic/junit/TEST-junit-jupiter.xml`                                   |
 | `zap:baseline`/`zap:full-scan`/`zap:api-scan` | `zap/report/<scan>-report.html` (also `.json`) - each scan's own filename, overwritten on the next run of that same scan |
 
 These directories are gitignored — they're regenerated on every run, not
 checked in.
+
+#### Uploading to NASEBANAL Assurance
+
+`make pytest:report-upload`, `vitest:report-upload`, `playwright:report-upload`, `specmatic:report-upload` and `locust:report-upload` send the **last run's summary** (counts, duration, first failures; Locust: request metrics) to a NASEBANAL Assurance project through the `nb` CLI (`nb assurance report upload`, see `bin/report_upload.sh`). The JUnit XML files above (and Locust's `*_stats.csv`) are what `nb` reads; only the summary is sent, never the raw report. The module's `test` target must have run first. `all:report-upload` uploads what `all:test` runs (pytest, vitest, playwright, specmatic); `locust:report-upload` (after `locust:load`) and `zap:report-upload` are run on their own, since neither is part of `all:test`. ZAP has no JUnit output of its own: `bin/zap_to_junit.mjs` converts each scan's JSON for upload.
+
+Settings in `.env`: `NB_TOKEN` (PAT / service-account token; unset = the credentials from `nb auth login`, and `bin/ensure_nb_auth.sh` opens the browser login when there are none - without a terminal it stops and asks for `NB_TOKEN`), `NB_BASE_URL` (the Assurance API, not the web UI: `.env.example` ships `https://api.assurance.nasebanal.com` for production, a local `.env` sets `http://localhost:8791` for a local `npm run dev` of nb-assurance-api; unset = `http://localhost:8791`), `ASSURANCE_PROJECT` (default `nb-quickstarts`, created on first upload). Uploads of the same commit on the same day share one run (`local-<commit>-<day>`; override with `NB_RUN_KEY`), so `pytest`, `vitest`, `playwright`... appear as suites of one run, and re-uploading a suite replaces it.
 
 **Provider verification (`specmatic:test`) vs Consumer verification
 (`specmatic:mock-up` + `vitest:contract-test`)** - Specmatic can check the

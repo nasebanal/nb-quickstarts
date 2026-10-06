@@ -16,6 +16,7 @@ pytest:
 	@echo "Test Commands:"
 	@echo "  pytest:test   - Build (if needed) and run apps/backend unit tests"
 	@echo "  pytest:report - Open the last report.html in your browser"
+	@echo "  pytest:report-upload - Upload the last run (pytest/report/junit.xml) to NASEBANAL Assurance (see .env: NB_TOKEN)"
 	@echo "  pytest:reset  - Delete the generated report (pytest/report/)"
 	@echo ""
 	@echo "Note: these are unit tests against an in-memory SQLite DB;"
@@ -47,3 +48,8 @@ pytest-report:
 		exit 1; \
 	fi
 	@bin/open_browser.sh pytest/report/report.html
+
+# Sends the last run's summary to NASEBANAL Assurance - see bin/report_upload.sh
+# for NB_TOKEN / NB_BASE_URL / ASSURANCE_PROJECT.
+pytest-report-upload:
+	@bin/report_upload.sh pytest:test unit pytest backend pytest/report/junit.xml

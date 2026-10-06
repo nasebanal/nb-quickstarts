@@ -221,7 +221,7 @@ export const gettingStarted: LocalizedDocsPage = {
               rows: [
                 ["How it connects", "Directly - Streamable HTTP is supported as is", "Through the mcp-remote bridge (a local http:// address can't be a custom connector, which needs a public https URL)"],
                 ["How to add", "claude mcp add --transport http <name> <url>", "Add an mcpServers entry to claude_desktop_config.json (use http://localhost:8010/mcp for agentgateway)"],
-                ["Then", "Start (or restart) Claude Code", "Restart Claude Desktop"],
+                ["Then", "Restart Claude Code, or reconnect with /mcp - a running session doesn't pick up a newly added server", "Restart Claude Desktop"],
                 ["Check", "/mcp lists the servers and their tools", "The servers' tools show up in a new chat"],
               ],
               nowrapColumns: [0],
@@ -237,6 +237,11 @@ export const gettingStarted: LocalizedDocsPage = {
                   "claude mcp list",
               },
             ],
+            note:
+              "claude mcp list shows Connected once the server is reachable, but a Claude Code session that was " +
+              "already running doesn't load its tools yet - restart Claude Code, or reconnect with /mcp, before " +
+              "asking for anything. Without a scope option the server is added to the current project only; add " +
+              "-s user to use it from any directory.",
           },
           {
             heading: "Claude Desktop (claude_desktop_config.json)",
@@ -486,7 +491,7 @@ export const gettingStarted: LocalizedDocsPage = {
               rows: [
                 ["接続の仕方", "直接 — Streamable HTTPにそのまま対応", "mcp-remoteブリッジ経由(ローカルのhttp://アドレスはカスタムコネクタにできない。カスタムコネクタには公開されたhttps URLが必要)"],
                 ["追加の仕方", "claude mcp add --transport http <名前> <URL>", "claude_desktop_config.jsonのmcpServersにエントリを追加(agentgatewayならhttp://localhost:8010/mcp)"],
-                ["その後", "Claude Codeを(再)起動", "Claude Desktopを再起動"],
+                ["その後", "Claude Codeを再起動、または/mcpで再接続(起動中のセッションは追加したサーバーを読み込まない)", "Claude Desktopを再起動"],
                 ["確認", "/mcpでサーバーとそのツールが一覧できる", "新しいチャットでサーバーのツールが使えるようになる"],
               ],
               nowrapColumns: [0],
@@ -502,6 +507,10 @@ export const gettingStarted: LocalizedDocsPage = {
                   "claude mcp list",
               },
             ],
+            note:
+              "claude mcp listでConnectedと表示されても、すでに起動していたClaude Codeのセッションにはまだツールが" +
+              "読み込まれません。頼む前にClaude Codeを再起動するか、/mcpで再接続してください。スコープを指定しない" +
+              "場合、サーバーは現在のプロジェクトにだけ追加されます。どのディレクトリからでも使うなら-s userを付けてください。",
           },
           {
             heading: "Claude Desktop(claude_desktop_config.json)",

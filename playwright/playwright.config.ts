@@ -5,7 +5,12 @@ export default defineConfig({
   // The whole playwright/ dir is already bind-mounted to /app (see
   // docker-compose.yml), so a relative path here lands directly in
   // playwright/report/ on the host — no extra volume needed.
-  reporter: [["list"], ["html", { outputFolder: "report", open: "never" }]],
+  reporter: [
+    ["list"],
+    ["html", { outputFolder: "report", open: "never" }],
+    // Separate dir: the html reporter owns report/. Read by `make playwright:report-upload`.
+    ["junit", { outputFile: "junit/junit.xml" }],
+  ],
   use: {
     // Playwright runs on the host network (see docker-compose.yml), so it
     // reaches the frontend the same way a real user's browser would: via

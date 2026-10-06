@@ -46,7 +46,18 @@ export function ThemeToggle() {
     }
   };
 
-  const ActiveIcon = CHOICES.find((c) => c.value === theme)?.icon ?? SunIcon;
+  // Like nb-shared-navigation: the button shows the *effective* mode (moon /
+  // sun), even when the choice is "system".
+  const [systemDark, setSystemDark] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    setSystemDark(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  const effectiveDark = theme === "dark" || (theme === "system" && systemDark);
+  const ActiveIcon = effectiveDark ? MoonIcon : SunIcon;
 
   return (
     <div className="nb-dropdown" ref={ref}>

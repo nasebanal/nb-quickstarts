@@ -8,8 +8,10 @@ import { DocsSidebar } from "@/components/docs/DocsSidebar";
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
     <main className="container nb-docs-layout">
-      <DocsSidebar />
-      <div className="nb-docs-main">{children}</div>
+      <div className="nb-panel nb-docs-panel">
+        <DocsSidebar />
+        <div className="nb-docs-main">{children}</div>
+      </div>
     </main>
   );
 }

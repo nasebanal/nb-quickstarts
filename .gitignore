@@ -34,6 +34,7 @@ pytest/report/
 vitest/report/
 vitest/report-contract/
 playwright/report/
+playwright/junit/
 playwright/test-results/
 specmatic/report/
 specmatic/junit/
