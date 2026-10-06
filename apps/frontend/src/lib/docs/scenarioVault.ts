@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioVault: LocalizedDocsPage = {
   en: {
-    title: "Scenario 6: Use Vault",
+    title: "Scenario 5: Use Vault",
     description:
       "The backend logs in to MySQL with a password from .env. This scenario takes that password out " +
       "of the backend's configuration altogether: the backend asks Vault for a database credential " +
@@ -73,10 +73,17 @@ export const scenarioVault: LocalizedDocsPage = {
           ],
           frames: [{ from: 5, to: 6, label: "when the lease ends" }],
         },
-        note:
+        closing: [
           "The backend renews its lease at half the TTL (app/config.py) up to the role's 24h ceiling; " +
           "renewal is implemented but this scenario doesn't wait an hour to watch it happen. Past the " +
           "ceiling the backend needs a restart to be issued a fresh credential.",
+        ],
+        noteTitle: "Vault: the MySQL database secrets engine",
+        noteHref: "https://developer.hashicorp.com/vault/docs/secrets/databases/mysql-maria",
+        note:
+          "make vault:setup-mysql (vault/bin/setup_mysql.sh) enables Vault's database secrets engine, registers " +
+          "apps' MySQL with root credentials and defines the apps-backend role. Reading database/creds/apps-backend " +
+          "then makes Vault create a MySQL user with a lease and drop it when the lease ends.",
       },
       {
         heading: "1. Start Vault and let it issue MySQL users",
@@ -113,9 +120,10 @@ export const scenarioVault: LocalizedDocsPage = {
             { text: "  (no answer - the backend never came up)" },
           ],
         },
-        note:
+        closing: [
           "Real output. This is the point of the step: with no password in its config and no Vault, the " +
           "backend is locked out - so whatever gets it in next can only be coming from Vault.",
+        ],
       },
       {
         heading: "3. Give the backend Vault - it logs in with a Vault-issued user",
@@ -150,11 +158,12 @@ export const scenarioVault: LocalizedDocsPage = {
             { text: "| v-token-apps-backe-c9wybUj5oXeKe | %    |", tone: "info" },
           ],
         },
-        note:
+        closing: [
           "Real output. Right after a full apps:restart, MySQL is still starting and Vault can't create the " +
           "user yet (it answers 500), so the backend logs \"dynamic credential not ready (HTTP 500), " +
           "attempt N/30\" a couple of times before the [vault] issued line - it retries rather than " +
           "falling back to a password it doesn't have.",
+        ],
       },
       {
         heading: "4. Look at what Vault did",
@@ -179,31 +188,37 @@ export const scenarioVault: LocalizedDocsPage = {
             { text: "+----------------------------------+------+" },
           ],
         },
-        note:
+        closing: [
           "Real output after two backend starts. The static way still works too: vault:put-mysql-secret " +
           "writes a fixed credential to secret/apps/mysql, which the backend falls back to when no dynamic " +
           "one is available - but it is the same password every time, which is exactly what the dynamic " +
           "credentials avoid.",
-      },
-      {
-        heading: "Returning to the normal configuration",
-        code: [
-          { label: ".env (comment both out again):", code: "# VAULT_ADDR=http://vault:8200\n# VAULT_TOKEN=nb-vault-root-token\n# and remove the APPS_BACKEND_MYSQL_PASSWORD= line" },
-          { code: "make apps:restart" },
         ],
       },
       {
         heading: "Cleanup",
-        code: [{ code: "make vault:down" }],
-        note:
+        code: [
+          { label: ".env (comment both out again):", code: "# VAULT_ADDR=http://vault:8200\n# VAULT_TOKEN=nb-vault-root-token\n# and remove the APPS_BACKEND_MYSQL_PASSWORD= line" },
+          { code: "make apps:restart" },
+          { code: "make vault:down" },
+        ],
+        closing: [
           "Vault's dev server is in-memory only - everything written to it, including its record of the " +
           "leases, is gone on vault:down / vault:restart, by design. The v-token-... users already created " +
           "stay in MySQL (nothing is left to drop them) until make apps:reset wipes the database.",
+        ],
+        noteTitle: "Vault: dev server mode",
+        noteHref: "https://developer.hashicorp.com/vault/docs/concepts/dev-server",
+        note:
+          "VAULT_DEV_ROOT_TOKEN_ID makes the Vault container start in dev mode: storage is in memory, Vault is " +
+          "initialised and unsealed automatically, the root token is the fixed value you set, and a KV v2 engine is " +
+          "mounted at secret/. That is why nothing needs initialising and nothing survives vault:down. Dev mode is " +
+          "for local experiments only.",
       },
     ],
   },
   ja: {
-    title: "シナリオ6: Vaultの利用",
+    title: "シナリオ5: Vaultの利用",
     description:
       "backendは、.envのパスワードでMySQLにログインしています。このシナリオでは、そのパスワードをbackendの" +
       "設定から完全に取り除きます: backendは起動時にVaultへデータベースの認証情報を要求し、Vaultがその場で" +
@@ -274,10 +289,16 @@ export const scenarioVault: LocalizedDocsPage = {
           ],
           frames: [{ from: 5, to: 6, label: "リースが切れたとき" }],
         },
-        note:
+        closing: [
           "backendはリースをTTLの半分の時点で更新し(app/config.py)、ロールの上限である24時間まで延ばします。" +
           "更新は実装済みですが、このシナリオでは1時間待って動作を確かめることはしていません。上限を過ぎると、" +
           "新しい認証情報を発行してもらうためにbackendの再起動が必要です。",
+        ],
+        noteTitle: "Vault: MySQLのdatabase secrets engine",
+        noteHref: "https://developer.hashicorp.com/vault/docs/secrets/databases/mysql-maria",
+        note:
+          "make vault:setup-mysql(vault/bin/setup_mysql.sh)は、Vaultのdatabase secrets " +
+          "engineを有効にし、appsのMySQLをrootの認証情報で登録して、apps-backendロールを定義します。database/creds/apps-backendを読むと、VaultがリースつきのMySQLユーザーを作り、リースが切れると削除します。",
       },
       {
         heading: "1. Vaultを起動し、MySQLユーザーを発行できるようにする",
@@ -314,9 +335,10 @@ export const scenarioVault: LocalizedDocsPage = {
             { text: "  (no answer - the backend never came up)" },
           ],
         },
-        note:
+        closing: [
           "実際の出力です。この手順のポイントはここです: 設定にパスワードがなく、Vaultもないと、backendは" +
           "締め出されます — つまり、この次にbackendを通すものは、Vaultから来ているとしか言えません。",
+        ],
       },
       {
         heading: "3. backendにVaultを渡す — Vaultが発行したユーザーでログインする",
@@ -349,10 +371,11 @@ export const scenarioVault: LocalizedDocsPage = {
             { text: "| v-token-apps-backe-c9wybUj5oXeKe | %    |", tone: "info" },
           ],
         },
-        note:
+        closing: [
           "実際の出力です。apps:restartの直後はMySQLがまだ起動中で、Vaultはユーザーをまだ作れず(500を返す)、" +
           "そのためbackendは[vault] issuedの行の前に「dynamic credential not ready (HTTP 500), attempt N/30」を" +
           "数回出します — 持っていないパスワードにフォールバックするのではなく、再試行します。",
+        ],
       },
       {
         heading: "4. Vaultが何をしたか見る",
@@ -377,25 +400,29 @@ export const scenarioVault: LocalizedDocsPage = {
             { text: "+----------------------------------+------+" },
           ],
         },
-        note:
+        closing: [
           "backendを2回起動した後の実際の出力です。静的なやり方も引き続き使えます: vault:put-mysql-secretは" +
           "固定の認証情報をsecret/apps/mysqlに書き込み、動的な認証情報が得られないときbackendはそれに" +
           "フォールバックします — ただし毎回同じパスワードで、それこそ動的な認証情報が避けているものです。",
-      },
-      {
-        heading: "通常の構成に戻す",
-        code: [
-          { label: ".env(2行ともコメントアウトに戻す):", code: "# VAULT_ADDR=http://vault:8200\n# VAULT_TOKEN=nb-vault-root-token\n# APPS_BACKEND_MYSQL_PASSWORD=の行は削除" },
-          { code: "make apps:restart" },
         ],
       },
       {
         heading: "環境のクリーンアップ",
-        code: [{ code: "make vault:down" }],
-        note:
+        code: [
+          { label: ".env(2行ともコメントアウトに戻す):", code: "# VAULT_ADDR=http://vault:8200\n# VAULT_TOKEN=nb-vault-root-token\n# APPS_BACKEND_MYSQL_PASSWORD=の行は削除" },
+          { code: "make apps:restart" },
+          { code: "make vault:down" },
+        ],
+        closing: [
           "Vaultのdevサーバーはインメモリのみです — 書き込んだものは、リースの記録を含めて、vault:down / " +
           "vault:restartで意図的に消えます。すでに作られたv-token-...のユーザーは、削除するものが" +
           "なくなるため、make apps:resetでデータベースを消すまでMySQLに残ります。",
+        ],
+        noteTitle: "Vault: devサーバーモード",
+        noteHref: "https://developer.hashicorp.com/vault/docs/concepts/dev-server",
+        note:
+          "VAULT_DEV_ROOT_TOKEN_IDを設定すると、Vaultのコンテナはdevモードで起動します。ストレージはインメモリで、Vaultは自動で初期化・unsealされ、rootトークンは設定した固定値になり、secret/にはKV " +
+          "v2エンジンがマウントされます。初期化が不要で、vault:downで何も残らないのはこのためです。devモードはローカルでの実験専用です。",
       },
     ],
   },

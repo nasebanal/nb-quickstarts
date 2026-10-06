@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioKeycloak: LocalizedDocsPage = {
   en: {
-    title: "Scenario 5: Use Keycloak",
+    title: "Scenario 4: Use Keycloak",
     description:
       "POST /transactions is protected by app/auth.py's get_current_username - until now, only " +
       "satisfiable with a mock token from POST /auth/login. This scenario turns on a real login: the " +
@@ -98,11 +98,17 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           ],
           frames: [{ from: 6, to: 7, label: "only on the first request, or after a key rotation - keys are cached" }],
         },
-        note:
+        closing: [
           "From the second request on, the key fetch is skipped: the backend's PyJWKClient caches the key set and only " +
           "re-fetches on a cache miss (a key rotation). The audience claim isn't checked - this demo " +
           "realm has one public client, apps-demo. The Frontend's part is written out by hand in " +
           "src/lib/oidc.ts (a redirect out, a code back, one fetch) - no OIDC library.",
+        ],
+        noteTitle: "PyJWT: verifying a token against a JWKS endpoint",
+        noteHref: "https://pyjwt.readthedocs.io/en/stable/usage.html#retrieve-rsa-signing-keys-from-a-jwks-endpoint",
+        note:
+          "The backend's signature check uses PyJWT's PyJWKClient: it fetches Keycloak's public keys from the " +
+          "realm's JWKS endpoint, caches the key set, and picks the key whose kid matches the token's header.",
       },
       {
         heading: "1. Start Keycloak and turn it on",
@@ -126,11 +132,19 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           },
           { label: "3. Recreate the backend and frontend so they pick it up", code: "make apps:restart" },
         ],
-        note:
+        closing: [
           "No Demo login / Keycloak toggle in the login dialog? KEYCLOAK_ISSUER is missing from .env (or " +
           "commented out with a #), or apps:restart has not run since you set it. Check what the frontend " +
           "received: docker exec nb-frontend printenv NEXT_PUBLIC_KEYCLOAK_ISSUER prints the issuer when it is on, " +
           "and nothing when it is off.",
+        ],
+        noteTitle: "Keycloak: realm import at startup",
+        noteHref: "https://www.keycloak.org/server/importExport",
+        note:
+          "keycloak/docker-compose.yml starts Keycloak with start-dev --import-realm and mounts keycloak/realm/ as " +
+          "its import directory, so nasebanal-realm.json is loaded on every start. That is why the realm, the " +
+          "apps-demo client and the demo user exist without any manual setup; a realm that already exists is " +
+          "skipped, not overwritten.",
       },
       {
         heading: "2. Log in with Keycloak",
@@ -160,9 +174,10 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           },
         ],
         imagesLayout: "stack",
-        note:
+        closing: [
           "Tokens are valid for 30 minutes (the realm's access token lifespan). After that, recording a " +
           "transaction gets a 401 and the app logs you out - log in again.",
+        ],
       },
       {
         heading: "3. Sign up a new user",
@@ -199,38 +214,64 @@ export const scenarioKeycloak: LocalizedDocsPage = {
             { text: "201", tone: "success" },
           ],
         },
-        note:
+        closing: [
           "Real output. The tampered token is rejected because its signature no longer matches Keycloak's " +
           "public key - the backend trusts the signature, not the token's contents. The mock token from the " +
           "Demo login tab keeps working alongside: the backend tries the Keycloak check first and falls back " +
           "to the mock lookup.",
+        ],
       },
       {
         heading: "5. Use it for an MCP client's login",
         body: [
-          "The same Keycloak login works when an MCP client logs in. With APPS_MCP_AUTH_REQUIRED=true, Claude Code's " +
+          "The same Keycloak login works when an MCP client logs in. Claude Code's " +
             "Authenticate opens the frontend's /mcp-authorize page, which has the same Demo login / Keycloak " +
             "toggle. Pick Keycloak, sign in as keycloak-demo, and you come back to that page (not to /accounts) " +
             "to press Allow - then get_me answers with the Keycloak user's profile. The backend verifies the " +
             "Keycloak JWT as it does everywhere, then issues the MCP client the ordinary demo token for that " +
-            "username. The full flow is in Getting Started: \"Requiring a login for /mcp\".",
+            "username. The same flow with the demo login is in Getting Started: \"How the /mcp login works\".",
         ],
+        sequence: {
+          summary:
+            "Sequence diagram: Claude Code gets a 401 from /mcp and sends the user to the frontend login; the user picks Keycloak, signs in there and returns to /mcp-authorize, where Allow trades the authorization code for a token that every tool call then carries.",
+          participants: [
+            { id: "cc", label: "Claude Code", sub: "MCP client" },
+            { id: "fe", label: "Frontend", sub: "browser" },
+            { id: "kc", label: "Keycloak", sub: "identity provider" },
+            { id: "be", label: "Backend", sub: "/mcp + /oauth" },
+          ],
+          steps: [
+            { kind: "message", from: "cc", to: "be", text: "POST /mcp with no token" },
+            { kind: "message", from: "be", to: "cc", text: "401", detail: "WWW-Authenticate: Bearer resource_metadata=...", dashed: true },
+            { kind: "message", from: "cc", to: "be", text: "Register this client", detail: "POST /oauth/register" },
+            { kind: "message", from: "cc", to: "fe", text: "Open the browser", detail: "/mcp-authorize?client_id=...&code_challenge=..." },
+            { kind: "message", from: "fe", to: "kc", text: "Pick Keycloak: redirect to its login", detail: "OIDC code + PKCE" },
+            { kind: "message", from: "kc", to: "fe", text: "Back with a code, token redeemed", detail: "/auth/callback -> returns to /mcp-authorize" },
+            { kind: "note", at: "fe", text: "Signed in as keycloak-demo - then Allow" },
+            { kind: "message", from: "fe", to: "be", text: "Ask for the authorization code", detail: "POST /oauth/authorize + Bearer <Keycloak JWT>" },
+            { kind: "note", at: "be", text: "Verifies the JWT against Keycloak's keys" },
+            { kind: "message", from: "fe", to: "cc", text: "Redirect with the code", detail: "http://localhost:<port>/callback?code=..." },
+            { kind: "message", from: "cc", to: "be", text: "Trade the code for a token", detail: "POST /oauth/token + PKCE verifier" },
+            { kind: "message", from: "cc", to: "be", text: "Every call from now on", detail: "Authorization: Bearer <demo token for keycloak-demo>" },
+          ],
+        },
       },
       {
-        heading: "Returning to mock-login-only",
+        heading: "Cleanup",
         code: [
           { label: ".env (comment the line out again):", code: "# KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal" },
           { code: "make apps:restart" },
           { code: "make keycloak:down" },
         ],
-        note:
+        closing: [
           "The Keycloak option disappears from the login page and every route works exactly as it did before " +
           "Keycloak existed.",
+        ],
       },
     ],
   },
   ja: {
-    title: "シナリオ5: Keycloakの利用",
+    title: "シナリオ4: Keycloakの利用",
     description:
       "POST /transactionsは、app/auth.pyのget_current_usernameによって保護されています — これまでは" +
       "POST /auth/loginが発行するモックトークンでしか満たせませんでした。このシナリオでは本物のログインを" +
@@ -324,12 +365,17 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           ],
           frames: [{ from: 6, to: 7, label: "初回リクエスト時、または鍵のローテーション後のみ — 鍵はキャッシュされる" }],
         },
-        note:
+        closing: [
           "2回目以降のリクエストは鍵の取得を飛ばします: backendのPyJWKClientが鍵セットをキャッシュし、" +
           "キャッシュミス(鍵のローテーション)のときだけ再取得します。audience(aud)クレームは検証しません — " +
           "このデモ用レルムにはapps-demoという公開クライアントが1つあるだけだからです。Frontend側の処理は" +
           "src/lib/oidc.tsに手書きしています(リダイレクトで出て、コードで戻り、fetchを1回) — OIDCライブラリは" +
           "使っていません。",
+        ],
+        noteTitle: "PyJWT: JWKSエンドポイントでのトークン検証",
+        noteHref: "https://pyjwt.readthedocs.io/en/stable/usage.html#retrieve-rsa-signing-keys-from-a-jwks-endpoint",
+        note:
+          "backendの署名検証はPyJWTのPyJWKClientを使っています。realmのJWKSエンドポイントからKeycloakの公開鍵を取得してキーセットをキャッシュし、トークンのヘッダーのkidに一致する鍵を選びます。",
       },
       {
         heading: "1. Keycloakを起動して有効化する",
@@ -353,11 +399,17 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           },
           { label: "3. backendとfrontendを再作成して反映する", code: "make apps:restart" },
         ],
-        note:
+        closing: [
           "ログインのダイアログに「デモログイン / Keycloak」の切り替えが出ませんか? .envにKEYCLOAK_ISSUERが無い" +
           "(または先頭の#でコメントアウトされている)か、設定したあとにapps:restartを実行していません。" +
           "frontendが受け取った値は、docker exec nb-frontend printenv NEXT_PUBLIC_KEYCLOAK_ISSUERで確認できます" +
           "(有効なら発行元が表示され、無効なら何も表示されません)。",
+        ],
+        noteTitle: "Keycloak: 起動時のrealmインポート",
+        noteHref: "https://www.keycloak.org/server/importExport",
+        note:
+          "keycloak/docker-compose.ymlはKeycloakをstart-dev " +
+          "--import-realmで起動し、keycloak/realm/をインポート用ディレクトリとしてマウントしているため、起動のたびにnasebanal-realm.jsonが読み込まれます。realm・apps-demoクライアント・デモユーザーが手作業なしで用意されているのはこのためで、すでに存在するrealmはスキップされ、上書きされません。",
       },
       {
         heading: "2. Keycloakでログインする",
@@ -388,9 +440,10 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           },
         ],
         imagesLayout: "stack",
-        note:
+        closing: [
           "トークンの有効期間は30分です(レルムのアクセストークン有効期間)。それを過ぎると、取引の記帳は" +
           "401になり、アプリがログアウトします — 再度ログインしてください。",
+        ],
       },
       {
         heading: "3. 新しいユーザーをサインアップする",
@@ -427,33 +480,59 @@ export const scenarioKeycloak: LocalizedDocsPage = {
             { text: "201", tone: "success" },
           ],
         },
-        note:
+        closing: [
           "実際の出力です。書き換えたトークンが拒否されるのは、署名がKeycloakの公開鍵と一致しなくなる" +
           "ためです — backendが信頼するのはトークンの中身ではなく署名です。デモログインのタブで得られる" +
           "モックトークンも並行して使えます: backendはまずKeycloakとしての検証を試し、失敗したらモックの" +
           "照合にフォールバックします。",
+        ],
       },
       {
         heading: "5. MCPクライアントのログインに使う",
         body: [
-          "MCPクライアントのログインでも同じKeycloakログインが使えます。APPS_MCP_AUTH_REQUIRED=trueのとき、" +
+          "MCPクライアントのログインでも同じKeycloakログインが使えます。" +
             "Claude CodeのAuthenticateはfrontendの/mcp-authorizeを開き、そこにも同じデモログイン / Keycloakの" +
             "切り替えがあります。Keycloakを選んでkeycloak-demoでサインインすると、/accountsではなくこのページに" +
             "戻るので、Allowを押します — するとget_meがKeycloakユーザーのプロフィールで答えます。backendは" +
             "いつもどおりKeycloakのJWTを検証し、そのユーザー名に対する通常のデモトークンをMCPクライアントへ" +
-            "発行します。全体の流れはGetting Startedの「/mcpにログインを必須にする」にあります。",
+            "発行します。デモログインでの同じ流れはGetting Startedの「/mcpのログインの仕組み」にあります。",
         ],
+        sequence: {
+          summary:
+            "シーケンス図: Claude Codeは/mcpで401を受けてユーザーをfrontendのログインへ送り、ユーザーはKeycloakを選んでサインインして/mcp-authorizeに戻り、Allowで認可コードをトークンに交換して、以後のすべてのツール呼び出しに付けます。",
+          participants: [
+            { id: "cc", label: "Claude Code", sub: "MCP client" },
+            { id: "fe", label: "Frontend", sub: "browser" },
+            { id: "kc", label: "Keycloak", sub: "IdP" },
+            { id: "be", label: "Backend", sub: "/mcp + /oauth" },
+          ],
+          steps: [
+            { kind: "message", from: "cc", to: "be", text: "トークンなしでPOST /mcp" },
+            { kind: "message", from: "be", to: "cc", text: "401", detail: "WWW-Authenticate: Bearer resource_metadata=...", dashed: true },
+            { kind: "message", from: "cc", to: "be", text: "クライアントを登録", detail: "POST /oauth/register" },
+            { kind: "message", from: "cc", to: "fe", text: "ブラウザを開く", detail: "/mcp-authorize?client_id=...&code_challenge=..." },
+            { kind: "message", from: "fe", to: "kc", text: "Keycloakを選び、ログインへリダイレクト", detail: "OIDC code + PKCE" },
+            { kind: "message", from: "kc", to: "fe", text: "codeを持って戻り、トークンに交換", detail: "/auth/callback -> /mcp-authorizeに戻る" },
+            { kind: "note", at: "fe", text: "keycloak-demoでサインインしてAllow" },
+            { kind: "message", from: "fe", to: "be", text: "認可コードを要求", detail: "POST /oauth/authorize + Bearer <Keycloak JWT>" },
+            { kind: "note", at: "be", text: "JWTをKeycloakの鍵で検証" },
+            { kind: "message", from: "fe", to: "cc", text: "codeを付けてリダイレクト", detail: "http://localhost:<port>/callback?code=..." },
+            { kind: "message", from: "cc", to: "be", text: "codeをトークンに交換", detail: "POST /oauth/token + PKCE verifier" },
+            { kind: "message", from: "cc", to: "be", text: "以後のすべての呼び出し", detail: "Authorization: Bearer <keycloak-demoのデモトークン>" },
+          ],
+        },
       },
       {
-        heading: "モックログインのみに戻す",
+        heading: "環境のクリーンアップ",
         code: [
           { label: ".env(行をもう一度コメントアウトする):", code: "# KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal" },
           { code: "make apps:restart" },
           { code: "make keycloak:down" },
         ],
-        note:
+        closing: [
           "ログイン画面からKeycloakの選択肢が消え、すべてのルートはKeycloakが存在する前と全く同じように" +
           "動作します。",
+        ],
       },
     ],
   },

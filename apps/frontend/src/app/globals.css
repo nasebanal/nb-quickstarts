@@ -729,6 +729,8 @@ body:has(> .nb-header) {
 
 .nb-docs-section table {
   margin-top: 8px;
+  /* Room before the paragraph, list or next block that follows the table. */
+  margin-bottom: 20px;
 }
 
 /* Comparison tables (first header empty): the first column only labels the rows, so it gets

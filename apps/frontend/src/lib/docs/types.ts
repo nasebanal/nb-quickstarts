@@ -103,11 +103,22 @@ export interface DocsBlock {
   imagesLayout?: "stack";
   /** An embedded YouTube video (the 11-character id from the URL). Needs internet access - nothing is shown offline. */
   video?: { id: string; title: string };
-  /** A callout box - a caveat, warning, or aside worth setting apart from the main prose. */
+  /** Plain paragraphs after everything else in the block (links allowed, like `body`) - the follow-up to a step: what the output means, a caveat, a tip. */
+  closing?: string[];
+  /** A callout box, reserved for explaining a term, pointing to an external page, or naming an OSS feature the repo configures without the reader doing anything (give it a `noteTitle` and the official reference as `noteHref`) - not for the ordinary notes of a step, which belong in `closing`. */
   note?: string;
   /** Bold heading of the callout above (e.g. "What is event sourcing"), optionally a link - the same shape as nb-landing-page's blog notes. */
   noteTitle?: string;
   noteHref?: string;
+  /** More callouts after the first (a block that touches two OSS features, each with its own reference link). */
+  notes?: DocsNote[];
+}
+
+/** A callout on its own: the same shape as `note` / `noteTitle` / `noteHref` on a block. */
+export interface DocsNote {
+  noteTitle?: string;
+  noteHref?: string;
+  note: string;
 }
 
 /** A headed (h3) block inside a section - e.g. "Checking the results" under one test tool. */

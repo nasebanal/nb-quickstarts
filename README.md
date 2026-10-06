@@ -44,7 +44,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | apps | Backend REST | http://localhost:8080 | `backend:8080` | FastAPI |
 | apps | Backend GraphQL | http://localhost:8080/graphql | `backend:8080/graphql` | Strawberry |
 | apps | MCP server | http://localhost:8080/mcp | `backend:8080/mcp` | Streamable HTTP |
-| apps | MCP login (OAuth) | http://localhost:8080/.well-known/oauth-authorization-server, `/oauth/register`, `/oauth/authorize`, `/oauth/token` | `backend:8080/...` | Only with `APPS_MCP_AUTH_REQUIRED=true` - see [Requiring a login for `/mcp`](#requiring-a-login-for-mcp). Not part of the OpenAPI contract, and left out of the MCP tool list |
+| apps | MCP login (OAuth) | http://localhost:8080/.well-known/oauth-authorization-server, `/oauth/register`, `/oauth/authorize`, `/oauth/token` | `backend:8080/...` | On by default (`APPS_MCP_AUTH_REQUIRED=false` turns it off) - see [Also from Claude](#also-from-claude-or-another-mcp-client). Not part of the OpenAPI contract, and left out of the MCP tool list |
 | apps | MCP login page | http://localhost:5173/mcp-authorize | `frontend:5173/mcp-authorize` | Where an MCP client's browser login lands (sign in, then **Allow**) |
 | apps | MySQL | localhost:3306 | `mysql-server:3306` | database `demo` |
 | Kong | Proxy | http://localhost:8000 | `kong:8000` | HTTPS: 8443 (host), `kong:8443` (in-network) |
@@ -165,7 +165,7 @@ make apps:mysql SQL="SELECT username, email, display_name, language, provider FR
 
 ### MCP: trying the backend's MCP server
 
-`apps/backend` serves MCP natively at `/mcp`, and MCP Inspector (started by `apps:up`, official image) is the quickest way to try it. `make apps:mcp` opens it with two servers listed - `apps-backend` (this one) and `agentgateway` (see [below](#agentgateway-exposing-appsbackend-as-mcp-tools); it only connects while `make agentgateway:up` is running). Its server list is the read-only `apps/mcp-inspector/config.json`, reached over `apps-network` by the Inspector's own server process; its UI token is pinned (`APPS_MCP_INSPECTOR_TOKEN`) and `apps:mcp` puts it in the URL.
+`apps/backend` serves MCP natively at `/mcp`, and MCP Inspector (started by `apps:up`, official image) is the quickest way to try it. `make apps:mcp` opens it (its config carries the demo token as an `Authorization` header for both servers - `/mcp` requires a login, and `agentgateway` passes the header on to the backend, so tools that need a token such as `get_me_me_get` work from the Inspector too) with two servers listed - `apps-backend` (this one) and `agentgateway` (see [below](#agentgateway-exposing-appsbackend-as-mcp-tools); it only connects while `make agentgateway:up` is running). Its server list is the read-only `apps/mcp-inspector/config.json`, reached over `apps-network` by the Inspector's own server process; its UI token is pinned (`APPS_MCP_INSPECTOR_TOKEN`) and `apps:mcp` puts it in the URL.
 
 1. `make apps:mcp` opens the Inspector with both servers listed (disconnected):
 
@@ -203,6 +203,8 @@ claude mcp list
 
 `claude mcp list` shows `Connected` once the server is reachable, but a Claude Code session that was already running doesn't load its tools yet - restart Claude Code, or reconnect with `/mcp`, before asking for anything. Without a scope option the server is added to the current project only; add `-s user` to use it from any directory.
 
+`/mcp` is behind a login (`get_me`, `update_profile` and `create_transaction` need a token, and this is how an MCP client gets one), so after restarting: open `/mcp`, pick `apps-backend` (it says *needs authentication*) and **Authenticate**. The browser opens the app's own login at `http://localhost:5173/mcp-authorize` - **Demo login** (`demo` / `demo`) or, with `KEYCLOAK_ISSUER` set and `make keycloak:up` running, **Keycloak** (`keycloak-demo` / `nasebanal-demo`) - press **Allow**, and Claude Code shows *Authentication successful*; close the tab and ask for `get_me`. Claude Code keeps the token, so the browser should open again only after `claude mcp remove` or when `TOKEN_SECRET` changes. `APPS_MCP_AUTH_REQUIRED=false` in `.env` (+ `make apps:restart`) leaves `/mcp` open instead; MCP Inspector and agentgateway are covered below.
+
 **Claude Desktop** (`claude_desktop_config.json`):
 
 ```json
@@ -216,30 +218,7 @@ claude mcp list
 }
 ```
 
-Then ask e.g. "list the accounts and their balances" - Claude calls `list_accounts_accounts_get` after you approve it. Remove the Claude Code entries afterwards with `claude mcp remove <name>`.
-
-#### Requiring a login for `/mcp`
-
-By default `/mcp` is open. Three of the tools need a bearer token anyway - `get_me`, `update_profile` and `create_transaction` answer `invalid or missing token` without one - and an MCP client has no way to supply it. `APPS_MCP_AUTH_REQUIRED=true` fixes that: `/mcp` answers `401` until the client has logged in through the browser, and the token it ends up with goes along with every tool call.
-
-```bash
-# .env: APPS_MCP_AUTH_REQUIRED=true
-make apps:restart
-claude mcp remove apps-backend        # forget a registration (and token) from before
-claude mcp add --transport http apps-backend http://localhost:8080/mcp
-```
-
-Restart Claude Code, open `/mcp`, pick `apps-backend` (it says *needs authentication*) and **Authenticate**:
-
-1. The browser opens `http://localhost:5173/mcp-authorize?...` - the app's own login, the same one as the front page: **Demo login** (`demo` / `demo`) or, with `KEYCLOAK_ISSUER` set and `make keycloak:up` running, **Keycloak** (`keycloak-demo` / `nasebanal-demo`). A Keycloak login leaves for Keycloak and comes back to this page.
-2. The page says which client wants in and as whom you are signed in. **Allow** hands the login back; **Deny** tells the client `access_denied`.
-3. The browser lands on Claude Code's own *Authentication successful* page (`http://localhost:<port>/callback?code=...`) - close the tab. Ask for `get_me`: it returns your profile.
-
-Claude Code keeps the token, so the browser should open again only after it is removed (`claude mcp remove`, or the stored login is cleared) or `TOKEN_SECRET` changes.
-
-How it works (`apps/backend/app/mcp_oauth.py`): the MCP authorization flow with the backend as the authorization server - `401` with a `WWW-Authenticate` pointing at `/.well-known/oauth-protected-resource`, authorization-server metadata, dynamic client registration (`POST /oauth/register`), authorization code + PKCE (`S256`), `POST /oauth/token`. The login itself is the frontend's: `/mcp-authorize` calls `POST /oauth/authorize` with the token of whoever just signed in (a demo token or a Keycloak JWT - `get_current_principal` takes either), so both login methods work with no extra code, and the access token that comes out is the ordinary demo token, which every protected route already accepts. Everything is signed and self-contained like that token (no store, any backend instance verifies it): the `client_id` carries its redirect URIs, the code lives 60 seconds. Registration accepts only loopback `http://` redirect URIs and `claude.ai` / `claude.com` callbacks. The OAuth routes are tagged `mcp-oauth` and left out of the MCP tool list.
-
-Things to know with it on: MCP Inspector (and any client without a token) now gets `401` too; **agentgateway is unaffected** - it builds its tools from the OpenAPI contract and calls the REST routes, never `/mcp` (see [its authentication note](#agentgateway-exposing-appsbackend-as-mcp-tools)). `fastapi-mcp` builds the tool list from the app's routes, so the `mcp-oauth` tag - not the OpenAPI contract - is what keeps the login plumbing out of it. Editing backend code while an MCP client is connected makes uvicorn's reload hang on the open `GET /mcp` stream: `docker restart nb-backend` instead. Turn it off again by removing the line and `apps:restart`.
+Then ask e.g. "list the accounts and their balances" - Claude calls `list_accounts_accounts_get` after you approve it. (`mcp-remote` runs the same browser login on its own when `/mcp` asks for it - not tried here.) Remove the Claude Code entries afterwards with `claude mcp remove <name>`.
 
 ### Specmatic: contract testing (Provider and Consumer)
 
@@ -286,6 +265,50 @@ Verified this way, not just described: every request during a real `make playwri
 
 There's only ever one `apps_backend` service to edit — no separate service per backend/mock to flip between. (An earlier attempt registered three services, one per target, meant to be toggled by an "enabled" flag - that doesn't work: Kong's `Route` object has no `enabled` field, only `Service` does, and disabling a `Service` behind an already-matched `Route` doesn't fail over to another route.) If Kong Manager's edit doesn't seem to stick, or you just want a clean slate regardless of what got changed live, `make kong:reset` reloads everything straight from `kong/conf/declarative.yml`, which defaults `apps_backend` back to the real backend.
 
+### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
+
+`make kafka:bridge-up` starts a small standalone consumer (`kafka/bridge/`) that reads events off the Kafka topic and forwards each one to a REST backend via `POST /transactions` — `apps/backend` by default, but `KAFKA_BRIDGE_TARGET_URL` can point anywhere, same as every other test tool's target host. It's deliberately separate from `kafka:up` (opt in explicitly) and lives in its own container rather than inside `apps/backend`, so a Kafka or backend outage only ever affects the bridge itself — it just retries forever, and only commits a Kafka offset after a successful delivery, so an outage pauses ingestion rather than losing events.
+
+```bash
+make apps:up
+make kafka:up
+make kafka:bridge-up
+```
+
+Two matching Locust scenarios make the case for putting Kafka in front of a write path at all — same event, same volume, two paths in. Use the **same** users / spawn rate for both; these are the settings where direct REST fails (single laptop, this repo's default limits: SQLAlchemy's default connection pool, a single `uvicorn` worker in `--reload` mode, 3 Locust workers):
+
+| Users / spawn rate | Run time | Direct REST (`locustfile_http_overload.py`) | Via Kafka (`locustfile_kafka.py`) |
+|---|---|---|---|
+| 100 / 20 | 30s | 0% failures, but median already ~220ms (p95 ~570ms) - too light to show errors | - |
+| **300 / 100** | 40s | **~30% failures**, median at the 30s DB-pool timeout | 1.66M events, **0% failures**, ~4ms median, backend `/health` ~3ms |
+| **600 / 200** | 60s | **~79% failures** (500s, connection resets, 30s+ latency) | 1.24M events, **0% failures**, ~24ms median, backend `/health` ~2ms |
+
+**Steps** (300 / 100 shown; swap in 600 / 200 / `60s` for the heavier run):
+
+1. Start the target and the Kafka path (optionally Grafana too - set `APPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318` in `.env`, then `apps:restart`):
+   ```bash
+   make apps:up
+   make kafka:up && make kafka:bridge-up
+   make observability:up        # optional: watch it live at http://localhost:3030
+   ```
+2. **Direct REST - this is the one that errors:**
+   ```bash
+   make locust:load LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s
+   ```
+   Or with the UI: `make locust:up LOCUST_FILE=locustfile_http_overload.py`, then enter `300` / `100` at http://localhost:8089.
+3. **Wait for the backend to recover** before the next run. After a run this heavy it stays unresponsive for ~90s, until the DB-pool waits queued behind it time out:
+   ```bash
+   until curl -sf -m 5 http://localhost:8080/health >/dev/null; do sleep 10; done
+   ```
+4. **The same load through Kafka:**
+   ```bash
+   make locust:load LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s
+   ```
+   (`make locust:up LOCUST_FILE=locustfile_kafka.py` + the same `300` / `100` in the UI works too. To switch between the two cleanly in UI mode, use `make locust:restart`.)
+5. **Compare**: `Failure Count` per row in `locust/logs/<timestamp>/locust_stats.csv` (or that run's `report.html`), and `curl -w '%{time_total}\n' http://localhost:8080/health` while each runs. In Grafana ("Apps backend (OpenTelemetry)"): 5xx ratio, p95 latency and DB connections used spike during step 2 and stay flat during step 4.
+
+Kafka stays flat because `kafka-bridge` drains the topic at its own steady, sequential pace and never forwards a burst to the backend. That also means the topic keeps draining into the backend long after step 4 ends (right after a 300 / 100 run, the bridge's consumer lag was still ~1.6M events - check with `docker exec nb-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka:29092 --describe --all-groups`); `make kafka:reset` clears the backlog before a fresh comparison.
+
 ### Keycloak: a real login, and a real token the backend verifies
 
 `apps/backend`'s `POST /transactions` is protected by `app/auth.py`'s `get_current_username` — until now, only satisfiable with a mock token from `POST /auth/login` (a username, no password). Keycloak adds a real OIDC login: the login page gets a **Demo login / Keycloak** toggle (with **Sign up**), you authenticate at Keycloak like you would with "Sign in with Google", and the backend accepts the JWT Keycloak issued on the exact same route. One variable turns on both the backend and the login page:
@@ -310,7 +333,7 @@ No **Demo login / Keycloak** toggle? `KEYCLOAK_ISSUER` is missing from `.env` (o
 
 Then open http://localhost:5173, click Login, pick **Keycloak**, and sign in as `keycloak-demo` / `nasebanal-demo` (or **Sign up** for a new user — the form is Keycloak's own; `make keycloak:open` shows the user in the admin console). The user menu shows a Keycloak badge, and recording a transaction succeeds because the backend verified the token's signature against Keycloak's public keys.
 
-The same Keycloak login also works for an MCP client: with `APPS_MCP_AUTH_REQUIRED=true` the page the browser opens (`/mcp-authorize`) offers the same **Demo login / Keycloak** toggle - see [Requiring a login for `/mcp`](#requiring-a-login-for-mcp).
+The same Keycloak login also works for an MCP client: the page its browser login opens (`/mcp-authorize`) offers the same **Demo login / Keycloak** toggle - see [Also from Claude](#also-from-claude-or-another-mcp-client).
 
 Without a browser: `make keycloak:verify-apps` gets a token for the demo user (password grant) and sends it as `Authorization: Bearer` to `POST /transactions`; `make keycloak:login` just prints one, for trying by hand with curl. A token without a valid signature, or no token at all, gets a `401`. `KEYCLOAK_ISSUER` is the address the *browser* logs in at (and the `iss` every token carries); the backend fetches the signing keys from `KEYCLOAK_JWKS_URL` (default `http://keycloak:8080/...`, the in-network address). Setting `KEYCLOAK_ISSUER` back to empty and restarting returns to mock-token-only.
 
@@ -404,51 +427,7 @@ The dashboard shows request rate per path, 5xx ratio, p50/p95/p99 latency, activ
 
 The instrumentation is standard OTel SDK code (`apps/backend/app/telemetry.py`) that honors the usual `OTEL_*` env vars, so pointing `APPS_OTEL_EXPORTER_OTLP_ENDPOINT` (plus `OTEL_EXPORTER_OTLP_HEADERS`) at another OTLP backend such as NewRelic - which the real NASEBANAL apps use - works without code changes. Only the Collector's config (`observability/otel-collector.yaml`) is specific to the local stack.
 
-Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't export to Destinations, and Cloudflare can't reach a `localhost` collector), and Kafka metrics, and Kong's/agentgateway's metrics (each has its own Prometheus/OTel integration that could be added to `observability/prometheus.yml` / their own config). Kong and agentgateway do export **traces** to the same Collector (`opentelemetry` plugin on Kong's `apps_backend` service; `config.tracing` in `agentgateway/config.yaml`), and the trace context is passed on, so a request through either gateway is one trace with the backend's spans under the gateway's - see Scenario 4. The Grafana dashboard's bottom panel, "Gateway traces", lists them.
-
-### Kafka bridge: comparing REST vs. Kafka-buffered ingestion
-
-`make kafka:bridge-up` starts a small standalone consumer (`kafka/bridge/`) that reads events off the Kafka topic and forwards each one to a REST backend via `POST /transactions` — `apps/backend` by default, but `KAFKA_BRIDGE_TARGET_URL` can point anywhere, same as every other test tool's target host. It's deliberately separate from `kafka:up` (opt in explicitly) and lives in its own container rather than inside `apps/backend`, so a Kafka or backend outage only ever affects the bridge itself — it just retries forever, and only commits a Kafka offset after a successful delivery, so an outage pauses ingestion rather than losing events.
-
-```bash
-make apps:up
-make kafka:up
-make kafka:bridge-up
-```
-
-Two matching Locust scenarios make the case for putting Kafka in front of a write path at all — same event, same volume, two paths in. Use the **same** users / spawn rate for both; these are the settings where direct REST fails (single laptop, this repo's default limits: SQLAlchemy's default connection pool, a single `uvicorn` worker in `--reload` mode, 3 Locust workers):
-
-| Users / spawn rate | Run time | Direct REST (`locustfile_http_overload.py`) | Via Kafka (`locustfile_kafka.py`) |
-|---|---|---|---|
-| 100 / 20 | 30s | 0% failures, but median already ~220ms (p95 ~570ms) - too light to show errors | - |
-| **300 / 100** | 40s | **~30% failures**, median at the 30s DB-pool timeout | 1.66M events, **0% failures**, ~4ms median, backend `/health` ~3ms |
-| **600 / 200** | 60s | **~79% failures** (500s, connection resets, 30s+ latency) | 1.24M events, **0% failures**, ~24ms median, backend `/health` ~2ms |
-
-**Steps** (300 / 100 shown; swap in 600 / 200 / `60s` for the heavier run):
-
-1. Start the target and the Kafka path (optionally Grafana too - set `APPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318` in `.env`, then `apps:restart`):
-   ```bash
-   make apps:up
-   make kafka:up && make kafka:bridge-up
-   make observability:up        # optional: watch it live at http://localhost:3030
-   ```
-2. **Direct REST - this is the one that errors:**
-   ```bash
-   make locust:load LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s
-   ```
-   Or with the UI: `make locust:up LOCUST_FILE=locustfile_http_overload.py`, then enter `300` / `100` at http://localhost:8089.
-3. **Wait for the backend to recover** before the next run. After a run this heavy it stays unresponsive for ~90s, until the DB-pool waits queued behind it time out:
-   ```bash
-   until curl -sf -m 5 http://localhost:8080/health >/dev/null; do sleep 10; done
-   ```
-4. **The same load through Kafka:**
-   ```bash
-   make locust:load LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s
-   ```
-   (`make locust:up LOCUST_FILE=locustfile_kafka.py` + the same `300` / `100` in the UI works too. To switch between the two cleanly in UI mode, use `make locust:restart`.)
-5. **Compare**: `Failure Count` per row in `locust/logs/<timestamp>/locust_stats.csv` (or that run's `report.html`), and `curl -w '%{time_total}\n' http://localhost:8080/health` while each runs. In Grafana ("Apps backend (OpenTelemetry)"): 5xx ratio, p95 latency and DB connections used spike during step 2 and stay flat during step 4.
-
-Kafka stays flat because `kafka-bridge` drains the topic at its own steady, sequential pace and never forwards a burst to the backend. That also means the topic keeps draining into the backend long after step 4 ends (right after a 300 / 100 run, the bridge's consumer lag was still ~1.6M events - check with `docker exec nb-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka:29092 --describe --all-groups`); `make kafka:reset` clears the backlog before a fresh comparison.
+Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't export to Destinations, and Cloudflare can't reach a `localhost` collector), and Kafka metrics, and Kong's/agentgateway's metrics (each has its own Prometheus/OTel integration that could be added to `observability/prometheus.yml` / their own config). Kong and agentgateway do export **traces** to the same Collector (`opentelemetry` plugin on Kong's `apps_backend` service; `config.tracing` in `agentgateway/config.yaml`), and the trace context is passed on, so a request through either gateway is one trace with the backend's spans under the gateway's - see Scenario 7. The Grafana dashboard's bottom panel, "Gateway traces", lists them.
 
 ### Locust load testing scenarios
 
@@ -577,7 +556,7 @@ A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KA
 | `APPS_MCP_INSPECTOR_TOKEN` | `nb-mcp-inspector-token` | The Inspector UI's auth token, pinned (random per start otherwise) and put in the URL by `make apps:mcp`. A fixed public default - local demo only |
 | `APPS_API_BASE` | `http://localhost:8080` | Where `apps/frontend` calls the backend - direct, or `http://localhost:8000/api` to route through Kong instead (needs `kong:up` + `apps:restart`) |
 | `APPS_KAFKA_BRIDGE_HEALTH_URL` | `http://localhost:8090` | Where the frontend checks kafka-bridge's health - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
-| `APPS_MCP_AUTH_REQUIRED` | *(unset = off)* | `true` puts `/mcp` behind a login: an MCP client such as Claude Code gets a 401, opens the browser on the frontend's `/mcp-authorize` page (the app's usual demo / Keycloak login) and carries the resulting token into every tool call. Needs `apps:restart`; MCP Inspector and agentgateway then need a token too |
+| `APPS_MCP_AUTH_REQUIRED` | `true` | `/mcp` is behind a login: an MCP client such as Claude Code gets a 401, opens the browser on the frontend's `/mcp-authorize` page (the app's usual demo / Keycloak login) and carries the resulting token into every tool call. `false` leaves `/mcp` open (needs `apps:restart`) |
 | `APPS_PUBLIC_BASE_URL` / `APPS_MCP_AUTHORIZE_URL` | `http://localhost:8080` / `http://localhost:5173/mcp-authorize` | The addresses the MCP client and browser use for the MCP login (host-published, not in-network) - change only when the backend / frontend are reached elsewhere |
 | `KEYCLOAK_ISSUER` | *(unset = off)* | Turns on Keycloak for `apps/backend` and the login page: `http://localhost:8180/realms/nasebanal` - see [Keycloak](#keycloak) |
 | `VAULT_ADDR` / `VAULT_TOKEN` | *(both unset = off)* | Where `apps/backend` asks for a Vault-issued MySQL credential - see [Vault](#vault) |

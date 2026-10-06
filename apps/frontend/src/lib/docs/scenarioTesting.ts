@@ -24,7 +24,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             "(the frontend's calls are made against a mock built from the same file, with no real backend). " +
             "Kong can route the frontend to that mock without a " +
             "frontend change ([Scenario 2](/docs/scenario-kong)); agentgateway builds its MCP tools from the same " +
-            "file ([Scenario 7](/docs/scenario-agentgateway)).",
+            "file ([Scenario 6](/docs/scenario-agentgateway)).",
           "Every test command leaves an HTML report (git-ignored, regenerated on each run). Open the file " +
             "directly in a browser, or serve its folder with python3 -m http.server.",
         ],
@@ -41,16 +41,17 @@ export const scenarioTesting: LocalizedDocsPage = {
             ["Security", "OWASP ZAP", "A passive scan of the frontend, an active scan, and an OpenAPI-driven scan of every backend route."],
           ],
         },
-        note:
+        closing: [
           "The unit tests require no running services and can be run first: make pytest:test and " +
           "make vitest:test. make all:test runs pytest, Vitest, Playwright and Specmatic in sequence, starting " +
           "the apps stack beforehand; the load test (make locust:load) and ZAP are not part of it - a sustained load run " +
           "and attack payloads are run explicitly. On GitHub, CI runs static checks only - Python lint, Dockerfile lint and " +
           "build, shell syntax, frontend type check and compose validation. The tests on this page require the " +
           "running stack and are run locally.",
+        ],
       },
       {
-        heading: "pytest: backend unit tests",
+        heading: "1. pytest: backend unit tests",
         subsections: [
           {
             heading: "Checking the results",
@@ -77,7 +78,7 @@ export const scenarioTesting: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "Vitest: frontend unit tests",
+        heading: "2. Vitest: frontend unit tests",
         subsections: [
           {
             heading: "Checking the results",
@@ -105,7 +106,7 @@ export const scenarioTesting: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "Playwright: end-to-end tests",
+        heading: "3. Playwright: end-to-end tests",
         subsections: [
           {
             heading: "Checking the results",
@@ -133,7 +134,7 @@ export const scenarioTesting: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "Specmatic: contract tests",
+        heading: "4. Specmatic: contract tests",
         subsections: [
           {
             heading: "Checking the results",
@@ -167,16 +168,22 @@ export const scenarioTesting: LocalizedDocsPage = {
             ],
           },
         ],
+        noteTitle: "Specmatic: external examples",
+        noteHref: "https://docs.specmatic.io/features/external_examples",
+        note:
+          "shared/openapi/examples/*.json are Specmatic's externalized examples, passed in with --examples: the same " +
+          "files supply the requests of the contract tests and the answers of the mock, which is why the mock " +
+          "returns the same data every time.",
       },
       {
-        heading: "Locust: load tests",
+        heading: "5. Locust: load tests",
         subsections: [
           {
             heading: "Checking the results",
             body: [
               "Locust runs against the running apps stack (make apps:up first) and reports response times and failures per endpoint. The available scenarios are HTTP, GraphQL " +
                 "and MySQL, an overload scenario, and the same overload sent through Kafka; [Scenario 3](/docs/scenario-kafka) " +
-                "and [Scenario 4](/docs/scenario-observability) use it to show the effect of an overload and how " +
+                "and [Scenario 7](/docs/scenario-observability) use it to show the effect of an overload and how " +
                 "Kafka and observability each respond. The report is locust/logs/<timestamp>/report.html. " +
                 "make locust:load is a separate command from the test targets (and is not run by make all:test), since it puts sustained load on the stack.",
             ],
@@ -200,7 +207,7 @@ export const scenarioTesting: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "OWASP ZAP: security scans",
+        heading: "6. OWASP ZAP: security scans",
         subsections: [
           {
             heading: "Checking the results",
@@ -217,8 +224,7 @@ export const scenarioTesting: LocalizedDocsPage = {
                 caption: "ZAP api-scan of the backend: 27 endpoints, no High or Medium alerts (2 Low). The scan passed 116 rules with 0 failures and 2 warnings.",
               },
             ],
-            note:
-              "There's also make zap:full-scan, a deeper active scan of the frontend itself - deliberately left out of the walkthrough above. Its attack payloads against the frontend's many hashed _next/static/* asset URLs can drive the Next.js dev server (Turbopack) into a CPU-pinning recompile loop that doesn't recover on its own, even after the scan stops. If that happens, restart just the frontend: docker compose -p apps -f apps/docker-compose.yml restart frontend.",
+            closing: ["There's also make zap:full-scan, a deeper active scan of the frontend itself - deliberately left out of the walkthrough above. Its attack payloads against the frontend's many hashed _next/static/* asset URLs can drive the Next.js dev server (Turbopack) into a CPU-pinning recompile loop that doesn't recover on its own, even after the scan stops. If that happens, restart just the frontend: docker compose -p apps -f apps/docker-compose.yml restart frontend."],
           },
           {
             heading: "Evaluation",
@@ -228,8 +234,7 @@ export const scenarioTesting: LocalizedDocsPage = {
               "The baseline scan of the frontend, a Next.js development server that is not hardened, passed 52 " +
                 "rules and raised 15 warnings, mostly missing security headers, with 0 failures.",
             ],
-            note:
-              "These are results from a development stack. They demonstrate the tooling and are not a security audit.",
+            closing: ["These are results from a development stack. They demonstrate the tooling and are not a security audit."],
           },
         ],
       },
@@ -261,7 +266,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             "応答するか)を検証し、コンシューマー側にはmockを提供します(frontendの呼び出しを、同じファイルから" +
             "作ったモックに対して行い、実際のbackendは使いません)。" +
             "Kongはfrontendを変更せずに、そのモックへ経路を切り替えられます([シナリオ2](/docs/scenario-kong))。" +
-            "agentgatewayも、同じファイルからMCPツールを作ります([シナリオ7](/docs/scenario-agentgateway))。",
+            "agentgatewayも、同じファイルからMCPツールを作ります([シナリオ6](/docs/scenario-agentgateway))。",
           "どのテストコマンドも、HTMLレポートを出力します(gitignore対象で、実行のたびに再生成されます)。" +
             "ファイルをブラウザで直接開くか、フォルダをpython3 -m http.serverで配信して参照します。",
         ],
@@ -278,16 +283,17 @@ export const scenarioTesting: LocalizedDocsPage = {
             ["セキュリティ", "OWASP ZAP", "frontendのパッシブスキャン、アクティブスキャン、backendの全ルートを対象にしたOpenAPI駆動のスキャン。"],
           ],
         },
-        note:
+        closing: [
           "ユニットテストは稼働中のサービスを必要とせず、最初に実行できます: make pytest:test と make vitest:test。" +
           "make all:test は、pytest・Vitest・Playwright・Specmaticを順に実行します(先にappsスタックを起動します)。" +
           "負荷テスト(make locust:load)とZAPは対象外です — 持続的な負荷や攻撃ペイロードは、明示的に実行します。" +
           "GitHubのCIが実行するのは静的チェック — Pythonのlint、Dockerfileのlintとビルド、シェルの構文、" +
           "frontendの型チェック、composeの検証 — のみです。本ページのテストは稼働中のスタックが必要なため、" +
           "ローカルで実行します。",
+        ],
       },
       {
-        heading: "pytest: backendのユニットテスト",
+        heading: "1. pytest: backendのユニットテスト",
         subsections: [
           {
             heading: "確認方法",
@@ -314,7 +320,7 @@ export const scenarioTesting: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "Vitest: frontendのユニットテスト",
+        heading: "2. Vitest: frontendのユニットテスト",
         subsections: [
           {
             heading: "確認方法",
@@ -342,7 +348,7 @@ export const scenarioTesting: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "Playwright: E2Eテスト",
+        heading: "3. Playwright: E2Eテスト",
         subsections: [
           {
             heading: "確認方法",
@@ -371,7 +377,7 @@ export const scenarioTesting: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "Specmatic: コントラクトテスト",
+        heading: "4. Specmatic: コントラクトテスト",
         subsections: [
           {
             heading: "確認方法",
@@ -405,16 +411,20 @@ export const scenarioTesting: LocalizedDocsPage = {
             ],
           },
         ],
+        noteTitle: "Specmatic: 外部化されたexample",
+        noteHref: "https://docs.specmatic.io/features/external_examples",
+        note:
+          "shared/openapi/examples/*.jsonはSpecmaticの外部化されたexampleで、--examplesで渡しています。同じファイルがコントラクトテストのリクエストとモックの応答の両方に使われるため、モックは毎回同じデータを返します。",
       },
       {
-        heading: "Locust: 負荷テスト",
+        heading: "5. Locust: 負荷テスト",
         subsections: [
           {
             heading: "確認方法",
             body: [
               "Locustは、稼働中のappsスタック(先にmake apps:up)に対して実行し、エンドポイントごとの応答時間と失敗を報告します。用意されているシナリオは、HTTP・GraphQL・MySQL、" +
                 "overloadシナリオ、同じ負荷をKafka経由にしたものです。[シナリオ3](/docs/scenario-kafka)と" +
-                "[シナリオ4](/docs/scenario-observability)は、これを使って、過負荷が何を起こし、Kafkaとオブザーバビリティが" +
+                "[シナリオ7](/docs/scenario-observability)は、これを使って、過負荷が何を起こし、Kafkaとオブザーバビリティが" +
                 "それぞれどう応えるかを示します。レポートは locust/logs/<タイムスタンプ>/report.html です。" +
                 "make locust:load はtest系のターゲットとは別のコマンドで(make all:testでは実行されません)、スタックに持続的な負荷をかけるためです。",
             ],
@@ -438,7 +448,7 @@ export const scenarioTesting: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "OWASP ZAP: セキュリティスキャン",
+        heading: "6. OWASP ZAP: セキュリティスキャン",
         subsections: [
           {
             heading: "確認方法",
@@ -455,8 +465,7 @@ export const scenarioTesting: LocalizedDocsPage = {
                 caption: "backendのZAP api-scan: 27エンドポイントでHigh・Mediumのアラートなし(Lowが2件)。116ルールに合格し、失敗0件・警告2件。",
               },
             ],
-            note:
-              "make zap:full-scanというコマンドもあります。frontend自体に対するより踏み込んだアクティブスキャンですが、上記のウォークスルーからは意図的に外しています。frontendの大量のハッシュ付き _next/static/* アセットURLへの攻撃ペイロードが、Next.jsの開発サーバー(Turbopack)を再コンパイル/キャッシュ書き換えの無限ループに陥らせ、スキャンを止めた後もCPUが張り付いたまま回復しないことがあるためです。発生した場合は frontend コンテナだけを再起動してください: docker compose -p apps -f apps/docker-compose.yml restart frontend",
+            closing: ["make zap:full-scanというコマンドもあります。frontend自体に対するより踏み込んだアクティブスキャンですが、上記のウォークスルーからは意図的に外しています。frontendの大量のハッシュ付き _next/static/* アセットURLへの攻撃ペイロードが、Next.jsの開発サーバー(Turbopack)を再コンパイル/キャッシュ書き換えの無限ループに陥らせ、スキャンを止めた後もCPUが張り付いたまま回復しないことがあるためです。発生した場合は frontend コンテナだけを再起動してください: docker compose -p apps -f apps/docker-compose.yml restart frontend"],
           },
           {
             heading: "評価結果",
@@ -466,8 +475,7 @@ export const scenarioTesting: LocalizedDocsPage = {
               "frontend(強化されていないNext.jsの開発サーバー)のベースラインスキャンは、52ルールに合格し、" +
                 "15件で警告(多くはセキュリティヘッダーの欠如)、失敗は0件でした。",
             ],
-            note:
-              "開発用スタックでの結果です。ツールの実演であり、セキュリティ監査ではありません。",
+            closing: ["開発用スタックでの結果です。ツールの実演であり、セキュリティ監査ではありません。"],
           },
         ],
       },

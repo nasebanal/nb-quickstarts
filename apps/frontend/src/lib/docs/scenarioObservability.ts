@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioObservability: LocalizedDocsPage = {
   en: {
-    title: "Scenario 4: Observability",
+    title: "Scenario 7: Observability",
     description:
       "The backend can export OpenTelemetry traces (FastAPI requests + SQLAlchemy queries), HTTP " +
       "server metrics and application logs over OTLP - off by default, so apps:up behaves exactly as " +
@@ -72,12 +72,13 @@ export const scenarioObservability: LocalizedDocsPage = {
             },
           ],
         },
-        note:
+        closing: [
           "Real output (shown once everything was up). Tempo and Loki both report NOT ready for " +
           "their first ~15 seconds after observability:up (Loki: \"waiting for 15s after being ready\") " +
           "even though data is already landing - re-run observability:verify a few seconds later if you " +
           "see that. Logs are deliberately limited to failed requests (status >= 400) and application " +
           "log lines, not one line per request, so a healthy backend may show none yet.",
+        ],
       },
       {
         heading: "2. Watch an overload happen live",
@@ -107,7 +108,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         imagesLayout: "stack",
       },
       {
-        heading: "What to look for",
+        heading: "3. Know what to look for",
         bullets: [
           "Request rate by path shows the burst arriving - /auth/login first, then /transactions as the " +
             "queue behind the DB pool builds.",
@@ -120,14 +121,15 @@ export const scenarioObservability: LocalizedDocsPage = {
           "5xx error ratio jumps toward 100% once the 30s pool timeouts start landing - a second or " +
             "so after latency, since a request only counts as a 5xx when it finally fails.",
         ],
-        note:
+        closing: [
           "The first screenshot above (from an earlier version of this dashboard) shows 5xx ratio as " +
           "No data: its query had a malformed selector, since fixed - the second screenshot has it " +
           "working. Run the same load through Kafka afterward (Scenario 3, step 4) with Grafana still " +
           "open, and every one of these panels stays flat instead.",
+        ],
       },
       {
-        heading: "3. Alerts: from a rule to a notification",
+        heading: "4. Follow an alert from a rule to a notification",
         body: [
           "observability/alert-rules.yml holds three Prometheus alert rules over the same signals the " +
             "dashboard graphs: BackendHighErrorRatio (5xx > 5%, critical), BackendHighLatencyP95 (p95 > " +
@@ -166,7 +168,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "Alertmanager's UI (http://localhost:9095) during the overload. Untick \"Inhibited\" and only BackendHighErrorRatio (critical) stays - the two warnings are muted by the inhibit rule; ticked, they are listed too.",
           },
         ],
-        note:
+        closing: [
           "Real output from a 300 / 100 / 40s direct-REST run, abridged (the lines for a manual " +
           "test alert were removed). The order is the point: the two warnings fire first, the critical " +
           "5xx alert a minute or so later - once it does, the inhibit rule mutes the warnings for the " +
@@ -175,9 +177,16 @@ export const scenarioObservability: LocalizedDocsPage = {
           "should stay quiet - not re-run against the alert rules yet, so check for yourself. " +
           "Alertmanager's own UI is at http://localhost:9095, and Grafana's " +
           "Alerting page lists the same alerts through the Alertmanager data source.",
+        ],
+        noteTitle: "Alertmanager: inhibition rules",
+        noteHref: "https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule",
+        note:
+          "Warnings being muted once the critical alert fires is Alertmanager's inhibit_rules at work " +
+          "(observability/alertmanager.yml): while an alert matching source_matchers (severity=\"critical\") is " +
+          "firing, alerts matching target_matchers (severity=\"warning\") with the same service label are muted.",
       },
       {
-        heading: "4. Logs, and jumping from a log line to its trace",
+        heading: "5. Read the logs, and jump from a log line to its trace",
         body: [
           "The backend also ships application logs over OTLP, through the same Collector, into Loki " +
             "(its native OTLP endpoint) - the dashboard's logs panel, or Grafana's Explore with the Loki " +
@@ -200,7 +209,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "5. Gateways send telemetry too: Kong and agentgateway",
+        heading: "6. Have the gateways send telemetry too: Kong and agentgateway",
         body: [
           "Kong and agentgateway can export their own traces to the same Collector, so a request that " +
             "goes through a gateway shows up as one trace: the gateway's span with the backend's spans " +
@@ -244,7 +253,7 @@ export const scenarioObservability: LocalizedDocsPage = {
           },
         ],
         imagesLayout: "stack",
-        note:
+        closing: [
           "Real runs. Every Kong trace of /api/accounts that was checked contained both nb-kong " +
           "and nb-backend spans, so the trace context is passed on to the backend (the plugin's " +
           "header_type is preserve, the default). Kong 3.6's opentelemetry plugin exports traces only (its " +
@@ -255,9 +264,25 @@ export const scenarioObservability: LocalizedDocsPage = {
           "returns one record per request, with the method, path, status and MCP method as labels, and the " +
           "trace_id/span_id that link it to the trace above (the record's body is empty; the fields are its " +
           "labels). Sampling every request is fine for a demo, not for production.",
+        ],
+        noteTitle: "Kong: the OpenTelemetry plugin",
+        noteHref: "https://docs.konghq.com/hub/kong-inc/opentelemetry/",
+        note:
+          "The opentelemetry plugin on apps_backend (kong/conf/declarative.yml) creates Kong's own span and passes " +
+          "the trace context on to the backend; its header_type stays at the default, preserve. Kong 3.6's plugin " +
+          "exports traces only.",
+        notes: [
+          {
+            noteTitle: "agentgateway: OpenTelemetry tracing",
+            noteHref: "https://agentgateway.dev/docs/standalone/main/integrations/observability/opentelemetry/",
+            note:
+              "The tracing block in agentgateway/config.yaml sets otlpEndpoint and randomSampling. randomSampling " +
+              "defaults to false, so without it agentgateway exports nothing unless the request already carries a trace.",
+          },
+        ],
       },
       {
-        heading: "Beyond the local stack",
+        heading: "7. Go beyond the local stack",
         body: [
           "The instrumentation itself is standard OTel SDK code (app/telemetry.py) that honors the " +
             "usual OTEL_* env vars, so pointing APPS_OTEL_EXPORTER_OTLP_ENDPOINT (plus " +
@@ -269,15 +294,16 @@ export const scenarioObservability: LocalizedDocsPage = {
       {
         heading: "Cleanup",
         code: [{ code: "make observability:down" }],
-        note:
+        closing: [
           "Turn export back off by commenting out APPS_OTEL_EXPORTER_OTLP_ENDPOINT in .env, then apps:restart, once " +
           "you're done - otherwise the backend keeps retrying an export target that's no longer there. " +
           "observability:reset additionally wipes stored metrics, traces, logs and Grafana state.",
+        ],
       },
     ],
   },
   ja: {
-    title: "シナリオ4: オブザーバビリティ",
+    title: "シナリオ7: オブザーバビリティ",
     description:
       "backendはOpenTelemetryのトレース(FastAPIのリクエスト + SQLAlchemyのクエリ)・HTTPサーバー" +
       "メトリクス・アプリケーションログをOTLPで送信できます — デフォルトはオフなので、明示的に有効化" +
@@ -347,12 +373,13 @@ export const scenarioObservability: LocalizedDocsPage = {
             },
           ],
         },
-        note:
+        closing: [
           "実際の出力です(すべて起動した後の状態)。observability:up直後の約15秒間は、TempoとLokiが" +
           "NOT readyと出ます(Lokiは\"waiting for 15s after being ready\") — その状態でもデータ自体は" +
           "すでに届いていることがあるので、数秒待ってobservability:verifyを再実行してください。ログは、" +
           "リクエストごとに1行ではなく、失敗したリクエスト(status >= 400)とアプリケーションのログ行だけを" +
           "送る設計のため、正常なbackendではまだ何も出ないことがあります。",
+        ],
       },
       {
         heading: "2. overloadの様子をライブに観察する",
@@ -382,7 +409,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         imagesLayout: "stack",
       },
       {
-        heading: "確認するポイント",
+        heading: "3. 確認するポイントを押さえる",
         bullets: [
           "Request rate by pathで、バーストが到達する様子 — まず/auth/login、続いてDBプール背後の" +
             "キューが積み上がるにつれて/transactionsが増えていく。",
@@ -395,14 +422,15 @@ export const scenarioObservability: LocalizedDocsPage = {
           "5xx error ratioが、30秒のプールタイムアウトが返り始めた時点で100%近くまで跳ね上がる — " +
             "リクエストは最終的に失敗して初めて5xxとして数えられるため、レイテンシより数秒遅れて動きます。",
         ],
-        note:
+        closing: [
           "上の1枚目のスクリーンショット(このダッシュボードの旧版のもの)では5xx比率がNo dataになって" +
           "います — クエリのセレクタが不正だったためで、現在は修正済みです(2枚目では動いています)。" +
           "この後、Grafanaを開いたままシナリオ3のstep 4(Kafka経由)で同じ負荷を流すと、これらのパネルは" +
           "すべて平坦なまま推移します。",
+        ],
       },
       {
-        heading: "3. アラート: ルールから通知まで",
+        heading: "4. アラートがルールから通知まで届く流れを追う",
         body: [
           "observability/alert-rules.ymlには、ダッシュボードが描いているのと同じ指標に対する3つのPrometheus" +
             "アラートルールがあります: BackendHighErrorRatio(5xxが5%超、critical)、BackendHighLatencyP95" +
@@ -441,7 +469,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "過負荷の最中のAlertmanagerのUI(http://localhost:9095)。「Inhibited」のチェックを外すとBackendHighErrorRatio(critical)だけが残ります — 2つのwarningは抑制ルールで黙らされているためで、チェックを入れると一覧に現れます。",
           },
         ],
-        note:
+        closing: [
           "300 / 100 / 40sのREST直叩き実行での実際の出力を省略したものです(手動のテスト用アラートの行は" +
           "除いています)。順序が重要です: まず2つのwarningが発火し、1分ほど後にcriticalの5xxアラートが" +
           "発火します — そうなると抑制ルールが同じサービスのwarningを黙らせるため、当番には3件ではなく" +
@@ -450,9 +478,14 @@ export const scenarioObservability: LocalizedDocsPage = {
           "ご自身で確かめてください。AlertmanagerのUIは" +
           "http://localhost:9095、GrafanaのAlertingページでもAlertmanagerデータソース経由で同じアラートが" +
           "見られます。",
+        ],
+        noteTitle: "Alertmanager: 抑制ルール(inhibit_rules)",
+        noteHref: "https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule",
+        note:
+          "criticalのアラートが発火するとwarningが抑制されるのは、Alertmanagerのinhibit_rulesの働きです(observability/alertmanager.yml)。source_matchers(severity=\"critical\")に一致するアラートが発火している間、同じserviceラベルを持つtarget_matchers(severity=\"warning\")に一致するアラートが抑制されます。",
       },
       {
-        heading: "4. ログと、ログ行からトレースへのジャンプ",
+        heading: "5. ログを読み、ログ行からトレースへジャンプする",
         body: [
           "backendはアプリケーションログも同じCollector経由のOTLPでLoki(そのネイティブOTLPエンドポイント)へ" +
             "送ります — ダッシュボードのログパネル、またはGrafanaのExploreでLokiデータソースに" +
@@ -475,7 +508,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "5. ゲートウェイからもトレースを送る: Kong と agentgateway",
+        heading: "6. ゲートウェイからもトレースを送る: Kong と agentgateway",
         body: [
           "KongとagentgatewayもCollectorへ自分のトレースを送れるので、ゲートウェイを通ったリクエストは、" +
             "ゲートウェイのスパンの下にbackendのスパンが連なる1本のトレースとして見えます。どちらもapps-networkに" +
@@ -519,7 +552,7 @@ export const scenarioObservability: LocalizedDocsPage = {
           },
         ],
         imagesLayout: "stack",
-        note:
+        closing: [
           "実際の実行結果です。確認したKong経由の/api/accountsのトレースはすべて、nb-kongとnb-backendの" +
           "両方のスパンを含んでいたので、トレースコンテキストはbackendへ引き継がれています(プラグインの" +
           "header_typeはデフォルトのpreserve)。Kong 3.6のopentelemetryプラグインが送れるのはトレースだけ(スキーマに" +
@@ -530,9 +563,23 @@ export const scenarioObservability: LocalizedDocsPage = {
           "リクエストごとに1件、メソッド・パス・ステータス・MCPメソッドがラベルとして、上のトレースへつながる" +
           "trace_id/span_idとともに返ります(レコードの本文は空で、項目はラベルに入っています)。" +
           "全リクエストをサンプリングするのはデモ用で、本番向けではありません。",
+        ],
+        noteTitle: "Kong: OpenTelemetryプラグイン",
+        noteHref: "https://docs.konghq.com/hub/kong-inc/opentelemetry/",
+        note:
+          "apps_backendに付けたopentelemetryプラグイン(kong/conf/declarative.yml)が、Kong自身のスパンを作り、トレースコンテキストをbackendへ引き継ぎます。header_typeは既定のpreserveのままです。Kong " +
+          "3.6のこのプラグインが出力するのはトレースだけです。",
+        notes: [
+          {
+            noteTitle: "agentgateway: OpenTelemetryトレース",
+            noteHref: "https://agentgateway.dev/docs/standalone/main/integrations/observability/opentelemetry/",
+            note:
+              "agentgateway/config.yamlのtracingブロックでotlpEndpointとrandomSamplingを設定しています。randomSamplingの既定はfalseなので、これを有効にしないと、リクエストがすでにトレースを持っている場合を除き、何もエクスポートされません。",
+          },
+        ],
       },
       {
-        heading: "ローカルスタックの先へ",
+        heading: "7. ローカルスタックの先へ進む",
         body: [
           "計装自体は標準的なOTel SDKのコード(app/telemetry.py)で、通常のOTEL_*環境変数に従います。" +
             "そのためAPPS_OTEL_EXPORTER_OTLP_ENDPOINT(および必要ならOTEL_EXPORTER_OTLP_HEADERS)を別の" +
@@ -544,10 +591,11 @@ export const scenarioObservability: LocalizedDocsPage = {
       {
         heading: "環境のクリーンアップ",
         code: [{ code: "make observability:down" }],
-        note:
+        closing: [
           "終わったら.envのAPPS_OTEL_EXPORTER_OTLP_ENDPOINTの行をコメントアウトして、apps:restartしてください — そうしない" +
           "と、backendはもう存在しない送信先へのエクスポートをリトライし続けます。observability:resetは" +
           "さらに、保存済みのメトリクス・トレース・ログとGrafanaの状態も消します。",
+        ],
       },
     ],
   },

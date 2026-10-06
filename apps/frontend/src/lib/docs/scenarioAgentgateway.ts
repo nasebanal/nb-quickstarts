@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioAgentgateway: LocalizedDocsPage = {
   en: {
-    title: "Scenario 7: MCP access via agentgateway",
+    title: "Scenario 6: MCP access via agentgateway",
     description:
       "The backend already mounts its own MCP server natively at /mcp (via fastapi-mcp, auto-derived " +
       "from its REST routes). agentgateway is a different way to get there: instead of backend-side " +
@@ -31,6 +31,9 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
           "agentgateway:tools does the MCP handshake by hand and lists what's being served - the real " +
             "verification that it's actually reading openapi.yaml, not a hardcoded example: eight tools, " +
             "one per operation, named and described straight from the contract.",
+          "agentgateway:up alone is enough for this list: the gateway reads shared/openapi/openapi.yaml " +
+            "directly when it starts (config.yaml's schema.file, mounted read-only), so the tools are known " +
+            "without the backend running. The backend is only needed once a tool is actually called (step 3).",
         ],
         terminal: {
           lines: [
@@ -60,22 +63,73 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
             },
           ],
         },
+        noteTitle: "agentgateway: OpenAPI as MCP tools",
+        noteHref: "https://agentgateway.dev/docs/standalone/latest/mcp/connect/openapi/",
+        note:
+          "agentgateway/config.yaml gives the gateway an openapi target (schema.file plus host: backend:8080). " +
+          "agentgateway then generates one MCP tool for each operation in the spec, named after its operationId, and " +
+          "translates each tool call into the matching HTTP request.",
       },
       {
-        heading: "2. Call a tool through the gateway",
-        body: [
-          "Run make apps:up before calling a tool. Calling list_accounts_accounts_get through the gateway returns the same live data " +
-            "GET /accounts itself does - it's a real proxy to the running backend, not a " +
-            "static description of it.",
+        heading: "2. Open the dashboard",
+        code: [
+          {
+            code: "make agentgateway:open   # http://localhost:15000 -> redirects to /ui",
+          },
         ],
-        note:
-          "get_me, update_profile and create_transaction need a real bearer token, same as the REST routes " +
-          "behind them. The tool arguments have no Authorization header, so called as-is they answer " +
-          "\"invalid or missing token\" - see \"4. Register it in Claude Code, with a token\" below.",
+        body: [
+          "With agentgateway up, check the configuration it started with. Its dashboard (a React SPA built " +
+            "into the image) is served off the admin port, separate from the MCP port, and lists the route that " +
+            "agentgateway/config.yaml applied. Open Routes and click the pencil (Edit route) on Route 1 to see " +
+            "what is configured in it.",
+        ],
+        imagesLayout: "stack",
+        images: [
+          {
+            src: "/docs/screenshots/agentgateway-routes.png",
+            alt: "agentgateway dashboard Traffic Routes page showing Route 1 (HTTP, bind 3000, listener Listener 1, match /) wired to the apps backend",
+            caption:
+              "agentgateway's own dashboard - Traffic > Routes, showing the real route MCP calls go through.",
+          },
+          {
+            src: "/docs/screenshots/agentgateway-route-edit.png",
+            alt: "agentgateway's Edit route panel for Route 1: Prefix path match /, no header or query conditions, one legacy MCP backend, a CORS route policy, and the Resulting YAML with an apps-backend target of type openapi whose schema file is /shared/openapi/openapi.yaml and host is backend:8080",
+            caption: "Edit route on Route 1. The Resulting YAML at the bottom is the route's real configuration.",
+          },
+        ],
+        closing: [
+          "The route matches everything under / and sends it to one MCP backend. The form shows it as \"legacy MCP " +
+            "backend - unsupported backend shape in this form\", but the Resulting YAML spells it out: a single target, " +
+            "apps-backend, of type openapi, with schema.file pointing at /shared/openapi/openapi.yaml and host " +
+            "backend:8080. That is where the tools come from: the OpenAPI contract is the schema, and every operation " +
+            "in it becomes a tool that is sent to backend:8080. The cors policy below it is what lets a browser client " +
+            "such as MCP Inspector call the gateway. Close the panel with Cancel - Save route would change the running " +
+            "configuration.",
+        ],
       },
       {
         heading: "3. Try it in MCP Inspector",
         code: [{ code: "make apps:mcp   # opens MCP Inspector at http://localhost:6274" }],
+        sequence: {
+          summary:
+            "Sequence diagram: MCP Inspector initializes a session with agentgateway, lists the tools the gateway built from openapi.yaml, and calls list_accounts_accounts_get, which the gateway turns into a GET /accounts on the backend and returns as the tool result.",
+          participants: [
+            { id: "mi", label: "MCP Inspector", sub: "MCP client" },
+            { id: "ag", label: "agentgateway", sub: "MCP -> REST" },
+            { id: "be", label: "Backend", sub: "REST" },
+          ],
+          steps: [
+            { kind: "message", from: "mi", to: "ag", text: "Flip the switch: initialize", detail: "MCP over Streamable HTTP, :8010/mcp" },
+            { kind: "message", from: "ag", to: "mi", text: "Session started", detail: "mcp-session-id", dashed: true },
+            { kind: "message", from: "mi", to: "ag", text: "Tools tab: tools/list" },
+            { kind: "note", at: "ag", text: "Eight tools, built from openapi.yaml - no backend call" },
+            { kind: "message", from: "ag", to: "mi", text: "The tool list", detail: "name + title per operation", dashed: true },
+            { kind: "message", from: "mi", to: "ag", text: "Execute Tool: tools/call", detail: "list_accounts_accounts_get" },
+            { kind: "message", from: "ag", to: "be", text: "The matching REST call", detail: "GET /accounts" },
+            { kind: "message", from: "be", to: "ag", text: "The account balances", detail: "JSON", dashed: true },
+            { kind: "message", from: "ag", to: "mi", text: "The tool result", detail: "the same JSON as the content", dashed: true },
+          ],
+        },
         body: [
           "MCP Inspector (started with apps:up) lists agentgateway next to the backend's own /mcp. " +
             "How to connect and call a tool is shown with the backend in [Getting Started](/docs/getting-started); " +
@@ -93,10 +147,16 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
             caption: "Connected to agentgateway: titled tools built from the OpenAPI contract, same account data.",
           },
         ],
-        note:
+        closing: [
+          "Tools that need a token work here too: try get_me_me_get the same way. The Inspector's config " +
+          "(apps/mcp-inspector/config.json) sends the demo token as an Authorization header with every request " +
+          "to agentgateway, and the gateway passes it on to the backend, so the call returns the demo user's " +
+          "profile. Without that header the same call answers \"invalid or missing token\" - which is what " +
+          "step 4 below solves for Claude Code.",
           "The backend's native /mcp also exposes its two GraphQL routes as tools, so its tool list is longer " +
           "than the eight agentgateway builds from the OpenAPI contract. Claude Code can use the " +
           "gateway too - step 4 below registers it, with a token.",
+        ],
       },
       {
         heading: "4. Register it in Claude Code, with a token",
@@ -126,11 +186,12 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
             code: "claude mcp list",
           },
         ],
-        note:
+        closing: [
           "get_me returning the demo user's profile means the token went through; \"invalid or missing token\" means the header was not " +
           "registered - claude mcp get does not list headers (its Connected says nothing about them), ~/.claude.json does. The demo " +
           "token never expires; a Keycloak access token lasts minutes. Claude Desktop works the same way through the mcp-remote bridge " +
           "(see Getting Started) with its --header option - not tried here.",
+        ],
         subsections: [
           {
             heading: "Why not the browser login (Authenticate)?",
@@ -148,43 +209,13 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "The dashboard",
-        code: [
-          {
-            code: "make agentgateway:open   # http://localhost:15000 -> redirects to /ui",
-          },
-        ],
-        body: [
-          "agentgateway ships a real dashboard UI (a React SPA built into the image by default), served " +
-            "off its admin port - separate from the MCP port above. Routes -> Route 1 shows exactly the " +
-            "backend this apps-demo route is actually wired to - the same route agentgateway:tools just " +
-            "proved works.",
-        ],
-        images: [
-          {
-            src: "/docs/screenshots/agentgateway-routes.png",
-            alt: "agentgateway dashboard Traffic Routes page showing Route 1 (HTTP, bind 3000, listener Listener 1, match /) wired to the apps backend",
-            caption:
-              "agentgateway's own dashboard - Traffic > Routes, showing the real route MCP calls go through.",
-          },
-        ],
-      },
-      {
-        heading: "Contract and backend availability",
-        body: [
-          "agentgateway reads shared/openapi/openapi.yaml from a read-only mount when it starts, " +
-            "so the backend can be down while the gateway starts and lists its tools. " +
-            "Tool calls still need the backend to be running.",
-        ],
-      },
-      {
         heading: "Cleanup",
         code: [{ code: "make agentgateway:down" }],
       },
     ],
   },
   ja: {
-    title: "シナリオ7: agentgateway経由でのMCPアクセス",
+    title: "シナリオ6: agentgateway経由でのMCPアクセス",
     description:
       "backendはすでに、自身のREST routesから自動生成されたMCPサーバーをfastapi-mcp経由で/mcpにネイティブ" +
       "にマウントしています。agentgatewayはそこに至るもう一つの経路です — backend側のMCP用コードではなく、" +
@@ -214,6 +245,9 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
             "これが「本当にopenapi.yamlを読んでいる」ことの実際の確認であり、ハードコードされた例では" +
             "ありません。openapi.yamlの1オペレーションにつき1ツール、名前も説明もそこからそのまま取ら" +
             "れた、8個のツールです。",
+          "この一覧はagentgateway:upだけで表示できます。ゲートウェイは起動時にshared/openapi/openapi.yamlを" +
+            "直接読み込む(config.yamlのschema.file。読み取り専用でマウント)ため、backendが動いていなくても" +
+            "ツールが分かります。backendが必要になるのは、ツールを実際に呼び出すとき(手順3)からです。",
         ],
         terminal: {
           lines: [
@@ -243,22 +277,72 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
             },
           ],
         },
+        noteTitle: "agentgateway: OpenAPIをMCPツールとして公開",
+        noteHref: "https://agentgateway.dev/docs/standalone/latest/mcp/connect/openapi/",
+        note:
+          "agentgateway/config.yamlは、ゲートウェイにopenapiターゲット(schema.fileとhost: " +
+          "backend:8080)を持たせています。agentgatewayは仕様内のオペレーション1つにつきMCPツールを1つ生成し(名前はoperationId)、ツール呼び出しを対応するHTTPリクエストに変換します。",
       },
       {
-        heading: "2. ゲートウェイ経由でツールを呼び出す",
-        body: [
-          "ツールを呼び出す前にmake apps:upを実行します。list_accounts_accounts_getをゲートウェイ経由で呼び出すと、GET /accounts自体" +
-            "が返すのと同じライブなデータが返ります — 静的な説明ではなく、稼働中のbackendへの本物のプロキシ" +
-            "です。",
+        heading: "2. ダッシュボードを開く",
+        code: [
+          {
+            code: "make agentgateway:open   # http://localhost:15000 -> /uiへリダイレクト",
+          },
         ],
-        note:
-          "get_me、update_profile、create_transactionは、背後のRESTルートと同じく本物のbearerトークンが" +
-          "必要です。ツールの引数にAuthorizationヘッダーは無いので、そのまま呼ぶと「invalid or missing token」に" +
-          "なります — 下の「4. トークンを付けてClaude Codeに登録する」を見てください。",
+        body: [
+          "agentgatewayを起動したら、起動時に読み込まれた設定を確認します。ダッシュボード(イメージに組み込まれた" +
+            "React SPA)はMCPポートとは別のadminポートで提供されていて、agentgateway/config.yamlが適用した" +
+            "ルートが表示されます。Routesを開き、Route 1の鉛筆アイコン(Edit route)をクリックすると、" +
+            "設定されている内容を見られます。",
+        ],
+        imagesLayout: "stack",
+        images: [
+          {
+            src: "/docs/screenshots/agentgateway-routes.png",
+            alt: "agentgatewayダッシュボードのTraffic Routesページ。Route 1(HTTP、bind 3000、listener Listener 1、match /)がappsのbackendに配線されている様子",
+            caption:
+              "agentgateway自身のダッシュボード — Traffic > Routes。MCP呼び出しが実際に通る経路が表示されている。",
+          },
+          {
+            src: "/docs/screenshots/agentgateway-route-edit.png",
+            alt: "agentgatewayのRoute 1のEdit routeパネル。パスマッチはPrefixの/、ヘッダー・クエリの条件なし、legacy MCP backendが1つ、CORSのルートポリシーがあり、下部のResulting YAMLにはapps-backendターゲット(種類はopenapi、schemaのfileは/shared/openapi/openapi.yaml、hostはbackend:8080)が表示されている",
+            caption: "Route 1のEdit route。下部のResulting YAMLが、このルートの実際の設定です。",
+          },
+        ],
+        closing: [
+          "このルートは/以下をすべて一致させ、MCPバックエンドの1つへ送ります。フォームでは「legacy MCP backend — " +
+            "Unsupported backend shape in this form」と表示されますが、Resulting YAMLには中身が書かれています: " +
+            "ターゲットは1つ、apps-backend(種類はopenapi)で、schema.fileは/shared/openapi/openapi.yamlを、hostは" +
+            "backend:8080を指しています。ツールの出どころはここで、OpenAPI契約がschemaとなり、その中のオペレーション" +
+            "1つ1つがツールになってbackend:8080へ送られます。その下のcorsポリシーは、MCP Inspectorのような" +
+            "ブラウザのクライアントがゲートウェイを呼べるようにするためのものです。パネルはCancelで閉じてください — " +
+            "Save routeを押すと動作中の設定が変わります。",
+        ],
       },
       {
         heading: "3. MCP Inspectorで試す",
         code: [{ code: "make apps:mcp   # MCP Inspectorを開く(http://localhost:6274)" }],
+        sequence: {
+          summary:
+            "シーケンス図: MCP Inspectorはagentgatewayとセッションを開始し、ゲートウェイがopenapi.yamlから作ったツールを一覧し、list_accounts_accounts_getを呼び出します。ゲートウェイはそれをbackendへのGET /accountsに変換し、結果をツールの結果として返します。",
+          participants: [
+            { id: "mi", label: "MCP Inspector", sub: "MCP client" },
+            { id: "ag", label: "agentgateway", sub: "MCP -> REST" },
+            { id: "be", label: "Backend", sub: "REST" },
+          ],
+          steps: [
+            { kind: "message", from: "mi", to: "ag", text: "スイッチをオン: initialize", detail: "Streamable HTTPのMCP、:8010/mcp" },
+            { kind: "message", from: "ag", to: "mi", text: "セッション開始", detail: "mcp-session-id", dashed: true },
+            { kind: "message", from: "mi", to: "ag", text: "Toolsタブ: tools/list" },
+            { kind: "note", at: "ag", text: "openapi.yamlから作った8個のツール — backendは呼ばない" },
+            { kind: "message", from: "ag", to: "mi", text: "ツール一覧", detail: "オペレーションごとのname + title", dashed: true },
+            { kind: "message", from: "mi", to: "ag", text: "Execute Tool: tools/call", detail: "list_accounts_accounts_get" },
+            { kind: "message", from: "ag", to: "be", text: "対応するRESTの呼び出し", detail: "GET /accounts" },
+            { kind: "message", from: "be", to: "ag", text: "勘定科目の残高", detail: "JSON", dashed: true },
+            { kind: "message", from: "ag", to: "mi", text: "ツールの結果", detail: "同じJSONをcontentとして返す", dashed: true },
+          ],
+        },
         body: [
           "MCP Inspector(apps:upと一緒に起動)には、backend自身の/mcpと並んでagentgatewayが載っています。" +
             "接続とツール呼び出しの手順はbackendを例に[Getting Started](/docs/getting-started)で示しているので、" +
@@ -276,10 +360,16 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
             caption: "agentgatewayに接続した状態: OpenAPI契約から作られたタイトル付きのツールと、同じ勘定科目データ。",
           },
         ],
-        note:
+        closing: [
+          "トークンが必要なツールもここで試せます: 同じ要領でget_me_me_getを呼んでみてください。Inspectorの設定" +
+          "(apps/mcp-inspector/config.json)は、agentgatewayへのすべてのリクエストにデモトークンをAuthorizationヘッダーとして" +
+          "付けて送り、ゲートウェイはそれをそのままbackendへ渡すので、デモユーザーのプロフィールが返ります。" +
+          "このヘッダーがないと同じ呼び出しは「invalid or missing token」になります — これをClaude Code向けに" +
+          "解決するのが下の手順4です。",
           "backendのネイティブな/mcpはGraphQLの2つのルートもツールとして公開するため、OpenAPI契約からagentgatewayが作る8個より" +
           "ツール数が多くなります。Claude Codeからもゲートウェイを使えます — " +
           "下の手順4でトークンを付けて登録します。",
+        ],
       },
       {
         heading: "4. トークンを付けてClaude Codeに登録する",
@@ -308,11 +398,12 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
             code: "claude mcp list",
           },
         ],
-        note:
+        closing: [
           "get_meがデモユーザーのプロフィールを返せば、トークンは通っています。「invalid or missing token」ならヘッダーが登録されて" +
           "いません — claude mcp getはヘッダーを表示しません(Connectedはヘッダーと無関係です)。確認は~/.claude.jsonで行います。デモ" +
           "トークンは期限なし、Keycloakのアクセストークンは数分です。Claude Desktopもmcp-remoteブリッジ(Getting Startedを参照)の" +
           "--headerオプションで同じように使えますが、ここでは試していません。",
+        ],
         subsections: [
           {
             heading: "ブラウザログイン(Authenticate)ではない理由",
@@ -327,35 +418,6 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
                 "agentgatewayのissue #3668により、Claude Codeがそのログインを拒否します(RFC 9207の発行元の不一致)。",
             ],
           },
-        ],
-      },
-      {
-        heading: "ダッシュボード",
-        code: [
-          {
-            code: "make agentgateway:open   # http://localhost:15000 -> /uiへリダイレクト",
-          },
-        ],
-        body: [
-          "agentgatewayには本物のダッシュボードUI(デフォルトでイメージに組み込まれたReact SPA)があり、" +
-            "上記MCPポートとは別のadminポートで提供されています。Routes -> Route 1では、このapps-demo" +
-            "ルートが実際にどのbackendへ配線されているかがそのまま見えます — agentgateway:toolsが" +
-            "動作を証明したのと、まさに同じルートです。",
-        ],
-        images: [
-          {
-            src: "/docs/screenshots/agentgateway-routes.png",
-            alt: "agentgatewayダッシュボードのTraffic Routesページ。Route 1(HTTP、bind 3000、listener Listener 1、match /)がappsのbackendに配線されている様子",
-            caption:
-              "agentgateway自身のダッシュボード — Traffic > Routes。MCP呼び出しが実際に通る経路が表示されている。",
-          },
-        ],
-      },
-      {
-        heading: "コントラクトとbackendの起動状態",
-        body: [
-          "agentgatewayは起動時にshared/openapi/openapi.yamlを読み取り専用のマウントから直接読み込みます。" +
-            "backendが停止していても起動とツール一覧の表示ができますが、ツールの呼び出しには稼働中のbackendが必要です。",
         ],
       },
       {

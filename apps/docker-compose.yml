@@ -89,14 +89,14 @@ services:
       # logs in at; the backend fetches the signing keys from the
       # in-network address below instead.
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
-      # MCP login (app/mcp_oauth.py) - unset (the default) leaves /mcp open.
-      # Set APPS_MCP_AUTH_REQUIRED=true in .env (+ `apps:restart`) and /mcp answers
-      # 401 until the client has logged in: an MCP client such as Claude Code
-      # then opens the browser on the frontend's /mcp-authorize page, which
-      # takes the same login as the app (demo login, or Keycloak when
-      # KEYCLOAK_ISSUER is set). The two URLs are the addresses the MCP client
-      # and browser use (host-published), not the in-network ones.
-      MCP_AUTH_REQUIRED: ${APPS_MCP_AUTH_REQUIRED:-}
+      # MCP login (app/mcp_oauth.py) - on by default: /mcp answers 401 until the
+      # client has logged in; an MCP client such as Claude Code then opens the
+      # browser on the frontend's /mcp-authorize page, which takes the same login
+      # as the app (demo login, or Keycloak when KEYCLOAK_ISSUER is set).
+      # APPS_MCP_AUTH_REQUIRED=false in .env (+ `apps:restart`) leaves /mcp open.
+      # The two URLs are the addresses the MCP client and browser use
+      # (host-published), not the in-network ones.
+      MCP_AUTH_REQUIRED: ${APPS_MCP_AUTH_REQUIRED:-true}
       PUBLIC_BASE_URL: ${APPS_PUBLIC_BASE_URL:-http://localhost:8080}
       MCP_AUTHORIZE_URL: ${APPS_MCP_AUTHORIZE_URL:-http://localhost:5173/mcp-authorize}
       KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-http://keycloak:8080/realms/nasebanal/protocol/openid-connect/certs}

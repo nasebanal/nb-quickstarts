@@ -39,7 +39,7 @@ export const scenarioKafka: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "1. Start the target and both paths in",
+        heading: "1. Start the target and both paths",
         code: [
           {
             code: "make apps:up\nmake kafka:up && make kafka:bridge-up",
@@ -47,7 +47,7 @@ export const scenarioKafka: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "2. Direct REST - this is the one that errors",
+        heading: "2. Load the backend directly over REST - this is the one that errors",
         body: [
           "locustfile_http_overload.py hammers POST /transactions directly. At this repo's own default " +
             "limits (SQLAlchemy's default connection pool, a single uvicorn worker in --reload mode), " +
@@ -58,12 +58,13 @@ export const scenarioKafka: LocalizedDocsPage = {
             code: "make locust:load LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
           },
         ],
-        note:
+        closing: [
           "Or with the UI: make locust:up LOCUST_FILE=locustfile_http_overload.py, then enter 300 / 100 " +
           "at http://localhost:8089. A fresh run of this exact command, in this environment: 78 " +
           "requests, 66 failed (84.62%) - HTTPError 500s and ConnectionResetError, median 32s. Exact " +
           "numbers move with your own hardware; a high failure rate and a median near the 30s DB-pool " +
           "timeout is the part that should reproduce.",
+        ],
       },
       {
         heading: "3. Wait for the backend to recover",
@@ -74,18 +75,19 @@ export const scenarioKafka: LocalizedDocsPage = {
         code: [{ code: "until curl -sf -m 5 http://localhost:8080/health >/dev/null; do sleep 10; done" }],
       },
       {
-        heading: "4. The same load through Kafka",
+        heading: "4. Run the same load through Kafka",
         code: [
           {
             code: "make locust:load LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
           },
         ],
-        note:
+        closing: [
           "make locust:up LOCUST_FILE=locustfile_kafka.py with the same 300 / 100 in the UI works too. " +
           "Use make locust:restart to switch cleanly between the two in UI mode.",
+        ],
       },
       {
-        heading: "Measured results",
+        heading: "5. Read the measured results",
         body: [
           "Same event, same volume, two paths in - use the same users/spawn rate for both. These are " +
             "the settings where direct REST fails on a single laptop with this repo's default limits.",
@@ -124,15 +126,16 @@ export const scenarioKafka: LocalizedDocsPage = {
             labels: EN_CHART_LABELS,
           },
         ],
-        note:
+        closing: [
           "Success rate and failure rate are cumulative (failed / completed requests so far), from " +
           "Locust's own per-second stats history. Direct REST sits at 100% until the first timeouts land " +
           "at ~35s - the 300 users are stuck waiting on the exhausted DB pool the whole time (only " +
           "~4 writes completed in the first 35s) - then collapses to 15% success. Via Kafka the producer " +
           "is never refused: 1.58M writes by 40s, 0 failures.",
+        ],
       },
       {
-        heading: "Why the gap",
+        heading: "6. Understand the gap",
         body: [
           "kafka-bridge drains the topic at its own steady, sequential pace and never forwards a burst " +
             "to the backend - the backend never sees more concurrent writes than one consumer, one " +
@@ -152,13 +155,14 @@ export const scenarioKafka: LocalizedDocsPage = {
             { text: "  ^ real capture, mid-drain: 915,057 events still queued for the bridge to forward" },
           ],
         },
-        note:
-          "Scenario 4 (Observability) shows this same overload run live in Grafana - 5xx ratio, p95 " +
+        closing: [
+          "Scenario 7 (Observability) shows this same overload run live in Grafana - 5xx ratio, p95 " +
           "latency and DB connections in use spike during the direct-REST step and stay flat during the " +
           "Kafka one.",
+        ],
       },
       {
-        heading: "Clear the backlog before a fresh comparison",
+        heading: "7. Clear the backlog before a fresh comparison",
         code: [{ code: "make kafka:reset" }],
         body: [
           "Confirmed directly: after this, the same consumer-groups --describe command above shows a " +
@@ -189,7 +193,7 @@ export const scenarioKafka: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "1. テスト対象と両方の経路を起動",
+        heading: "1. テスト対象と両方の経路を起動する",
         code: [
           {
             code: "make apps:up\nmake kafka:up && make kafka:bridge-up",
@@ -197,7 +201,7 @@ export const scenarioKafka: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "2. REST直叩き — これがエラーになる側",
+        heading: "2. REST直叩きで負荷をかける — これがエラーになる側",
         body: [
           "locustfile_http_overload.pyはPOST /transactionsを直接叩きます。このリポジトリのデフォルト制限" +
             "(SQLAlchemyのデフォルト接続プール、--reloadモードのuvicornワーカー1つ)では、負荷が一定を" +
@@ -208,12 +212,13 @@ export const scenarioKafka: LocalizedDocsPage = {
             code: "make locust:load LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
           },
         ],
-        note:
+        closing: [
           "UIを使う場合: make locust:up LOCUST_FILE=locustfile_http_overload.pyのうえで、" +
           "http://localhost:8089で300 / 100を入力。このコマンドをそのまま今回の環境で実行した結果: " +
           "78リクエスト中66件失敗(84.62%)— HTTPError 500とConnectionResetError、median 32秒。正確な" +
           "数値は手元のハードウェアによって変わりますが、高い失敗率と30秒のDBプールタイムアウト付近の" +
           "medianという部分は再現するはずです。",
+        ],
       },
       {
         heading: "3. backendの回復を待つ",
@@ -224,18 +229,19 @@ export const scenarioKafka: LocalizedDocsPage = {
         code: [{ code: "until curl -sf -m 5 http://localhost:8080/health >/dev/null; do sleep 10; done" }],
       },
       {
-        heading: "4. 同じ負荷をKafka経由で",
+        heading: "4. 同じ負荷をKafka経由でかける",
         code: [
           {
             code: "make locust:load LOCUST_FILE=locustfile_kafka.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100 LOCUST_RUN_TIME=40s",
           },
         ],
-        note:
+        closing: [
           "UIでも同様: make locust:up LOCUST_FILE=locustfile_kafka.pyで同じ300 / 100を入力。UIモードで" +
           "両者をきれいに切り替えるにはmake locust:restartを使います。",
+        ],
       },
       {
-        heading: "実測結果",
+        heading: "5. 実測結果を確認する",
         body: [
           "同じイベント、同じ量を2つの経路で — 両方とも同じUsers/spawn rateを使います。以下は、1台の" +
             "ノートPC・このリポジトリのデフォルト制限のもとで、REST直叩きが実際に失敗する設定です。",
@@ -274,15 +280,16 @@ export const scenarioKafka: LocalizedDocsPage = {
             labels: JA_CHART_LABELS,
           },
         ],
-        note:
+        closing: [
           "成功率・失敗率は累積(それまでに完了したリクエストのうち成功/失敗した割合)で、Locust自身が" +
           "1秒ごとに記録する統計履歴から作っています。REST直叩きは最初のタイムアウトが返る約35秒まで" +
           "100%のままですが、これは300ユーザーが枯渇したDBプールを待って止まっているためで(最初の35秒間に" +
           "完了した書き込みは約4件だけ)、その後成功率15%まで急落します。Kafka経由ではproducerが拒否されることが" +
           "なく、40秒で158万件を失敗0で書き込めています。",
+        ],
       },
       {
-        heading: "この差が出る理由",
+        heading: "6. 差が出る理由を理解する",
         body: [
           "kafka-bridgeは自分自身の一定で逐次的なペースでトピックを消費し、バーストをbackendに転送する" +
             "ことがありません — 負荷テストがどれだけ速くトピックにproduceしても、backend側は「consumerが" +
@@ -301,13 +308,14 @@ export const scenarioKafka: LocalizedDocsPage = {
             { text: "  ^ 実際のキャプチャ(drain中): bridgeがまだ転送していないイベントが915,057件残っている" },
           ],
         },
-        note:
-          "シナリオ4(オブザーバビリティ)では、この同じoverload実行をGrafana上でライブに見ます — " +
+        closing: [
+          "シナリオ7(オブザーバビリティ)では、この同じoverload実行をGrafana上でライブに見ます — " +
           "REST直叩きのステップでは5xx比率・p95レイテンシ・使用中のDB接続数が跳ね上がり、Kafka経由の" +
           "ステップでは平坦なままになります。",
+        ],
       },
       {
-        heading: "新しく比較する前に溜まった分をクリア",
+        heading: "7. 新しく比較する前に溜まった分をクリアする",
         code: [{ code: "make kafka:reset" }],
         body: [
           "実際に確認済み: この後、同じconsumer-groups --describeコマンドを実行すると、トピックが" +
