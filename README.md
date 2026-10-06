@@ -290,12 +290,23 @@ There's only ever one `apps_backend` service to edit — no separate service per
 
 `apps/backend`'s `POST /transactions` is protected by `app/auth.py`'s `get_current_username` — until now, only satisfiable with a mock token from `POST /auth/login` (a username, no password). Keycloak adds a real OIDC login: the login page gets a **Demo login / Keycloak** toggle (with **Sign up**), you authenticate at Keycloak like you would with "Sign in with Google", and the backend accepts the JWT Keycloak issued on the exact same route. One variable turns on both the backend and the login page:
 
+Starting Keycloak is not enough: the login page offers it (and the backend accepts its tokens) only when **`KEYCLOAK_ISSUER` is set in `.env`** - that one variable is how the apps learn Keycloak exists. Without it the login dialog shows only the demo login, even with Keycloak running. Three steps:
+
 ```bash
 make apps:up
-make keycloak:up
-# .env: KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal
-make apps:restart          # backend and frontend need recreating to pick it up
+make keycloak:up                  # 1. start Keycloak
 ```
+
+```bash
+# 2. .env (.env.example has the line, empty) - this is what makes the login page show Keycloak
+KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal
+```
+
+```bash
+make apps:restart                 # 3. backend and frontend need recreating to pick it up
+```
+
+No **Demo login / Keycloak** toggle? `KEYCLOAK_ISSUER` is missing from `.env` (or commented out with a `#`), or `apps:restart` has not run since you set it - `docker exec nb-frontend printenv NEXT_PUBLIC_KEYCLOAK_ISSUER` prints the issuer when it is on, nothing when it is off.
 
 Then open http://localhost:5173, click Login, pick **Keycloak**, and sign in as `keycloak-demo` / `nasebanal-demo` (or **Sign up** for a new user — the form is Keycloak's own; `make keycloak:open` shows the user in the admin console). The user menu shows a Keycloak badge, and recording a transaction succeeds because the backend verified the token's signature against Keycloak's public keys.
 
