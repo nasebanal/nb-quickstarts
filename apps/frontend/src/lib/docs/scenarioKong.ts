@@ -36,6 +36,27 @@ export const scenarioKong: LocalizedDocsPage = {
               "make apps:restart   # frontend needs recreating to pick up the new value",
           },
         ],
+        imagesLayout: "stack",
+        images: [
+          {
+            src: "/docs/screenshots/kong-frontend-via-kong.png",
+            alt: "The frontend's account page with API endpoint http://localhost:8000/api and the Via Kong checkbox checked",
+            caption: "After apps:restart: the API endpoint is http://localhost:8000/api and Via Kong is checked.",
+          },
+        ],
+        closing: [
+          "Log in at http://localhost:5173 and look at the strip above the balances: it shows the API endpoint the " +
+            "frontend is using and three checkboxes. They are read-only indicators, and each is checked from a real " +
+            "response header, not from configuration - Via Kong when the answer carries Kong's Via header. The same " +
+            "balances appear either way; only the route changed.",
+        ],
+        noteTitle: "Kong: DB mode and declarative configuration",
+        noteHref: "https://docs.konghq.com/gateway/latest/production/deployment-topologies/db-less-and-declarative-config/",
+        note:
+          "kong/conf/declarative.yml describes Kong's services, routes and plugins as declarative configuration. In " +
+          "DB-less mode (KONG_DB=off) Kong reads only that file and its Admin API is read-only. This repo defaults " +
+          "to DB mode: the file is imported into Postgres on the first start (or by make kong:reset), after which " +
+          "the same entities can be edited in Kong Manager.",
       },
       {
         heading: "2. Start the contract mocks",
@@ -50,8 +71,7 @@ export const scenarioKong: LocalizedDocsPage = {
             code: "make specmatic:mock-up",
           },
         ],
-        note:
-          "Specmatic's mock needs no Path at all, since its mock paths already match the real API directly.",
+        closing: ["Specmatic's mock needs no Path at all, since its mock paths already match the real API directly."],
       },
       {
         heading: "3. Swap the target to a contract mock",
@@ -79,21 +99,22 @@ export const scenarioKong: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "Steps in Kong Manager",
+        heading: "4. Edit it in Kong Manager",
         bullets: [
           "make kong:open (or open http://localhost:8002) → Gateway Services → apps_backend → Edit.",
           "Set Host / Port / Path to one of the targets above, then Save.",
-          "curl http://localhost:8000/api/accounts (or reload the frontend, if it's routed " +
-            "through Kong) to confirm - allow a couple of seconds for the change to propagate.",
+          "curl http://localhost:8000/api/accounts, or reload the frontend's account page (the checkboxes are " +
+            "checked once when the page loads, so a reload is needed), to confirm - allow a couple of seconds " +
+            "for the change to propagate.",
           "To go back to the real backend: edit apps_backend again, Host backend / Port 8080 / Path " +
             "empty, Save.",
         ],
       },
       {
-        heading: "Verify it worked",
+        heading: "5. Verify it worked",
         body: [
           "The real backend and Specmatic's mock return structurally similar but genuinely different " +
-            "data - the mock's is schema-valid but randomly generated, never the ledger's real values. " +
+            "data - the mock answers with the example written in the contract (openapi.yaml), never the ledger's real values. " +
             "That difference through the exact same curl, before and after the edit, is the proof the " +
             "swap actually took effect (via the Admin API here - the same edit Kong Manager's Save " +
             "button makes):",
@@ -105,7 +126,7 @@ export const scenarioKong: LocalizedDocsPage = {
               tone: "muted",
             },
             {
-              text: '[{"name":"Cash","balance":120000,"eventCount":3},{"name":"Kafka Load Account","balance":744370,...',
+              text: '[{"name":"Cash","balance":121012,"eventCount":8},{"name":"Rent Expense","balance":30000,"eventCount":1},...',
             },
             { text: "" },
             {
@@ -119,14 +140,36 @@ export const scenarioKong: LocalizedDocsPage = {
               tone: "muted",
             },
             {
-              text: '[{"name": "IYBOK", "balance": 133, "eventCount": 240}]',
+              text: '[{"name": "Cash", "balance": 120000, "eventCount": 3},',
               tone: "success",
             },
             {
-              text: "  ^ Specmatic's mock - a schema-valid but randomly generated response, not the real ledger",
+              text: ' {"name": "Rent Expense", "balance": 30000, "eventCount": 1},',
+              tone: "success",
+            },
+            {
+              text: ' {"name": "Sales Revenue", "balance": 50000, "eventCount": 1}]',
+              tone: "success",
+            },
+            {
+              text: "  ^ Specmatic's mock - the example from the contract (the same every time), not the real ledger",
             },
           ],
         },
+        imagesLayout: "stack",
+        images: [
+          {
+            src: "/docs/screenshots/kong-frontend-via-mock.png",
+            alt: "The frontend's account page after apps_backend was pointed at Specmatic's mock: Via Kong and Via Mock both checked, and only three accounts listed",
+            caption: "After the swap and a reload: Via Mock is checked too, and the balances are the mock's example data.",
+          },
+        ],
+        closing: [
+          "The frontend shows the same thing. Reload its account page after the edit: Via Mock is now checked " +
+            "next to Via Kong (Specmatic's mock adds an X-Specmatic-Result response header the real backend never " +
+            "sends, which is what the checkbox looks for), and the balance table switches to the mock's example " +
+            "data. The API endpoint is still http://localhost:8000/api - the frontend itself was not touched.",
+        ],
       },
       {
         heading: "Cleanup",
@@ -181,6 +224,26 @@ export const scenarioKong: LocalizedDocsPage = {
               "make apps:restart   # frontendを再作成して新しい値を反映",
           },
         ],
+        imagesLayout: "stack",
+        images: [
+          {
+            src: "/docs/screenshots/kong-frontend-via-kong.png",
+            alt: "frontendの勘定科目ページ。API endpointはhttp://localhost:8000/apiで、Via Kongのチェックボックスがチェックされている",
+            caption: "apps:restart後: API endpointがhttp://localhost:8000/apiになり、Via Kongにチェックが入ります。",
+          },
+        ],
+        closing: [
+          "http://localhost:5173にログインし、残高表の上の帯を見てください。frontendが使っているAPI endpointと、" +
+            "3つのチェックボックスが表示されています。これらは読み取り専用の表示で、設定からの推測ではなく実際の" +
+            "レスポンスヘッダーで判定しています — 応答にKongのViaヘッダーが付いていればVia Kongにチェックが入ります。" +
+            "どちらの経路でも同じ残高が表示され、変わったのは経路だけです。",
+        ],
+        noteTitle: "Kong: DBモードと宣言的設定",
+        noteHref: "https://docs.konghq.com/gateway/latest/production/deployment-topologies/db-less-and-declarative-config/",
+        note:
+          "kong/conf/declarative.ymlは、Kongのservice・route・pluginを宣言的設定として記述したファイルです。DB-lessモード(KONG_DB=off)ではKongはこのファイルだけを読み、Admin " +
+          "APIは読み取り専用になります。このリポジトリは既定でDBモードで、初回起動時(またはmake kong:reset)にこのファイルがPostgresへ取り込まれ、以後は同じエンティティをKong " +
+          "Managerで編集できます。",
       },
       {
         heading: "2. 契約モックを起動する",
@@ -195,8 +258,7 @@ export const scenarioKong: LocalizedDocsPage = {
             code: "make specmatic:mock-up",
           },
         ],
-        note:
-          "Specmaticのモックはモック側のパスが実APIとそのまま一致するため、Pathの指定は不要です。",
+        closing: ["Specmaticのモックはモック側のパスが実APIとそのまま一致するため、Pathの指定は不要です。"],
       },
       {
         heading: "3. 向き先を契約モックへ差し替える",
@@ -223,20 +285,21 @@ export const scenarioKong: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "Kong Managerでの手順",
+        heading: "4. Kong Managerで編集する",
         bullets: [
           "make kong:open(またはhttp://localhost:8002を開く)→ Gateway Services → apps_backend → Edit。",
           "Host / Port / Pathを上の表いずれかに設定してSave。",
-          "curl http://localhost:8000/api/accounts(またはKong経由のfrontendをリロード)で確認 " +
+          "curl http://localhost:8000/api/accounts、またはfrontendの勘定科目ページのリロード(チェックボックスは" +
+            "ページを開いたときに一度だけ判定されるため、リロードが必要です)で確認します " +
             "— 反映まで数秒かかることがあります。",
           "実backendに戻すには: apps_backendを再度編集し、Host backend / Port 8080 / Pathは空でSave。",
         ],
       },
       {
-        heading: "反映されたことを確認する",
+        heading: "5. 反映されたことを確認する",
         body: [
           "実backendとSpecmaticのモックは、構造は似ていても中身がまったく異なるデータを返します — " +
-            "モックの応答はスキーマ的には正しいものの、ランダムに生成された値で、台帳の実データでは" +
+            "モックはコントラクト(openapi.yaml)に書かれたexampleを返し、台帳の実データでは" +
             "決してありません。同じcurlを編集の前後で叩いたときのこの違いこそが、切り替えが実際に" +
             "反映された証拠です(ここではAdmin API経由 — Kong ManagerのSaveボタンが行うのと同じ編集です):",
         ],
@@ -247,7 +310,7 @@ export const scenarioKong: LocalizedDocsPage = {
               tone: "muted",
             },
             {
-              text: '[{"name":"Cash","balance":120000,"eventCount":3},{"name":"Kafka Load Account","balance":744370,...',
+              text: '[{"name":"Cash","balance":121012,"eventCount":8},{"name":"Rent Expense","balance":30000,"eventCount":1},...',
             },
             { text: "" },
             {
@@ -261,14 +324,36 @@ export const scenarioKong: LocalizedDocsPage = {
               tone: "muted",
             },
             {
-              text: '[{"name": "IYBOK", "balance": 133, "eventCount": 240}]',
+              text: '[{"name": "Cash", "balance": 120000, "eventCount": 3},',
               tone: "success",
             },
             {
-              text: "  ^ Specmaticのモック — スキーマ的には妥当だがランダム生成された値で、実際の台帳ではない",
+              text: ' {"name": "Rent Expense", "balance": 30000, "eventCount": 1},',
+              tone: "success",
+            },
+            {
+              text: ' {"name": "Sales Revenue", "balance": 50000, "eventCount": 1}]',
+              tone: "success",
+            },
+            {
+              text: "  ^ Specmaticのモック — コントラクトのexample(毎回同じ値)で、実際の台帳ではない",
             },
           ],
         },
+        imagesLayout: "stack",
+        images: [
+          {
+            src: "/docs/screenshots/kong-frontend-via-mock.png",
+            alt: "apps_backendをSpecmaticのモックへ向けた後のfrontendの勘定科目ページ。Via KongとVia Mockの両方にチェックが入り、勘定科目は3つだけ表示されている",
+            caption: "差し替えてリロードした後: Via Mockにもチェックが入り、残高はモックのexampleデータになります。",
+          },
+        ],
+        closing: [
+          "frontendの画面でも同じことが分かります。編集後に勘定科目ページをリロードすると、Via Kongに加えて" +
+            "Via Mockにもチェックが入り(Specmaticのモックは実backendが返さないX-Specmatic-Resultヘッダーを" +
+            "付けるので、チェックボックスはそれを見ています)、残高の表がモックのexampleデータに切り替わります。" +
+            "API endpointはhttp://localhost:8000/apiのままで、frontend自体には何も手を入れていません。",
+        ],
       },
       {
         heading: "環境のクリーンアップ",

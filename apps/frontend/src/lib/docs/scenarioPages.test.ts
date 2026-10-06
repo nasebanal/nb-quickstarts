@@ -14,10 +14,10 @@ const SCENARIOS = [
   ["1", scenarioTesting],
   ["2", scenarioKong],
   ["3", scenarioKafka],
-  ["4", scenarioObservability],
-  ["5", scenarioKeycloak],
-  ["6", scenarioVault],
-  ["7", scenarioAgentgateway],
+  ["4", scenarioKeycloak],
+  ["5", scenarioVault],
+  ["6", scenarioAgentgateway],
+  ["7", scenarioObservability],
 ] as const;
 
 describe("scenario pages", () => {
@@ -39,10 +39,25 @@ describe("scenario pages", () => {
     expect(redirects).toContainEqual({ source: "/docs/testing", destination: nav[0].href, permanent: true });
   });
 
-  it("have the same cleanup section, worded professionally in Japanese", () => {
-    // Scenario 5 (Keycloak) has no cleanup: it ends with "Returning to mock-login-only" instead.
+  it("number every section between the opening and the cleanup, consecutively", () => {
+    // The opening ("Why X", "How it works", "Overview") and the cleanup are unnumbered; the sections between them are 1, 2, 3...
     for (const [number, page] of SCENARIOS) {
-      if (number === "5") continue;
+      for (const locale of ["en", "ja"] as const) {
+        const headings = page[locale].sections.map((section) => section.heading ?? "");
+        const numbered = headings.filter((heading) => /^\d+\. /.test(heading));
+        expect(numbered.map((heading) => Number.parseInt(heading, 10)), `scenario ${number} ${locale}`).toEqual(
+          numbered.map((_, index) => index + 1),
+        );
+        // Once the numbering starts it runs to the cleanup without gaps.
+        const first = headings.findIndex((heading) => /^\d+\. /.test(heading));
+        const middle = headings.slice(first, -1);
+        expect(middle.every((heading) => /^\d+\. /.test(heading)), `scenario ${number} ${locale}`).toBe(true);
+      }
+    }
+  });
+
+  it("have the same cleanup section, worded professionally in Japanese", () => {
+    for (const [number, page] of SCENARIOS) {
       expect(page.en.sections.map((section) => section.heading), `scenario ${number} en`).toContain("Cleanup");
       expect(page.ja.sections.map((section) => section.heading), `scenario ${number} ja`).toContain("環境のクリーンアップ");
     }
@@ -66,7 +81,7 @@ describe("Scenario 1: verify the demo app", () => {
       expect(cleanup.heading).toBe(locale === "en" ? "Cleanup" : "環境のクリーンアップ");
       expect(cleanup.code?.[0].code).toMatch(/make apps:down/);
       // Middle sections: pytest, Vitest, Playwright, Specmatic, Locust, ZAP. The cleanup closes the scenario.
-      expect(page.sections.slice(1, -1).map((section) => section.heading?.split(":")[0])).toEqual([
+      expect(page.sections.slice(1, -1).map((section) => section.heading?.replace(/^\d+\. /, "").split(":")[0])).toEqual([
         "pytest",
         "Vitest",
         "Playwright",

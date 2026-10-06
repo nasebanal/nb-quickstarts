@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
-import type { DocsBlock, DocsPageContent } from "@/lib/docs/types";
+import type { DocsBlock, DocsNote, DocsPageContent } from "@/lib/docs/types";
 import { SequenceDiagram } from "./SequenceDiagram";
 import { TerminalOutput } from "./TerminalOutput";
 import { TimeSeriesChart } from "./TimeSeriesChart";
@@ -60,6 +60,26 @@ function cellLines(cell: string): ReactNode {
   ));
 }
 
+// A callout: an optional bold title (a link when it points at an official reference) and the text.
+function NoteAside({ note }: { note: DocsNote }) {
+  return (
+    <aside className="nb-docs-note" data-testid="docs-note">
+      {note.noteTitle && (
+        <p className="nb-docs-note-title">
+          {note.noteHref ? (
+            <a href={note.noteHref} target="_blank" rel="noopener noreferrer">
+              {note.noteTitle}
+            </a>
+          ) : (
+            note.noteTitle
+          )}
+        </p>
+      )}
+      <p>{inlineCode(note.note)}</p>
+    </aside>
+  );
+}
+
 // Paragraphs and bullets of a block.
 function BlockText({ block }: { block: DocsBlock }) {
   return (
@@ -76,7 +96,7 @@ function BlockText({ block }: { block: DocsBlock }) {
   );
 }
 
-// Everything else a block can carry (code, table, diagrams, terminal, charts, images, callout).
+// Everything else a block can carry (code, table, diagrams, terminal, charts, images, closing paragraphs, callout).
 function BlockMedia({ block }: { block: DocsBlock }) {
   return (
     <>
@@ -144,22 +164,9 @@ function BlockMedia({ block }: { block: DocsBlock }) {
           />
         </div>
       )}
-      {block.note && (
-        <aside className="nb-docs-note" data-testid="docs-note">
-          {block.noteTitle && (
-            <p className="nb-docs-note-title">
-              {block.noteHref ? (
-                <a href={block.noteHref} target="_blank" rel="noopener noreferrer">
-                  {block.noteTitle}
-                </a>
-              ) : (
-                block.noteTitle
-              )}
-            </p>
-          )}
-          <p>{inlineCode(block.note)}</p>
-        </aside>
-      )}
+      {block.closing?.map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{inlineLinks(paragraph)}</p>)}
+      {block.note && <NoteAside note={{ note: block.note, noteTitle: block.noteTitle, noteHref: block.noteHref }} />}
+      {block.notes?.map((extra) => <NoteAside key={extra.note} note={extra} />)}
     </>
   );
 }

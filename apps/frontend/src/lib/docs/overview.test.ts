@@ -14,10 +14,10 @@ const SCENARIOS = [
   scenarioTesting,
   scenarioKong,
   scenarioKafka,
-  scenarioObservability,
   scenarioKeycloak,
   scenarioVault,
   scenarioAgentgateway,
+  scenarioObservability,
 ];
 
 describe("Overview page", () => {

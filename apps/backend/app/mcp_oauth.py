@@ -15,14 +15,13 @@ from app.auth import Principal, _b64, _sign, _unb64, get_current_principal, issu
 
 # OAuth for /mcp (MCP's authorization flow: RFC 9728 protected-resource
 # metadata, RFC 8414 authorization-server metadata, RFC 7591 dynamic client
-# registration, authorization code + PKCE). Off unless MCP_AUTH_REQUIRED=true -
-# empty (the default) leaves /mcp open exactly as before, so MCP Inspector,
-# agentgateway and the test scenarios keep working untouched.
+# registration, authorization code + PKCE). On by default: a client that calls
+# /mcp without a token gets a 401 pointing at the metadata below, and an MCP
+# client such as Claude Code opens the browser on its own. MCP_AUTH_REQUIRED=false
+# (APPS_MCP_AUTH_REQUIRED in .env) leaves /mcp open, as it was before the login existed.
 #
-# With it on, a client that calls /mcp without a token gets a 401 pointing at
-# the metadata below, and an MCP client such as Claude Code opens the browser
-# on its own. The browser lands on the *frontend's* login page (MCP_AUTHORIZE_URL),
-# so the user signs in the way they always do - the demo login, or Keycloak when
+# The browser lands on the *frontend's* login page (MCP_AUTHORIZE_URL), so the
+# user signs in the way they always do - the demo login, or Keycloak when
 # KEYCLOAK_ISSUER is set - and the frontend then asks POST /oauth/authorize
 # (with that login's token) for the authorization code. This backend is only
 # the authorization server's bookkeeping; it never sees a password here.
@@ -32,7 +31,7 @@ from app.auth import Principal, _b64, _sign, _unb64, get_current_principal, issu
 # them and nothing is stored. The access token handed out is the ordinary
 # demo token (auth.issue_token), which every protected route already accepts -
 # even when the person signed in through Keycloak (their username carries over).
-MCP_AUTH_REQUIRED = os.getenv("MCP_AUTH_REQUIRED", "").lower() in ("1", "true", "yes")
+MCP_AUTH_REQUIRED = (os.getenv("MCP_AUTH_REQUIRED") or "true").strip().lower() not in ("0", "false", "no", "off")
 
 # Where this backend is reached from the MCP client / browser (not the
 # in-network address), and where the frontend's MCP login page lives.

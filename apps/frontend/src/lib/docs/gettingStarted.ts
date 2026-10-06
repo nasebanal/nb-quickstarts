@@ -4,9 +4,10 @@ export const gettingStarted: LocalizedDocsPage = {
   en: {
     title: "Getting Started",
     description:
-      "Every command below is a plain make target, run from the repository root. Each module also " +
-      "prints its own help - run make apps, make kong, and so on with no action - so this page only " +
-      "covers the commands you need before touching any scenario.",
+      "A step-by-step walkthrough for checking the basic features first. It takes you from starting " +
+      "the apps stack through to confirming it works, which every scenario needs before you begin. " +
+      "Commands are plain make targets run from the repository root, and each module also prints " +
+      "its own help - run make apps, make kong, and so on with no action.",
     sections: [
       {
         heading: "Quick demo",
@@ -65,10 +66,11 @@ export const gettingStarted: LocalizedDocsPage = {
             ["demo", "demo", "en", "Demo User"],
           ],
         },
-        note:
+        closing: [
           "These are seed data for a local demo (apps/backend/app/seed.py), not credentials to protect. " +
           "Only a hash of the password is stored. Every test tool (Playwright, Locust, kafka-bridge, " +
           "Specmatic) logs in as demo.",
+        ],
       },
       {
         heading: "Record a transaction",
@@ -94,7 +96,7 @@ export const gettingStarted: LocalizedDocsPage = {
             caption: "After: Cash 121000 with 4 transactions - the new entry is counted.",
           },
         ],
-        note: "Starting numbers are those of a freshly reset stack (make all:reset); if you have already run the test tools they differ - what matters is the +1000 and the +1.",
+        closing: ["Starting numbers are those of a freshly reset stack (make all:reset); if you have already run the test tools they differ - what matters is the +1000 and the +1."],
       },
       {
         heading: "Look inside MySQL",
@@ -103,7 +105,7 @@ export const gettingStarted: LocalizedDocsPage = {
             "make apps:sql opens phpMyAdmin already logged in to " +
             "demo (no password prompt - it connects as root for this local demo), with the two tables, " +
             "transactions and users, in the left-hand list. It also lets you click through the rows, and " +
-            "shows mysql.user, where the users Vault creates in Scenario 6 appear.",
+            "shows mysql.user, where the users Vault creates in Scenario 5 appear.",
           "In the transactions table the new row is at the bottom - Cash, 1000, source api (recorded through " +
             "the REST API; the first five rows are seed data). From the terminal, make apps:mysql opens a mysql " +
             "shell, or runs one statement:",
@@ -140,12 +142,13 @@ export const gettingStarted: LocalizedDocsPage = {
             { text: "+----------+--------------------+--------------+----------+----------+" },
           ],
         },
-        note:
+        closing: [
           "Real output. Try it in step with the app: record a transaction and a new transactions row appears; " +
           "save a new display name on the Profile page and the users row changes; log in through Keycloak " +
-          "once (Scenario 5) and a keycloak row is created for you. A balance is the SUM of an account's " +
+          "once (Scenario 4) and a keycloak row is created for you. A balance is the SUM of an account's " +
           "rows: SELECT name, SUM(quantity) FROM transactions GROUP BY name. The Overview page's ER diagram " +
           "shows every column.",
+        ],
       },
       {
         heading: "One-shot test tools and their reports",
@@ -165,11 +168,12 @@ export const gettingStarted: LocalizedDocsPage = {
               "make specmatic:test          # provider contract test against openapi.yaml",
           },
         ],
-        note:
+        closing: [
           "Every make <module>:test run leaves a browsable HTML report behind under <module>/report/ " +
           "(and make locust:load, the headless load run, under locust/logs/<timestamp>/) - all gitignored, regenerated on every run. " +
           "[Scenario 1](/docs/scenario-testing) covers every one of them: how to check the results, real " +
           "screenshots, and the evaluation of the results from this repository.",
+        ],
       },
       {
         heading: "Try the backend's MCP server",
@@ -177,11 +181,12 @@ export const gettingStarted: LocalizedDocsPage = {
         body: [
           "The backend serves MCP natively at /mcp, and MCP Inspector (started with apps:up) is the quickest " +
             "way to try it. Its server list is fixed to two endpoints: apps-backend (this one) and agentgateway " +
-            "(Scenario 7, which only connects while make agentgateway:up is running).",
+            "(Scenario 6, which only connects while make agentgateway:up is running).",
         ],
         bullets: [
           "Flip the switch on the apps-backend card to connect - it turns green and shows Connected.",
           "Open the Tools tab, pick list_accounts_accounts_get (it takes no arguments) and press Execute Tool - the Results panel shows the same data GET /accounts returns.",
+          "Tools that need a token work too: pick get_me_me_get and Execute Tool - it returns the demo user's profile.",
         ],
         imagesLayout: "stack",
         images: [
@@ -206,12 +211,20 @@ export const gettingStarted: LocalizedDocsPage = {
             caption: "The result of the call - live data from the running backend.",
           },
         ],
+        noteTitle: "Authentication token settings in MCP Inspector",
+        noteHref: "https://modelcontextprotocol.io/docs/2026-07-28/tools/inspector/configuration#catalog-file-format",
+        note:
+          "/mcp requires a login, and there is nothing to sign in to in the Inspector: its server list is the read-only " +
+          "apps/mcp-inspector/config.json (started with --config), and that file gives apps-backend and agentgateway an " +
+          "Authorization header carrying the demo token, which the Inspector sends with every request. Without it /mcp answers " +
+          "401 and the apps-backend card cannot connect, and get_me_me_get answers invalid or missing token. " +
+          "The per-server headers field is the Inspector's own config format - see its documentation.",
       },
       {
-        heading: "Also try it from Claude (or another MCP client)",
+        heading: "Checking with MCP clients other than Inspector",
         body: [
           "MCP Inspector is only one client - any MCP client that speaks Streamable HTTP can use the same " +
-            "endpoint (agentgateway's own is registered in Scenario 7). Here is how the two Claude clients differ:",
+            "endpoint (agentgateway's own is registered in Scenario 6). Here is how the two Claude clients differ:",
         ],
         subsections: [
           {
@@ -236,11 +249,35 @@ export const gettingStarted: LocalizedDocsPage = {
                   "claude mcp list",
               },
             ],
-            note:
+            closing: [
               "claude mcp list shows Connected once the server is reachable, but a Claude Code session that was " +
               "already running doesn't load its tools yet - restart Claude Code, or reconnect with /mcp, before " +
               "asking for anything. Without a scope option the server is added to the current project only; add " +
               "-s user to use it from any directory.",
+            ],
+            bullets: [
+              "/mcp is behind a login (get_me, update_profile and create_transaction need a token, and this is how an MCP " +
+                "client gets one), so after restarting: open /mcp, pick apps-backend (it says needs authentication) and Authenticate.",
+              "The browser opens the frontend's /mcp-authorize page - the app's own login: sign in with the Demo login " +
+                "(demo / demo). Logging in with Keycloak instead is covered in [Scenario 4](/docs/scenario-keycloak).",
+              "Press Allow (Deny tells the client access_denied). The browser lands on Claude Code's own " +
+                "\"Authentication successful\" page - close the tab, then ask for get_me.",
+              "Claude Code keeps the token, so the browser should open again only after claude mcp remove or when " +
+                "TOKEN_SECRET changes. APPS_MCP_AUTH_REQUIRED=false in .env (+ make apps:restart) leaves /mcp open instead.",
+            ],
+            imagesLayout: "stack",
+            images: [
+              {
+                src: "/docs/screenshots/mcp-authorize-login.png",
+                alt: "The frontend's /mcp-authorize page with the login dialog open on Demo login, demo / demo filled in",
+                caption: "Authenticate opens /mcp-authorize - the app's own login (Demo login).",
+              },
+              {
+                src: "/docs/screenshots/mcp-authorize-allow.png",
+                alt: "The /mcp-authorize page saying Claude Code (apps-backend) wants to use the MCP tools, signed in as demo, with Allow and Deny buttons",
+                caption: "Signed in - press Allow to hand the login back to Claude Code.",
+              },
+            ],
           },
           {
             heading: "Claude Desktop (claude_desktop_config.json)",
@@ -257,36 +294,20 @@ export const gettingStarted: LocalizedDocsPage = {
                   "}",
               },
             ],
-            note:
+            closing: [
               "Then ask something like \"list the accounts and their balances\" - Claude calls " +
-              "list_accounts_accounts_get, asking you to approve the call first. These are local demo " +
-              "endpoints (open unless APPS_MCP_AUTH_REQUIRED is set - see below); remove them afterwards with claude mcp remove <name>.",
+              "list_accounts_accounts_get, asking you to approve the call first. mcp-remote runs the same browser " +
+              "login on its own when /mcp asks for it - not tried here. Remove the Claude Code entries afterwards " +
+              "with claude mcp remove <name>.",
+            ],
           },
         ],
       },
       {
-        heading: "Requiring a login for /mcp",
+        heading: "How the /mcp login works",
         body: [
-          "By default /mcp is open - but get_me, update_profile and create_transaction need a bearer token, " +
-            "and an MCP client has no way to supply one. Set APPS_MCP_AUTH_REQUIRED=true and /mcp answers 401 " +
-            "until the client has logged in through the browser; the token it ends up with is sent along with " +
-            "every tool call.",
-        ],
-        code: [
-          {
-            code:
-              "# .env: APPS_MCP_AUTH_REQUIRED=true\n" +
-              "make apps:restart\n" +
-              "claude mcp remove apps-backend\n" +
-              "claude mcp add --transport http apps-backend http://localhost:8080/mcp",
-          },
-        ],
-        bullets: [
-          "Restart Claude Code, open /mcp, pick apps-backend (it says needs authentication) and Authenticate.",
-          "The browser opens the frontend's /mcp-authorize page - the app's own login: Demo login (demo / demo) or, " +
-            "with KEYCLOAK_ISSUER set and make keycloak:up running, Keycloak (keycloak-demo / nasebanal-demo).",
-          "Press Allow (Deny tells the client access_denied). The browser lands on Claude Code's own " +
-            "\"Authentication successful\" page - close the tab, then ask for get_me.",
+          "/mcp answers 401 until the client has logged in through the browser (the steps are under Claude Code " +
+            "above); the token it ends up with is sent along with every tool call.",
         ],
         sequence: {
           summary:
@@ -294,7 +315,6 @@ export const gettingStarted: LocalizedDocsPage = {
           participants: [
             { id: "cc", label: "Claude Code", sub: "MCP client" },
             { id: "fe", label: "Frontend", sub: "browser" },
-            { id: "kc", label: "Keycloak", sub: "optional" },
             { id: "be", label: "Backend", sub: "/mcp + /oauth" },
           ],
           steps: [
@@ -302,9 +322,8 @@ export const gettingStarted: LocalizedDocsPage = {
             { kind: "message", from: "be", to: "cc", text: "401", detail: "WWW-Authenticate: Bearer resource_metadata=...", dashed: true },
             { kind: "message", from: "cc", to: "be", text: "Register this client", detail: "POST /oauth/register" },
             { kind: "message", from: "cc", to: "fe", text: "Open the browser", detail: "/mcp-authorize?client_id=...&code_challenge=..." },
-            { kind: "message", from: "fe", to: "kc", text: "Keycloak login (only if you pick it)", detail: "OIDC code + PKCE, back to /auth/callback" },
-            { kind: "note", at: "fe", text: "Signed in: demo login or Keycloak - then Allow" },
-            { kind: "message", from: "fe", to: "be", text: "Ask for the authorization code", detail: "POST /oauth/authorize + Bearer <token of whoever signed in>" },
+            { kind: "note", at: "fe", text: "Sign in with the demo login - then Allow" },
+            { kind: "message", from: "fe", to: "be", text: "Ask for the authorization code", detail: "POST /oauth/authorize + Bearer <demo login token>" },
             { kind: "message", from: "fe", to: "cc", text: "Redirect with the code", detail: "http://localhost:<port>/callback?code=..." },
             { kind: "message", from: "cc", to: "be", text: "Trade the code for a token", detail: "POST /oauth/token + PKCE verifier" },
             { kind: "message", from: "cc", to: "be", text: "Every call from now on", detail: "Authorization: Bearer <token> -> forwarded to the REST route" },
@@ -316,18 +335,39 @@ export const gettingStarted: LocalizedDocsPage = {
             bullets: [
               "The backend is the authorization server (app/mcp_oauth.py): protected-resource and " +
                 "authorization-server metadata, dynamic client registration, authorization code + PKCE (S256). The " +
-                "login itself is the frontend's, so both login methods work with no extra code - and the access " +
+                "login itself is the frontend's, so a Keycloak login works with no extra code too (Scenario 4) - and the access " +
                 "token that comes out is the ordinary demo token.",
               "client_id and the code are signed and self-contained (no store, any backend instance verifies " +
                 "them); the code lives 60 seconds. Registration accepts only loopback http:// redirect URIs and " +
                 "claude.ai / claude.com callbacks. The OAuth routes are tagged mcp-oauth and left out of the tool list.",
-              "With it on, MCP Inspector (and any client without a token) gets 401 too. agentgateway is unaffected (it calls the " +
-                "REST routes, never /mcp - see Scenario 7).",
+              "MCP Inspector is let in by the demo token in its config; any other client without a token gets 401. " +
+                "agentgateway is unaffected (it calls the REST routes, never /mcp - see Scenario 6).",
               "Editing backend code while an MCP client is connected makes uvicorn's reload hang on the open " +
-                "GET /mcp stream - use docker restart nb-backend. Turn the login off by removing the line and " +
-                "running make apps:restart.",
+                "GET /mcp stream - use docker restart nb-backend. Turn the login off with " +
+                "APPS_MCP_AUTH_REQUIRED=false in .env and make apps:restart.",
             ],
           },
+        ],
+        noteTitle: "fastapi-mcp: an MCP server from FastAPI routes",
+        noteHref: "https://fastapi-mcp.tadata.com/getting-started/quickstart",
+        note:
+          "The backend's /mcp endpoint is mounted by fastapi-mcp (FastApiMCP(app).mount_http() in app/main.py). It " +
+          "turns the REST routes into MCP tools and forwards each tool call's Authorization header to the route, " +
+          "which is how the login's token reaches get_me and the others.",
+      },
+      {
+        heading: "Reset everything",
+        body: [
+          "To undo what you changed while trying things out - recorded transactions, Kong's configuration, Kafka " +
+            "topics, metrics and traces - run make all:reset. It stops every service, wipes the stored data of " +
+            "apps, Kong, Kafka and observability, and clears each test tool's generated reports and logs. " +
+            "Nothing is started afterwards: bring back what you need with make all:up (or a module's own up).",
+        ],
+        code: [{ code: "make all:reset   # stop everything and wipe stored data and generated reports" }],
+        closing: [
+          "Settings you edited in .env (for example APPS_API_BASE or APPS_MCP_AUTH_REQUIRED) are not touched - " +
+            "put them back by hand. Each module also has its own reset (make apps:reset, make kong:reset, ...) " +
+            "if you only want to start over with one of them.",
         ],
       },
       {
@@ -343,9 +383,10 @@ export const gettingStarted: LocalizedDocsPage = {
   ja: {
     title: "Getting Started",
     description:
-      "以下のコマンドはすべてリポジトリルートで実行する、普通のmakeターゲットです。各モジュールは" +
-      "アクションなしで(make apps、make kongのように)実行すると自分自身のヘルプも表示するので、この" +
-      "ページではどのシナリオに入る前にも必要になる最低限のコマンドだけを扱います。",
+      "まずは基本機能を確認するための手順をまとめたページです。どのシナリオに入る前にも必要になる、" +
+      "appsスタックの起動から動作確認までを順に進めます。コマンドはすべてリポジトリルートで実行する" +
+      "普通のmakeターゲットで、各モジュールはアクションなしで(make apps、make kongのように)実行すると" +
+      "自分自身のヘルプも表示します。",
     sections: [
       {
         heading: "クイックデモ",
@@ -403,10 +444,11 @@ export const gettingStarted: LocalizedDocsPage = {
             ["demo", "demo", "en", "Demo User"],
           ],
         },
-        note:
+        closing: [
           "これらはローカルデモ用のシードデータ(apps/backend/app/seed.py)で、守るべき認証情報ではありません。" +
           "保存されているのはパスワードのハッシュだけです。すべてのテストツール(Playwright・Locust・" +
           "kafka-bridge・Specmatic)は、demoでログインします。",
+        ],
       },
       {
         heading: "取引を記帳する",
@@ -432,14 +474,14 @@ export const gettingStarted: LocalizedDocsPage = {
             caption: "記帳後: Cashは121000で取引4件 — 新しいエントリが反映されている。",
           },
         ],
-        note: "開始時の数値は、リセット直後(make all:reset)のスタックのものです。テストツールを実行済みだと違いますが、見るのは+1000と+1です。",
+        closing: ["開始時の数値は、リセット直後(make all:reset)のスタックのものです。テストツールを実行済みだと違いますが、見るのは+1000と+1です。"],
       },
       {
         heading: "MySQLの中身を確認する",
         body: [
           "いま記帳したエントリは、MySQLの1行になっています。いちばん手軽に見る方法はSQLクライアントです: make apps:sqlでphpMyAdminが、demoにログイン済みの状態で" +
             "開きます(パスワード入力は不要 — このローカルデモではrootで接続します)。左の一覧に2つのテーブル、" +
-            "transactionsとusersが並び、行をクリックして辿れます。シナリオ6でVaultが作るユーザーが現れる" +
+            "transactionsとusersが並び、行をクリックして辿れます。シナリオ5でVaultが作るユーザーが現れる" +
             "mysql.userも見られます。",
           "transactionsテーブルでは、新しい行が末尾に入っています — Cash、1000、sourceはapi(REST API経由で記帳したため。" +
             "最初の5行はシードデータです)。ターミナルからは、make apps:mysqlでmysqlシェルを開くか、SQLを1文だけ実行できます:",
@@ -476,11 +518,12 @@ export const gettingStarted: LocalizedDocsPage = {
             { text: "+----------+--------------------+--------------+----------+----------+" },
           ],
         },
-        note:
+        closing: [
           "実際の出力です。アプリの操作と並べて試してみてください: 取引を記帳するとtransactionsに新しい行が増え、" +
-          "プロフィール画面で表示名を保存するとusersの行が変わり、Keycloakで一度ログインすれば(シナリオ5)" +
+          "プロフィール画面で表示名を保存するとusersの行が変わり、Keycloakで一度ログインすれば(シナリオ4)" +
           "keycloakの行が自動で作られます。残高は科目の行のSUMです: SELECT name, SUM(quantity) FROM transactions " +
           "GROUP BY name。すべてのカラムは概要ページのER図にあります。",
+        ],
       },
       {
         heading: "一発実行のテストツールとレポート",
@@ -500,11 +543,12 @@ export const gettingStarted: LocalizedDocsPage = {
               "make specmatic:test          # openapi.yamlに対するProvider契約テスト",
           },
         ],
-        note:
+        closing: [
           "make <module>:testを実行するたびに、<module>/report/以下(ヘッドレスの負荷テストmake locust:loadはlocust/logs/<timestamp>/以下)に" +
           "ブラウザで見られるHTMLレポートが残ります — すべて.gitignore対象で、実行のたびに新しく生成されます。" +
           "[シナリオ1](/docs/scenario-testing)では、すべてのテストについて、結果の確認方法、実際のスクリーンショット、" +
           "本リポジトリでの結果の評価を記載しています。",
+        ],
       },
       {
         heading: "backendのMCPサーバーを試す",
@@ -512,11 +556,12 @@ export const gettingStarted: LocalizedDocsPage = {
         body: [
           "backendは/mcpでMCPをネイティブに提供しており、試すにはapps:upと一緒に起動するMCP Inspectorが手軽です。" +
             "サーバー一覧は2つのエンドポイントに固定されています: apps-backend(こちら)と、agentgateway" +
-            "(シナリオ7。make agentgateway:upが動いている間だけ接続できます)。",
+            "(シナリオ6。make agentgateway:upが動いている間だけ接続できます)。",
         ],
         bullets: [
           "apps-backendカードのスイッチをオンにして接続します。緑になりConnectedと表示されます。",
           "Toolsタブでlist_accounts_accounts_getを選び(引数はありません)、Execute Toolを押すと、ResultsにGET /accountsと同じデータが表示されます。",
+          "トークンが必要なツールも試せます: get_me_me_getを選んでExecute Toolを押すと、デモユーザーのプロフィールが返ります。",
         ],
         imagesLayout: "stack",
         images: [
@@ -541,12 +586,20 @@ export const gettingStarted: LocalizedDocsPage = {
             caption: "呼び出し結果 — 稼働中のbackendのライブなデータ。",
           },
         ],
+        noteTitle: "MCP Inspectorにおける認証トークン設定",
+        noteHref: "https://modelcontextprotocol.io/docs/2026-07-28/tools/inspector/configuration#catalog-file-format",
+        note:
+          "/mcpはログインが必要ですが、Inspectorで改めてログインする必要はありません。Inspectorのサーバー一覧は読み取り専用の" +
+          "apps/mcp-inspector/config.json(--configで起動)で、このファイルがapps-backendとagentgatewayに、デモトークンを" +
+          "入れたAuthorizationヘッダーを持たせ、Inspectorがすべてのリクエストでそれを送ります。ヘッダーがないと/mcpは401を返して" +
+          "apps-backendのカードは接続できず、get_me_me_getはinvalid or missing tokenになります。" +
+          "サーバーごとのheadersはInspector自身の設定ファイル形式です — 詳しくは公式ドキュメントを参照してください。",
       },
       {
-        heading: "Inspector以外に、Claudeなど他のMCPクライアントでも確認できます",
+        heading: "Inspector以外のMCPクライアントでの確認手順",
         body: [
           "MCP Inspectorは数あるクライアントの1つで、Streamable HTTPを話せるMCPクライアントなら同じ" +
-            "エンドポイントを使えます(agentgatewayのエンドポイントはシナリオ7で登録します)。2つのClaudeクライアントの違いは次のとおりです:",
+            "エンドポイントを使えます(agentgatewayのエンドポイントはシナリオ6で登録します)。2つのClaudeクライアントの違いは次のとおりです:",
         ],
         subsections: [
           {
@@ -571,10 +624,34 @@ export const gettingStarted: LocalizedDocsPage = {
                   "claude mcp list",
               },
             ],
-            note:
+            closing: [
               "claude mcp listでConnectedと表示されても、すでに起動していたClaude Codeのセッションにはまだツールが" +
               "読み込まれません。頼む前にClaude Codeを再起動するか、/mcpで再接続してください。スコープを指定しない" +
               "場合、サーバーは現在のプロジェクトにだけ追加されます。どのディレクトリからでも使うなら-s userを付けてください。",
+            ],
+            bullets: [
+              "/mcpはログインが必要です(get_me、update_profile、create_transactionにはトークンが必要で、MCPクライアントはこの方法で入手します)。" +
+                "再起動後、/mcpでapps-backend(needs authenticationと表示されます)を選んでAuthenticateします。",
+              "ブラウザでfrontendの/mcp-authorizeが開きます。アプリ自身のログインで、デモログイン(demo / demo)で" +
+                "サインインします。Keycloakでログインする場合は[シナリオ4](/docs/scenario-keycloak)を参照してください。",
+              "Allowを押します(Denyならクライアントにaccess_deniedが返ります)。ブラウザはClaude Code自身の" +
+                "「Authentication successful」ページに移るので、タブを閉じてget_meを頼んでください。",
+              "Claude Codeはトークンを保持するので、ブラウザが再び開くのはclaude mcp removeした後かTOKEN_SECRETを変えた後だけです。" +
+                ".envでAPPS_MCP_AUTH_REQUIRED=false(+ make apps:restart)にすると/mcpを開放できます。",
+            ],
+            imagesLayout: "stack",
+            images: [
+              {
+                src: "/docs/screenshots/mcp-authorize-login.png",
+                alt: "frontendの/mcp-authorizeページ。デモログインのダイアログが開き、demo / demoが入力されている",
+                caption: "Authenticateで/mcp-authorizeが開く — アプリ自身のログイン(デモログイン)。",
+              },
+              {
+                src: "/docs/screenshots/mcp-authorize-allow.png",
+                alt: "/mcp-authorizeページ。Claude Code(apps-backend)がMCPツールを使いたいと表示され、demoでサインイン済み。AllowとDenyのボタンがある",
+                caption: "ログイン済み — Allowを押すとログインがClaude Codeに返る。",
+              },
+            ],
           },
           {
             heading: "Claude Desktop(claude_desktop_config.json)",
@@ -591,36 +668,19 @@ export const gettingStarted: LocalizedDocsPage = {
                   "}",
               },
             ],
-            note:
+            closing: [
               "あとは「勘定科目と残高を一覧して」などと頼むと、Claudeがlist_accounts_accounts_getを呼びます" +
-              "(実行前に承認を求められます)。これらはデモ用のローカルエンドポイントです(APPS_MCP_AUTH_REQUIREDを設定しない限り認証なし。後述)。確認後は" +
-              "claude mcp remove <name>で外してください。",
+              "(実行前に承認を求められます)。mcp-remoteは/mcpに求められると同じブラウザログインを自分で実行します(ここでは未検証)。" +
+              "確認後はClaude Codeのエントリをclaude mcp remove <name>で外してください。",
+            ],
           },
         ],
       },
       {
-        heading: "/mcpにログインを必須にする",
+        heading: "/mcpのログインの仕組み",
         body: [
-          "既定では/mcpは開いたままです。ただしget_me、update_profile、create_transactionにはベアラートークンが" +
-            "必要で、MCPクライアントにはそれを渡す手段がありません。APPS_MCP_AUTH_REQUIRED=trueにすると、" +
-            "クライアントがブラウザでログインするまで/mcpは401を返し、最終的に得たトークンが以後の" +
-            "すべてのツール呼び出しに付きます。",
-        ],
-        code: [
-          {
-            code:
-              "# .env: APPS_MCP_AUTH_REQUIRED=true\n" +
-              "make apps:restart\n" +
-              "claude mcp remove apps-backend\n" +
-              "claude mcp add --transport http apps-backend http://localhost:8080/mcp",
-          },
-        ],
-        bullets: [
-          "Claude Codeを再起動し、/mcpでapps-backend(needs authenticationと表示されます)を選んでAuthenticateします。",
-          "ブラウザでfrontendの/mcp-authorizeが開きます。アプリ自身のログインで、デモログイン(demo / demo)、" +
-            "またはKEYCLOAK_ISSUERを設定してmake keycloak:upしていればKeycloak(keycloak-demo / nasebanal-demo)です。",
-          "Allowを押します(Denyならクライアントにaccess_deniedが返ります)。ブラウザはClaude Code自身の" +
-            "「Authentication successful」ページに移るので、タブを閉じてget_meを頼んでください。",
+          "クライアントがブラウザでログインするまで/mcpは401を返し(手順は上のClaude Codeを参照)、" +
+            "最終的に得たトークンが以後のすべてのツール呼び出しに付きます。",
         ],
         sequence: {
           summary:
@@ -628,7 +688,6 @@ export const gettingStarted: LocalizedDocsPage = {
           participants: [
             { id: "cc", label: "Claude Code", sub: "MCP client" },
             { id: "fe", label: "Frontend", sub: "browser" },
-            { id: "kc", label: "Keycloak", sub: "optional" },
             { id: "be", label: "Backend", sub: "/mcp + /oauth" },
           ],
           steps: [
@@ -636,9 +695,8 @@ export const gettingStarted: LocalizedDocsPage = {
             { kind: "message", from: "be", to: "cc", text: "401", detail: "WWW-Authenticate: Bearer resource_metadata=...", dashed: true },
             { kind: "message", from: "cc", to: "be", text: "クライアントを登録", detail: "POST /oauth/register" },
             { kind: "message", from: "cc", to: "fe", text: "ブラウザを開く", detail: "/mcp-authorize?client_id=...&code_challenge=..." },
-            { kind: "message", from: "fe", to: "kc", text: "Keycloakログイン(選んだ場合のみ)", detail: "OIDC code + PKCE, back to /auth/callback" },
-            { kind: "note", at: "fe", text: "ログイン(デモまたはKeycloak)してAllow" },
-            { kind: "message", from: "fe", to: "be", text: "認可コードを要求", detail: "POST /oauth/authorize + Bearer <token of whoever signed in>" },
+            { kind: "note", at: "fe", text: "デモログインでサインインしてAllow" },
+            { kind: "message", from: "fe", to: "be", text: "認可コードを要求", detail: "POST /oauth/authorize + Bearer <demo login token>" },
             { kind: "message", from: "fe", to: "cc", text: "codeを付けてリダイレクト", detail: "http://localhost:<port>/callback?code=..." },
             { kind: "message", from: "cc", to: "be", text: "codeをトークンに交換", detail: "POST /oauth/token + PKCE verifier" },
             { kind: "message", from: "cc", to: "be", text: "以後のすべての呼び出し", detail: "Authorization: Bearer <token> -> forwarded to the REST route" },
@@ -650,17 +708,36 @@ export const gettingStarted: LocalizedDocsPage = {
             bullets: [
               "backend(app/mcp_oauth.py)が認可サーバーです。protected-resourceと認可サーバーのメタデータ、" +
                 "動的クライアント登録、認可コード+PKCE(S256)を提供します。ログイン自体はfrontendのものなので、" +
-                "2つのログイン方法はどちらも追加コードなしで使え、出てくるアクセストークンは通常のデモトークンです。",
+                "Keycloakのログインも追加コードなしで使え(シナリオ4)、出てくるアクセストークンは通常のデモトークンです。",
               "client_idとcodeは署名つきで自己完結しています(保存先なし、どのbackendインスタンスでも検証できます)。" +
                 "codeの有効期間は60秒です。登録できるリダイレクトURIはループバックのhttp://と、claude.ai / " +
                 "claude.comのコールバックだけです。OAuthのルートはmcp-oauthタグを付けて、ツール一覧から外しています。",
-              "有効にすると、MCP Inspector(などトークンを持たないクライアント)も401になります。" +
-                "agentgatewayは影響を受けません(REST経路を呼び、/mcpは使いません — シナリオ7を参照)。",
+              "MCP Inspectorは設定内のデモトークンで通ります。トークンを持たないほかのクライアントは401になります。" +
+                "agentgatewayは影響を受けません(REST経路を呼び、/mcpは使いません — シナリオ6を参照)。",
               "MCPクライアントを接続したままbackendのコードを編集すると、開いたままのGET /mcpストリームに" +
                 "uvicornの再読み込みが阻まれて固まります。docker restart nb-backendを使ってください。" +
-                "ログインを止めるには、その行を消してmake apps:restartします。",
+                "ログインを止めるには、.envでAPPS_MCP_AUTH_REQUIRED=falseにしてmake apps:restartします。",
             ],
           },
+        ],
+        noteTitle: "fastapi-mcp: FastAPIのルートからMCPサーバーを作る",
+        noteHref: "https://fastapi-mcp.tadata.com/getting-started/quickstart",
+        note:
+          "backendの/mcpは、fastapi-mcpがマウントしています(app/main.pyのFastApiMCP(app).mount_http())。RESTのルートをMCPツールに変換し、ツール呼び出しごとにAuthorizationヘッダーを対応するルートへ転送します。ログインで得たトークンがget_meなどに届くのはこのためです。",
+      },
+      {
+        heading: "すべてをリセットする",
+        body: [
+          "試している間に加えた変更(記帳した取引、Kongの設定、Kafkaのトピック、メトリクスやトレースなど)を" +
+            "元に戻すには、make all:resetを実行します。すべてのサービスを停止し、apps・Kong・Kafka・" +
+            "observabilityの保存データと、各テストツールが生成したレポートやログを消去します。" +
+            "実行後は何も起動しないので、必要なものをmake all:up(またはモジュールごとのup)で起動し直してください。",
+        ],
+        code: [{ code: "make all:reset   # すべて停止し、保存データと生成レポートを消去" }],
+        closing: [
+          ".envに加えた設定(APPS_API_BASEやAPPS_MCP_AUTH_REQUIREDなど)は変更されないので、必要なら手で" +
+            "元に戻してください。モジュールごとのreset(make apps:reset、make kong:resetなど)もあり、" +
+            "一部だけやり直すこともできます。",
         ],
       },
       {

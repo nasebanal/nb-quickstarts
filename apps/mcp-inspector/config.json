@@ -2,11 +2,13 @@
   "mcpServers": {
     "apps-backend": {
       "type": "http",
-      "url": "http://backend:8080/mcp"
+      "url": "http://backend:8080/mcp",
+      "headers": { "Authorization": "Bearer nb1~ZGVtbw~o8ULBzbbQm6Lrym32BZVUdAXhtlQYQJL1emk2ZCkMqY" }
     },
     "agentgateway": {
       "type": "http",
-      "url": "http://agentgateway:3000/mcp"
+      "url": "http://agentgateway:3000/mcp",
+      "headers": { "Authorization": "Bearer nb1~ZGVtbw~o8ULBzbbQm6Lrym32BZVUdAXhtlQYQJL1emk2ZCkMqY" }
     }
   }
 }

@@ -82,31 +82,31 @@ export const overview: LocalizedDocsPage = {
             ],
           },
           {
-            heading: "Scenario 4: Observability",
-            href: "/docs/scenario-observability",
-            body: [
-              "Enables the backend's OpenTelemetry export (traces, metrics and logs; off by default) and runs an HTTP overload while it is observed live in Grafana. The same run triggers alert rules that Alertmanager routes as notifications, a log line in Loki links to the trace of the request behind it, and Kong and agentgateway export telemetry as well.",
-            ],
-          },
-          {
-            heading: "Scenario 5: Use Keycloak",
+            heading: "Scenario 4: Use Keycloak",
             href: "/docs/scenario-keycloak",
             body: [
               "Replaces the mock login with a real one: the login page gains a Keycloak option (with sign-up), the user authenticates at Keycloak, and the backend accepts the token Keycloak issued on the same POST /transactions route. The scenario then confirms that the backend performs the check.",
             ],
           },
           {
-            heading: "Scenario 6: Use Vault",
+            heading: "Scenario 5: Use Vault",
             href: "/docs/scenario-vault",
             body: [
               "Removes the database password from the backend's configuration: the backend requests a credential from Vault at startup, and Vault creates a short-lived MySQL user for it on demand. The scenario shows the backend failing without Vault and working with it, then inspects the users Vault created.",
             ],
           },
           {
-            heading: "Scenario 7: MCP access via agentgateway",
+            heading: "Scenario 6: MCP access via agentgateway",
             href: "/docs/scenario-agentgateway",
             body: [
               "Provides a second route to the backend as MCP tools. Besides the backend's own /mcp, agentgateway builds MCP tools solely from the OpenAPI contract (openapi.yaml). A tool is called through the gateway and from a real MCP client, and the gateway's dashboard is reviewed.",
+            ],
+          },
+          {
+            heading: "Scenario 7: Observability",
+            href: "/docs/scenario-observability",
+            body: [
+              "Enables the backend's OpenTelemetry export (traces, metrics and logs; off by default) and runs an HTTP overload while it is observed live in Grafana. The same run triggers alert rules that Alertmanager routes as notifications, a log line in Loki links to the trace of the request behind it, and Kong and agentgateway export telemetry as well.",
             ],
           },
         ],
@@ -185,31 +185,31 @@ export const overview: LocalizedDocsPage = {
             ],
           },
           {
-            heading: "シナリオ4: オブザーバビリティ",
-            href: "/docs/scenario-observability",
-            body: [
-              "backendのOpenTelemetryエクスポート(トレース・メトリクス・ログ。既定ではオフ)を有効にし、HTTPの過負荷を実行して、その様子をGrafanaでライブに観察します。同じ実行でアラートルールが発火してAlertmanagerが通知に振り分け、Lokiのログ行からそのリクエストのトレースへ遷移でき、Kongとagentgatewayもテレメトリーを送信します。",
-            ],
-          },
-          {
-            heading: "シナリオ5: Keycloakの利用",
+            heading: "シナリオ4: Keycloakの利用",
             href: "/docs/scenario-keycloak",
             body: [
               "モックのログインを本物に置き換えます。ログイン画面にKeycloakの選択肢(サインアップ付き)が加わり、Keycloakで認証すると、backendは同じPOST /transactionsでKeycloakが発行したトークンを受け付けます。そのうえで、backendが実際にトークンを検証していることを確認します。",
             ],
           },
           {
-            heading: "シナリオ6: Vaultの利用",
+            heading: "シナリオ5: Vaultの利用",
             href: "/docs/scenario-vault",
             body: [
               "backendの設定からデータベースのパスワードを取り除きます。backendは起動時にVaultへ認証情報を要求し、Vaultがその場で短命なMySQLユーザーを作成します。Vaultなしではbackendが失敗し、Vaultありでは動作することを確認し、最後にVaultが作成したユーザーを確認します。",
             ],
           },
           {
-            heading: "シナリオ7: agentgateway経由でのMCPアクセス",
+            heading: "シナリオ6: agentgateway経由でのMCPアクセス",
             href: "/docs/scenario-agentgateway",
             body: [
               "backendへMCPツールとして到達する、もう1つの経路です。backend自身の/mcpとは別に、agentgatewayはMCPツールをOpenAPIのSpecファイル(openapi.yaml)だけから作成します。ゲートウェイ経由と実際のMCPクライアントからツールを呼び出し、ゲートウェイのダッシュボードを確認します。",
+            ],
+          },
+          {
+            heading: "シナリオ7: オブザーバビリティ",
+            href: "/docs/scenario-observability",
+            body: [
+              "backendのOpenTelemetryエクスポート(トレース・メトリクス・ログ。既定ではオフ)を有効にし、HTTPの過負荷を実行して、その様子をGrafanaでライブに観察します。同じ実行でアラートルールが発火してAlertmanagerが通知に振り分け、Lokiのログ行からそのリクエストのトレースへ遷移でき、Kongとagentgatewayもテレメトリーを送信します。",
             ],
           },
         ],
