@@ -353,33 +353,27 @@ Switch `agentgateway` on, open **Tools**, pick `list_accounts_accounts_get` and 
 
 Verified end-to-end: `agentgateway:tools` lists eight tools - `health_health_get`, `login_auth_login_post`, `get_me_me_get`, `update_profile_me_profile_put`, `list_transactions_transactions_get`, `create_transaction_transactions_post`, `get_transaction_transactions__transaction_id__get`, `list_accounts_accounts_get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_accounts_accounts_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
 
-**Register it in Claude Code or Claude Desktop** (needs `make agentgateway:up`; the steps for the backend's own `/mcp` are in [MCP: trying the backend's MCP server](#mcp-trying-the-backends-mcp-server)):
+**Register it in Claude Code, with a token** (needs `make agentgateway:up` and `make apps:up`). `get_me`, `update_profile` and `create_transaction` need a bearer token, like the REST routes behind them, and the tool arguments have no `Authorization` header - without a token they answer `invalid or missing token`. So the token goes on the connection itself: agentgateway passes the connection's `Authorization` header through to the backend (checked with a demo token and with a Keycloak one). In this order:
 
 ```bash
-claude mcp add --transport http agentgateway http://localhost:8010/mcp
+# 1. get a token (the demo token never expires)
+TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \
+  -d '{"username":"demo","password":"demo"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+echo "token: ${TOKEN:0:12}..."   # nb1~ZGVtbw~... means it worked
+
+# 2. register agentgateway with it (drop the first line if it was never registered)
+claude mcp remove agentgateway
+claude mcp add --transport http agentgateway http://localhost:8010/mcp --header "Authorization: Bearer $TOKEN"
+
+# 3. restart Claude Code (a running session does not pick up a newly added server), then ask it to call get_me
 claude mcp list
 ```
 
-Restart Claude Code (or reconnect with `/mcp`) before asking for anything, as there. For Claude Desktop, add an `mcpServers` entry that goes through the `mcp-remote` bridge, with `http://localhost:8010/mcp` as the URL:
-
-```json
-{ "mcpServers": { "agentgateway": { "command": "npx", "args": ["-y", "mcp-remote", "http://localhost:8010/mcp"] } } }
-```
-
-This registers the open tools (`list_accounts`, `list_transactions`, ...); the ones that need a token are covered under **Authentication** below.
+`get_me` returning the demo user's profile means the token went through; `invalid or missing token` means the header was not registered - `claude mcp get` does not list headers (its `Connected` says nothing about them), `~/.claude.json` does. A Keycloak access token lasts minutes, the demo token never expires. Claude Desktop works the same way through the `mcp-remote` bridge (see [MCP](#mcp-trying-the-backends-mcp-server)) with its `--header` option - not tried here.
 
 Point an MCP client (Claude Desktop, [mcp-inspector](https://github.com/modelcontextprotocol/inspector), ...) at `http://localhost:8010/mcp` to use it interactively. `create_transaction_transactions_post` needs a real bearer token, same as `POST /transactions` itself does everywhere else - call `login_auth_login_post` first and pass its token back as an `Authorization` header, or the tool call 401s the same way an unauthenticated `curl` would.
 
-**Authentication.** agentgateway has no login of its own here, and `APPS_MCP_AUTH_REQUIRED` does not reach it (it calls the REST routes, not `/mcp`). So in Claude Code's `/mcp` the server shows *not authenticated* and **Authenticate** fails (`Dynamic Client Registration rejected (HTTP 406)` - every path other than `/mcp` is answered by agentgateway's MCP handler, and there is no OAuth endpoint to register with); pick **Reconnect** instead. The three tools that need a token - `get_me`, `update_profile`, `create_transaction` - get `invalid or missing token`, because the tool arguments carry no `Authorization` header. agentgateway does pass the *connection's* `Authorization` header through to the backend (checked with a demo token and with a Keycloak one), so give the connection a token once:
-
-```bash
-TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \
-  -d '{"username":"demo","password":"demo"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
-claude mcp remove agentgateway
-claude mcp add --transport http agentgateway http://localhost:8010/mcp --header "Authorization: Bearer $TOKEN"
-```
-
-(Restart Claude Code afterwards; `claude mcp get agentgateway` does not list headers, and its `Connected` says nothing about them - `~/.claude.json` does.) The demo token never expires; a Keycloak access token lasts minutes. A browser login through agentgateway itself would need `policies.mcpAuthentication`, which only validates JWTs - the demo token is not one - so it waits for the backend to issue JWTs. `provider: keycloak` is no way around it: agentgateway issue [#3668](https://github.com/agentgateway/agentgateway/issues/3668) makes Claude Code reject that login (RFC 9207 issuer mismatch).
+**Why not the browser login (Authenticate)?** agentgateway has no login of its own here, and `APPS_MCP_AUTH_REQUIRED` does not reach it - it builds its tools from the OpenAPI contract and calls the REST routes, never the backend's `/mcp`. So in Claude Code's `/mcp` the server shows *not authenticated* and **Authenticate** fails (`Dynamic Client Registration rejected (HTTP 406)`: every path other than `/mcp` is answered by agentgateway's MCP handler, so there is no OAuth endpoint to register with); pick **Reconnect** instead - it connects fine, and the header carries the token. A browser login through agentgateway itself would need `policies.mcpAuthentication`, which only validates JWTs - the demo token is not one - so it waits for the backend to issue JWTs. `provider: keycloak` is no way around it: agentgateway issue [#3668](https://github.com/agentgateway/agentgateway/issues/3668) makes Claude Code reject that login (RFC 9207 issuer mismatch).
 
 agentgateway also ships a real dashboard UI (a React SPA, built into the image by default - `Dockerfile`'s `CARGO_FEATURES=agentgateway-app/ui`), served off its **admin** port, separate from the MCP port above:
 

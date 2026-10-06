@@ -71,7 +71,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         note:
           "get_me, update_profile and create_transaction need a real bearer token, same as the REST routes " +
           "behind them. The tool arguments have no Authorization header, so called as-is they answer " +
-          "\"invalid or missing token\" - see \"5. Calling the tools that need a token\" below.",
+          "\"invalid or missing token\" - see \"4. Register it in Claude Code, with a token\" below.",
       },
       {
         heading: "3. Try it in MCP Inspector",
@@ -95,66 +95,57 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         ],
         note:
           "The backend's native /mcp also exposes its two GraphQL routes as tools, so its tool list is longer " +
-          "than the eight agentgateway builds from the OpenAPI contract. Claude Code and Claude Desktop can use the " +
-          "gateway too - see [Getting Started](/docs/getting-started).",
+          "than the eight agentgateway builds from the OpenAPI contract. Claude Code can use the " +
+          "gateway too - step 4 below registers it, with a token.",
       },
       {
-        heading: "4. Use it from Claude Code or Claude Desktop",
+        heading: "4. Register it in Claude Code, with a token",
         body: [
-          "Any MCP client that speaks Streamable HTTP can use the gateway; it needs make agentgateway:up. The " +
-            "backend's own /mcp is registered the same way - see Getting Started for the side-by-side of the two " +
-            "Claude clients and for the browser login that /mcp can require.",
+          "get_me, update_profile and create_transaction need a bearer token, like the REST routes behind them, and the tool " +
+            "arguments have no Authorization header - so without a token they answer \"invalid or missing token\". The " +
+            "token therefore goes on the connection itself: agentgateway passes the connection's Authorization header through to " +
+            "the backend (checked with a demo token and with a Keycloak one). So register it with one, in this order " +
+            "(needs make agentgateway:up and make apps:up):",
         ],
         code: [
           {
-            label: "Claude Code",
-            code: "claude mcp add --transport http agentgateway http://localhost:8010/mcp\nclaude mcp list",
-          },
-          {
-            label: "Claude Desktop (claude_desktop_config.json)",
-            code:
-              "{\n" +
-              '  "mcpServers": {\n' +
-              '    "agentgateway": {\n' +
-              '      "command": "npx",\n' +
-              '      "args": ["-y", "mcp-remote", "http://localhost:8010/mcp"]\n' +
-              "    }\n" +
-              "  }\n" +
-              "}",
-          },
-        ],
-        note:
-          "Restart Claude Code (or reconnect with /mcp) before asking for anything - a running session does not " +
-          "pick up a newly added server. This registers the open tools (list_accounts, list_transactions, ...); " +
-          "the ones that need a token are next.",
-      },
-      {
-        heading: "5. Calling the tools that need a token",
-        body: [
-          "agentgateway has no login of its own here, and APPS_MCP_AUTH_REQUIRED does not reach it: it builds " +
-            "its tools from the OpenAPI contract and calls the REST routes, never the backend's /mcp. So in " +
-            "Claude Code's /mcp the server shows not authenticated, and Authenticate fails with Dynamic Client " +
-            "Registration rejected (HTTP 406) - every path other than /mcp is answered by agentgateway's MCP " +
-            "handler, so there is no OAuth endpoint to register with. Pick Reconnect instead.",
-          "What does work: agentgateway passes the connection's Authorization header through to the backend " +
-            "(checked with a demo token and with a Keycloak one). Give the connection a token once:",
-        ],
-        code: [
-          {
+            label: "1. Get a token (the demo token never expires)",
             code:
               "TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \\\n" +
               "  -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')\n" +
+              "echo \"token: ${TOKEN:0:12}...\"   # nb1~ZGVtbw~... means it worked",
+          },
+          {
+            label: "2. Register agentgateway with it (drop the first line if it was never registered)",
+            code:
               "claude mcp remove agentgateway\n" +
               "claude mcp add --transport http agentgateway http://localhost:8010/mcp --header \"Authorization: Bearer $TOKEN\"",
           },
+          {
+            label: "3. Restart Claude Code (a running session does not pick up a newly added server), then ask it to call get_me",
+            code: "claude mcp list",
+          },
         ],
         note:
-          "Restart Claude Code afterwards. claude mcp get does not list headers (its Connected says nothing " +
-          "about them) - ~/.claude.json does. The demo token never expires; a Keycloak access token lasts " +
-          "minutes. A browser login through agentgateway itself would need policies.mcpAuthentication, which " +
-          "only validates JWTs - the demo token is not one - so it waits for the backend to issue JWTs. " +
-          "provider: keycloak is no way around that: agentgateway issue #3668 makes Claude Code reject the " +
-          "login (RFC 9207 issuer mismatch).",
+          "get_me returning the demo user's profile means the token went through; \"invalid or missing token\" means the header was not " +
+          "registered - claude mcp get does not list headers (its Connected says nothing about them), ~/.claude.json does. The demo " +
+          "token never expires; a Keycloak access token lasts minutes. Claude Desktop works the same way through the mcp-remote bridge " +
+          "(see Getting Started) with its --header option - not tried here.",
+        subsections: [
+          {
+            heading: "Why not the browser login (Authenticate)?",
+            body: [
+              "agentgateway has no login of its own here, and APPS_MCP_AUTH_REQUIRED does not reach it: it builds its tools from " +
+                "the OpenAPI contract and calls the REST routes, never the backend's /mcp. So in Claude Code's /mcp the server " +
+                "shows not authenticated, and Authenticate fails with Dynamic Client Registration rejected (HTTP 406) - every path " +
+                "other than /mcp is answered by agentgateway's MCP handler, so there is no OAuth endpoint to register with. " +
+                "Pick Reconnect instead (it connects fine; the header carries the token).",
+              "A browser login through agentgateway itself would need policies.mcpAuthentication, which only validates JWTs - " +
+                "the demo token is not one - so it waits for the backend to issue JWTs. provider: keycloak is no way around that: " +
+                "agentgateway issue #3668 makes Claude Code reject the login (RFC 9207 issuer mismatch).",
+            ],
+          },
+        ],
       },
       {
         heading: "The dashboard",
@@ -263,7 +254,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         note:
           "get_me、update_profile、create_transactionは、背後のRESTルートと同じく本物のbearerトークンが" +
           "必要です。ツールの引数にAuthorizationヘッダーは無いので、そのまま呼ぶと「invalid or missing token」に" +
-          "なります — 下の「5. トークンが必要なツールを呼ぶ」を見てください。",
+          "なります — 下の「4. トークンを付けてClaude Codeに登録する」を見てください。",
       },
       {
         heading: "3. MCP Inspectorで試す",
@@ -287,66 +278,56 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         ],
         note:
           "backendのネイティブな/mcpはGraphQLの2つのルートもツールとして公開するため、OpenAPI契約からagentgatewayが作る8個より" +
-          "ツール数が多くなります。Claude CodeやClaude Desktopからもゲートウェイを使えます — " +
-          "[Getting Started](/docs/getting-started)を参照してください。",
+          "ツール数が多くなります。Claude Codeからもゲートウェイを使えます — " +
+          "下の手順4でトークンを付けて登録します。",
       },
       {
-        heading: "4. Claude CodeまたはClaude Desktopから使う",
+        heading: "4. トークンを付けてClaude Codeに登録する",
         body: [
-          "Streamable HTTPに対応するMCPクライアントなら、どれでもゲートウェイを使えます(make agentgateway:upが" +
-            "必要です)。backend自身の/mcpも同じ方法で登録します — 2つのClaudeクライアントの比較と、/mcpに" +
-            "要求できるブラウザログインはGetting Startedを見てください。",
+          "get_me、update_profile、create_transactionは、背後のRESTルートと同じくbearerトークンが必要で、ツールの引数に" +
+            "Authorizationヘッダーは無いので、トークンが無いと「invalid or missing token」になります。そのためトークンは" +
+            "接続そのものに付けます: agentgatewayは接続のAuthorizationヘッダーをbackendへそのまま渡します(デモトークンでも" +
+            "Keycloakのトークンでも確認済み)。次の順で、トークンを付けて登録します(make agentgateway:upとmake apps:upが必要です):",
         ],
         code: [
           {
-            label: "Claude Code",
-            code: "claude mcp add --transport http agentgateway http://localhost:8010/mcp\nclaude mcp list",
-          },
-          {
-            label: "Claude Desktop(claude_desktop_config.json)",
-            code:
-              "{\n" +
-              '  "mcpServers": {\n' +
-              '    "agentgateway": {\n' +
-              '      "command": "npx",\n' +
-              '      "args": ["-y", "mcp-remote", "http://localhost:8010/mcp"]\n' +
-              "    }\n" +
-              "  }\n" +
-              "}",
-          },
-        ],
-        note:
-          "何か頼む前にClaude Codeを再起動(または/mcpで再接続)してください — 起動中のセッションは追加した" +
-          "サーバーを読み込みません。ここで登録されるのは認証不要のツール(list_accounts、list_transactionsなど)で、" +
-          "トークンが必要なツールは次の節です。",
-      },
-      {
-        heading: "5. トークンが必要なツールを呼ぶ",
-        body: [
-          "agentgatewayにはここで独自のログインがなく、APPS_MCP_AUTH_REQUIREDも届きません。OpenAPIコントラクトから" +
-            "ツールを作り、RESTルートを呼ぶだけで、backendの/mcpは使わないからです。そのためClaude Codeの/mcpでは" +
-            "not authenticatedと表示され、AuthenticateはDynamic Client Registration rejected (HTTP 406)で失敗します" +
-            " — /mcp以外のパスはすべてagentgatewayのMCPハンドラが応答するので、登録先のOAuthエンドポイントが" +
-            "ありません。代わりにReconnectを選んでください。",
-          "使える方法: agentgatewayは、接続のAuthorizationヘッダーをbackendへそのまま渡します(デモトークンでも" +
-            "Keycloakのトークンでも確認済み)。接続にトークンを一度渡します:",
-        ],
-        code: [
-          {
+            label: "1. トークンを取得する(デモトークンは期限なし)",
             code:
               "TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \\\n" +
               "  -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')\n" +
+              "echo \"token: ${TOKEN:0:12}...\"   # nb1~ZGVtbw~... means it worked",
+          },
+          {
+            label: "2. そのトークンを付けてagentgatewayを登録する(未登録なら1行目は不要)",
+            code:
               "claude mcp remove agentgateway\n" +
               "claude mcp add --transport http agentgateway http://localhost:8010/mcp --header \"Authorization: Bearer $TOKEN\"",
           },
+          {
+            label: "3. Claude Codeを再起動する(起動中のセッションは追加したサーバーを読み込みません)。そのあとget_meを呼ぶよう頼む",
+            code: "claude mcp list",
+          },
         ],
         note:
-          "その後Claude Codeを再起動してください。claude mcp getはヘッダーを表示しません(Connectedはヘッダーと" +
-          "無関係です)。確認は~/.claude.jsonで行います。デモトークンは期限なし、Keycloakのアクセストークンは" +
-          "数分です。agentgateway自身でブラウザログインするには、JWTだけを検証するpolicies.mcpAuthenticationが" +
-          "要り、デモトークンはJWTではないので、backendがJWTを発行できるようになるまで待ちです。" +
-          "provider: keycloakも回避策にはなりません: agentgatewayのissue #3668により、Claude Codeがそのログインを" +
-          "拒否します(RFC 9207の発行元の不一致)。",
+          "get_meがデモユーザーのプロフィールを返せば、トークンは通っています。「invalid or missing token」ならヘッダーが登録されて" +
+          "いません — claude mcp getはヘッダーを表示しません(Connectedはヘッダーと無関係です)。確認は~/.claude.jsonで行います。デモ" +
+          "トークンは期限なし、Keycloakのアクセストークンは数分です。Claude Desktopもmcp-remoteブリッジ(Getting Startedを参照)の" +
+          "--headerオプションで同じように使えますが、ここでは試していません。",
+        subsections: [
+          {
+            heading: "ブラウザログイン(Authenticate)ではない理由",
+            body: [
+              "agentgatewayにはここで独自のログインがなく、APPS_MCP_AUTH_REQUIREDも届きません。OpenAPIコントラクトから" +
+                "ツールを作り、RESTルートを呼ぶだけで、backendの/mcpは使わないからです。そのためClaude Codeの/mcpでは" +
+                "not authenticatedと表示され、AuthenticateはDynamic Client Registration rejected (HTTP 406)で失敗します" +
+                " — /mcp以外のパスはすべてagentgatewayのMCPハンドラが応答するので、登録先のOAuthエンドポイントが" +
+                "ありません。代わりにReconnectを選んでください(接続はできて、トークンはヘッダーが運びます)。",
+              "agentgateway自身でブラウザログインするには、JWTだけを検証するpolicies.mcpAuthenticationが要り、デモトークンは" +
+                "JWTではないので、backendがJWTを発行できるようになるまで待ちです。provider: keycloakも回避策にはなりません: " +
+                "agentgatewayのissue #3668により、Claude Codeがそのログインを拒否します(RFC 9207の発行元の不一致)。",
+            ],
+          },
+        ],
       },
       {
         heading: "ダッシュボード",
