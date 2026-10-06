@@ -197,6 +197,17 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           "to the mock lookup.",
       },
       {
+        heading: "5. Use it for an MCP client's login",
+        body: [
+          "The same Keycloak login works when an MCP client logs in. With APPS_MCP_AUTH_REQUIRED=true, Claude Code's " +
+            "Authenticate opens the frontend's /mcp-authorize page, which has the same Demo login / Keycloak " +
+            "toggle. Pick Keycloak, sign in as keycloak-demo, and you come back to that page (not to /accounts) " +
+            "to press Allow - then get_me answers with the Keycloak user's profile. The backend verifies the " +
+            "Keycloak JWT as it does everywhere, then issues the MCP client the ordinary demo token for that " +
+            "username. The full flow is in Getting Started: \"Requiring a login for /mcp\".",
+        ],
+      },
+      {
         heading: "Returning to mock-login-only",
         code: [
           { label: ".env:", code: "KEYCLOAK_ISSUER=" },
@@ -403,6 +414,17 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           "ためです — backendが信頼するのはトークンの中身ではなく署名です。デモログインのタブで得られる" +
           "モックトークンも並行して使えます: backendはまずKeycloakとしての検証を試し、失敗したらモックの" +
           "照合にフォールバックします。",
+      },
+      {
+        heading: "5. MCPクライアントのログインに使う",
+        body: [
+          "MCPクライアントのログインでも同じKeycloakログインが使えます。APPS_MCP_AUTH_REQUIRED=trueのとき、" +
+            "Claude CodeのAuthenticateはfrontendの/mcp-authorizeを開き、そこにも同じデモログイン / Keycloakの" +
+            "切り替えがあります。Keycloakを選んでkeycloak-demoでサインインすると、/accountsではなくこのページに" +
+            "戻るので、Allowを押します — するとget_meがKeycloakユーザーのプロフィールで答えます。backendは" +
+            "いつもどおりKeycloakのJWTを検証し、そのユーザー名に対する通常のデモトークンをMCPクライアントへ" +
+            "発行します。全体の流れはGetting Startedの「/mcpにログインを必須にする」にあります。",
+        ],
       },
       {
         heading: "モックログインのみに戻す",

@@ -35,7 +35,7 @@ vault:
 	@echo "  VAULT_PORT=8200"
 	@echo "  VAULT_ROOT_TOKEN=nb-vault-root-token"
 	@echo "  VAULT_ADDR=, VAULT_TOKEN=  (apps/backend's own env vars, empty = off - see .env.example)"
-	@echo "  BACKEND_MYSQL_PASSWORD=    (set but empty: the backend has no password of its own - see .env.example)"
+	@echo "  APPS_BACKEND_MYSQL_PASSWORD=    (set but empty: the backend has no password of its own - see .env.example)"
 	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  UI / API: http://localhost:$${VAULT_PORT:-8200} (token: $${VAULT_ROOT_TOKEN:-nb-vault-root-token})"
@@ -78,7 +78,7 @@ vault-open:
 # apps/backend (app/config.py) fetches secret/apps/mysql at startup when
 # VAULT_ADDR/VAULT_TOKEN are set, and falls back to its own MYSQL_USER/
 # MYSQL_PASSWORD env vars otherwise - same "empty leaves it off" shape as
-# OTEL_EXPORTER_OTLP_ENDPOINT. The value written here is deliberately the
+# APPS_OTEL_EXPORTER_OTLP_ENDPOINT. The value written here is deliberately the
 # *same* credential apps' MySQL already accepts (from APPS_MYSQL_USER/
 # APPS_MYSQL_PASSWORD, what apps/docker-compose.yml itself uses) - this
 # demo is about proving the real backend genuinely sources it from Vault at
@@ -113,14 +113,14 @@ vault-leases:
 	@docker exec -e VAULT_ADDR=http://127.0.0.1:8200 -e VAULT_TOKEN=$${VAULT_ROOT_TOKEN:-nb-vault-root-token} \
 		nb-vault vault list sys/leases/lookup/database/creds/apps-backend
 
-# Both prove targets recreate the backend with BACKEND_MYSQL_PASSWORD set but
+# Both prove targets recreate the backend with APPS_BACKEND_MYSQL_PASSWORD set but
 # empty (apps/docker-compose.yml uses `-`, not `:-`, so empty is kept): the
 # backend then has no password of its own at all. Without Vault it can't log
 # in; with Vault it asks for a credential and gets a brand-new MySQL user. The
 # variables apply to this one recreate only - .env is not touched.
 vault-prove-needs-vault:
 	@echo "Recreating apps/backend with NO MySQL password and NO Vault..."
-	@BACKEND_MYSQL_PASSWORD= VAULT_ADDR= VAULT_TOKEN= \
+	@APPS_BACKEND_MYSQL_PASSWORD= VAULT_ADDR= VAULT_TOKEN= \
 		docker-compose -f apps/docker-compose.yml up -d --force-recreate backend
 	@sleep 12
 	@echo ""
@@ -136,7 +136,7 @@ vault-prove-needs-vault:
 vault-verify-apps: vault-setup-mysql
 	@echo ""
 	@echo "Recreating apps/backend with NO MySQL password of its own, but WITH Vault..."
-	@BACKEND_MYSQL_PASSWORD= VAULT_ADDR=http://vault:8200 VAULT_TOKEN=$${VAULT_ROOT_TOKEN:-nb-vault-root-token} \
+	@APPS_BACKEND_MYSQL_PASSWORD= VAULT_ADDR=http://vault:8200 VAULT_TOKEN=$${VAULT_ROOT_TOKEN:-nb-vault-root-token} \
 		docker-compose -f apps/docker-compose.yml up -d --force-recreate backend
 	@i=0; until curl -sf -m 3 http://localhost:8080/health >/dev/null || [ $$i -ge 30 ]; do sleep 2; i=$$((i+1)); done
 	@echo ""

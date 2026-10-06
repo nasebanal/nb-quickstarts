@@ -32,7 +32,7 @@ export const scenarioKong: LocalizedDocsPage = {
             code:
               "make apps:up\n" +
               "make kong:up\n" +
-              "# .env: NEXT_PUBLIC_API_BASE=http://localhost:8000/api\n" +
+              "# .env: APPS_API_BASE=http://localhost:8000/api\n" +
               "make apps:restart   # frontend needs recreating to pick up the new value",
           },
         ],
@@ -137,7 +137,7 @@ export const scenarioKong: LocalizedDocsPage = {
         code: [
           {
             code:
-              "# .env: remove NEXT_PUBLIC_API_BASE (or set it back to http://localhost:8080)\n" +
+              "# .env: remove APPS_API_BASE (or set it back to http://localhost:8080)\n" +
               "make apps:restart          # frontend needs recreating to pick up the change\n" +
               "make specmatic:mock-down   # if you started Specmatic's mock\n" +
               "make kong:down",
@@ -177,7 +177,7 @@ export const scenarioKong: LocalizedDocsPage = {
             code:
               "make apps:up\n" +
               "make kong:up\n" +
-              "# .env: NEXT_PUBLIC_API_BASE=http://localhost:8000/api\n" +
+              "# .env: APPS_API_BASE=http://localhost:8000/api\n" +
               "make apps:restart   # frontendを再作成して新しい値を反映",
           },
         ],
@@ -279,7 +279,7 @@ export const scenarioKong: LocalizedDocsPage = {
         code: [
           {
             code:
-              "# .env: NEXT_PUBLIC_API_BASEを削除(またはhttp://localhost:8080に戻す)\n" +
+              "# .env: APPS_API_BASEを削除(またはhttp://localhost:8080に戻す)\n" +
               "make apps:restart          # frontendを再作成して変更を反映\n" +
               "make specmatic:mock-down   # Specmaticのモックを起動した場合\n" +
               "make kong:down",

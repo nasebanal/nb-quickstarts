@@ -211,7 +211,7 @@ export const gettingStarted: LocalizedDocsPage = {
         heading: "Also try it from Claude (or another MCP client)",
         body: [
           "MCP Inspector is only one client - any MCP client that speaks Streamable HTTP can use the same " +
-            "endpoints (agentgateway's needs make agentgateway:up). Here is how the two Claude clients differ:",
+            "endpoint (agentgateway's own is registered in Scenario 7). Here is how the two Claude clients differ:",
         ],
         subsections: [
           {
@@ -220,7 +220,7 @@ export const gettingStarted: LocalizedDocsPage = {
               headers: ["", "Claude Code", "Claude Desktop"],
               rows: [
                 ["How it connects", "Directly - Streamable HTTP is supported as is", "Through the mcp-remote bridge (a local http:// address can't be a custom connector, which needs a public https URL)"],
-                ["How to add", "claude mcp add --transport http <name> <url>", "Add an mcpServers entry to claude_desktop_config.json (use http://localhost:8010/mcp for agentgateway)"],
+                ["How to add", "claude mcp add --transport http <name> <url>", "Add an mcpServers entry to claude_desktop_config.json"],
                 ["Then", "Restart Claude Code, or reconnect with /mcp - a running session doesn't pick up a newly added server", "Restart Claude Desktop"],
                 ["Check", "/mcp lists the servers and their tools", "The servers' tools show up in a new chat"],
               ],
@@ -233,7 +233,6 @@ export const gettingStarted: LocalizedDocsPage = {
               {
                 code:
                   "claude mcp add --transport http apps-backend http://localhost:8080/mcp\n" +
-                  "claude mcp add --transport http agentgateway http://localhost:8010/mcp\n" +
                   "claude mcp list",
               },
             ],
@@ -260,8 +259,74 @@ export const gettingStarted: LocalizedDocsPage = {
             ],
             note:
               "Then ask something like \"list the accounts and their balances\" - Claude calls " +
-              "list_accounts_accounts_get, asking you to approve the call first. These are local, " +
-              "unauthenticated demo endpoints; remove them afterwards with claude mcp remove <name>.",
+              "list_accounts_accounts_get, asking you to approve the call first. These are local demo " +
+              "endpoints (open unless APPS_MCP_AUTH_REQUIRED is set - see below); remove them afterwards with claude mcp remove <name>.",
+          },
+        ],
+      },
+      {
+        heading: "Requiring a login for /mcp",
+        body: [
+          "By default /mcp is open - but get_me, update_profile and create_transaction need a bearer token, " +
+            "and an MCP client has no way to supply one. Set APPS_MCP_AUTH_REQUIRED=true and /mcp answers 401 " +
+            "until the client has logged in through the browser; the token it ends up with is sent along with " +
+            "every tool call.",
+        ],
+        code: [
+          {
+            code:
+              "# .env: APPS_MCP_AUTH_REQUIRED=true\n" +
+              "make apps:restart\n" +
+              "claude mcp remove apps-backend\n" +
+              "claude mcp add --transport http apps-backend http://localhost:8080/mcp",
+          },
+        ],
+        bullets: [
+          "Restart Claude Code, open /mcp, pick apps-backend (it says needs authentication) and Authenticate.",
+          "The browser opens the frontend's /mcp-authorize page - the app's own login: Demo login (demo / demo) or, " +
+            "with KEYCLOAK_ISSUER set and make keycloak:up running, Keycloak (keycloak-demo / nasebanal-demo).",
+          "Press Allow (Deny tells the client access_denied). The browser lands on Claude Code's own " +
+            "\"Authentication successful\" page - close the tab, then ask for get_me.",
+        ],
+        sequence: {
+          summary:
+            "Sequence diagram: Claude Code gets a 401 from /mcp, registers itself, sends the user to the frontend login, and trades the authorization code for a token that every tool call then carries.",
+          participants: [
+            { id: "cc", label: "Claude Code", sub: "MCP client" },
+            { id: "fe", label: "Frontend", sub: "browser" },
+            { id: "kc", label: "Keycloak", sub: "optional" },
+            { id: "be", label: "Backend", sub: "/mcp + /oauth" },
+          ],
+          steps: [
+            { kind: "message", from: "cc", to: "be", text: "POST /mcp with no token" },
+            { kind: "message", from: "be", to: "cc", text: "401", detail: "WWW-Authenticate: Bearer resource_metadata=...", dashed: true },
+            { kind: "message", from: "cc", to: "be", text: "Register this client", detail: "POST /oauth/register" },
+            { kind: "message", from: "cc", to: "fe", text: "Open the browser", detail: "/mcp-authorize?client_id=...&code_challenge=..." },
+            { kind: "message", from: "fe", to: "kc", text: "Keycloak login (only if you pick it)", detail: "OIDC code + PKCE, back to /auth/callback" },
+            { kind: "note", at: "fe", text: "Signed in: demo login or Keycloak - then Allow" },
+            { kind: "message", from: "fe", to: "be", text: "Ask for the authorization code", detail: "POST /oauth/authorize + Bearer <token of whoever signed in>" },
+            { kind: "message", from: "fe", to: "cc", text: "Redirect with the code", detail: "http://localhost:<port>/callback?code=..." },
+            { kind: "message", from: "cc", to: "be", text: "Trade the code for a token", detail: "POST /oauth/token + PKCE verifier" },
+            { kind: "message", from: "cc", to: "be", text: "Every call from now on", detail: "Authorization: Bearer <token> -> forwarded to the REST route" },
+          ],
+        },
+        subsections: [
+          {
+            heading: "Good to know",
+            bullets: [
+              "The backend is the authorization server (app/mcp_oauth.py): protected-resource and " +
+                "authorization-server metadata, dynamic client registration, authorization code + PKCE (S256). The " +
+                "login itself is the frontend's, so both login methods work with no extra code - and the access " +
+                "token that comes out is the ordinary demo token.",
+              "client_id and the code are signed and self-contained (no store, any backend instance verifies " +
+                "them); the code lives 60 seconds. Registration accepts only loopback http:// redirect URIs and " +
+                "claude.ai / claude.com callbacks. The OAuth routes are tagged mcp-oauth and left out of the tool list.",
+              "With it on, MCP Inspector (and any client without a token) gets 401 too. agentgateway is unaffected (it calls the " +
+                "REST routes, never /mcp - see Scenario 7).",
+              "Editing backend code while an MCP client is connected makes uvicorn's reload hang on the open " +
+                "GET /mcp stream - use docker restart nb-backend. Turn the login off by removing the line and " +
+                "running make apps:restart.",
+            ],
           },
         ],
       },
@@ -481,7 +546,7 @@ export const gettingStarted: LocalizedDocsPage = {
         heading: "Inspector以外に、Claudeなど他のMCPクライアントでも確認できます",
         body: [
           "MCP Inspectorは数あるクライアントの1つで、Streamable HTTPを話せるMCPクライアントなら同じ" +
-            "エンドポイントを使えます(agentgatewayはmake agentgateway:upが必要)。2つのClaudeクライアントの違いは次のとおりです:",
+            "エンドポイントを使えます(agentgatewayのエンドポイントはシナリオ7で登録します)。2つのClaudeクライアントの違いは次のとおりです:",
         ],
         subsections: [
           {
@@ -490,7 +555,7 @@ export const gettingStarted: LocalizedDocsPage = {
               headers: ["", "Claude Code", "Claude Desktop"],
               rows: [
                 ["接続の仕方", "直接 — Streamable HTTPにそのまま対応", "mcp-remoteブリッジ経由(ローカルのhttp://アドレスはカスタムコネクタにできない。カスタムコネクタには公開されたhttps URLが必要)"],
-                ["追加の仕方", "claude mcp add --transport http <名前> <URL>", "claude_desktop_config.jsonのmcpServersにエントリを追加(agentgatewayならhttp://localhost:8010/mcp)"],
+                ["追加の仕方", "claude mcp add --transport http <名前> <URL>", "claude_desktop_config.jsonのmcpServersにエントリを追加"],
                 ["その後", "Claude Codeを再起動、または/mcpで再接続(起動中のセッションは追加したサーバーを読み込まない)", "Claude Desktopを再起動"],
                 ["確認", "/mcpでサーバーとそのツールが一覧できる", "新しいチャットでサーバーのツールが使えるようになる"],
               ],
@@ -503,7 +568,6 @@ export const gettingStarted: LocalizedDocsPage = {
               {
                 code:
                   "claude mcp add --transport http apps-backend http://localhost:8080/mcp\n" +
-                  "claude mcp add --transport http agentgateway http://localhost:8010/mcp\n" +
                   "claude mcp list",
               },
             ],
@@ -529,8 +593,73 @@ export const gettingStarted: LocalizedDocsPage = {
             ],
             note:
               "あとは「勘定科目と残高を一覧して」などと頼むと、Claudeがlist_accounts_accounts_getを呼びます" +
-              "(実行前に承認を求められます)。これらはデモ用の認証なしのローカルエンドポイントです。確認後は" +
+              "(実行前に承認を求められます)。これらはデモ用のローカルエンドポイントです(APPS_MCP_AUTH_REQUIREDを設定しない限り認証なし。後述)。確認後は" +
               "claude mcp remove <name>で外してください。",
+          },
+        ],
+      },
+      {
+        heading: "/mcpにログインを必須にする",
+        body: [
+          "既定では/mcpは開いたままです。ただしget_me、update_profile、create_transactionにはベアラートークンが" +
+            "必要で、MCPクライアントにはそれを渡す手段がありません。APPS_MCP_AUTH_REQUIRED=trueにすると、" +
+            "クライアントがブラウザでログインするまで/mcpは401を返し、最終的に得たトークンが以後の" +
+            "すべてのツール呼び出しに付きます。",
+        ],
+        code: [
+          {
+            code:
+              "# .env: APPS_MCP_AUTH_REQUIRED=true\n" +
+              "make apps:restart\n" +
+              "claude mcp remove apps-backend\n" +
+              "claude mcp add --transport http apps-backend http://localhost:8080/mcp",
+          },
+        ],
+        bullets: [
+          "Claude Codeを再起動し、/mcpでapps-backend(needs authenticationと表示されます)を選んでAuthenticateします。",
+          "ブラウザでfrontendの/mcp-authorizeが開きます。アプリ自身のログインで、デモログイン(demo / demo)、" +
+            "またはKEYCLOAK_ISSUERを設定してmake keycloak:upしていればKeycloak(keycloak-demo / nasebanal-demo)です。",
+          "Allowを押します(Denyならクライアントにaccess_deniedが返ります)。ブラウザはClaude Code自身の" +
+            "「Authentication successful」ページに移るので、タブを閉じてget_meを頼んでください。",
+        ],
+        sequence: {
+          summary:
+            "シーケンス図: Claude Codeは/mcpで401を受けて自分を登録し、ユーザーをfrontendのログインへ送り、認可コードをトークンに交換して、以後のすべてのツール呼び出しに付けます。",
+          participants: [
+            { id: "cc", label: "Claude Code", sub: "MCP client" },
+            { id: "fe", label: "Frontend", sub: "browser" },
+            { id: "kc", label: "Keycloak", sub: "optional" },
+            { id: "be", label: "Backend", sub: "/mcp + /oauth" },
+          ],
+          steps: [
+            { kind: "message", from: "cc", to: "be", text: "トークンなしでPOST /mcp" },
+            { kind: "message", from: "be", to: "cc", text: "401", detail: "WWW-Authenticate: Bearer resource_metadata=...", dashed: true },
+            { kind: "message", from: "cc", to: "be", text: "クライアントを登録", detail: "POST /oauth/register" },
+            { kind: "message", from: "cc", to: "fe", text: "ブラウザを開く", detail: "/mcp-authorize?client_id=...&code_challenge=..." },
+            { kind: "message", from: "fe", to: "kc", text: "Keycloakログイン(選んだ場合のみ)", detail: "OIDC code + PKCE, back to /auth/callback" },
+            { kind: "note", at: "fe", text: "ログイン(デモまたはKeycloak)してAllow" },
+            { kind: "message", from: "fe", to: "be", text: "認可コードを要求", detail: "POST /oauth/authorize + Bearer <token of whoever signed in>" },
+            { kind: "message", from: "fe", to: "cc", text: "codeを付けてリダイレクト", detail: "http://localhost:<port>/callback?code=..." },
+            { kind: "message", from: "cc", to: "be", text: "codeをトークンに交換", detail: "POST /oauth/token + PKCE verifier" },
+            { kind: "message", from: "cc", to: "be", text: "以後のすべての呼び出し", detail: "Authorization: Bearer <token> -> forwarded to the REST route" },
+          ],
+        },
+        subsections: [
+          {
+            heading: "知っておくこと",
+            bullets: [
+              "backend(app/mcp_oauth.py)が認可サーバーです。protected-resourceと認可サーバーのメタデータ、" +
+                "動的クライアント登録、認可コード+PKCE(S256)を提供します。ログイン自体はfrontendのものなので、" +
+                "2つのログイン方法はどちらも追加コードなしで使え、出てくるアクセストークンは通常のデモトークンです。",
+              "client_idとcodeは署名つきで自己完結しています(保存先なし、どのbackendインスタンスでも検証できます)。" +
+                "codeの有効期間は60秒です。登録できるリダイレクトURIはループバックのhttp://と、claude.ai / " +
+                "claude.comのコールバックだけです。OAuthのルートはmcp-oauthタグを付けて、ツール一覧から外しています。",
+              "有効にすると、MCP Inspector(などトークンを持たないクライアント)も401になります。" +
+                "agentgatewayは影響を受けません(REST経路を呼び、/mcpは使いません — シナリオ7を参照)。",
+              "MCPクライアントを接続したままbackendのコードを編集すると、開いたままのGET /mcpストリームに" +
+                "uvicornの再読み込みが阻まれて固まります。docker restart nb-backendを使ってください。" +
+                "ログインを止めるには、その行を消してmake apps:restartします。",
+            ],
           },
         ],
       },

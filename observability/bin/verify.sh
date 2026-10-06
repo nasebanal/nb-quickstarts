@@ -1,12 +1,12 @@
 #!/bin/sh
 # Checks each component answers, then whether apps/backend's telemetry has
-# actually arrived (needs OTEL_EXPORTER_OTLP_ENDPOINT set + some traffic).
+# actually arrived (needs APPS_OTEL_EXPORTER_OTLP_ENDPOINT set + some traffic).
 
-GRAFANA="http://localhost:${GRAFANA_PORT:-3030}"
-PROM="http://localhost:${PROMETHEUS_PORT:-9094}"
-TEMPO="http://localhost:${TEMPO_PORT:-3200}"
-LOKI="http://localhost:${LOKI_PORT:-3100}"
-ALERTMANAGER="http://localhost:${ALERTMANAGER_PORT:-9095}"
+GRAFANA="http://localhost:${OBSERVABILITY_GRAFANA_PORT:-3030}"
+PROM="http://localhost:${OBSERVABILITY_PROMETHEUS_PORT:-9094}"
+TEMPO="http://localhost:${OBSERVABILITY_TEMPO_PORT:-3200}"
+LOKI="http://localhost:${OBSERVABILITY_LOKI_PORT:-3100}"
+ALERTMANAGER="http://localhost:${OBSERVABILITY_ALERTMANAGER_PORT:-9095}"
 
 check() {
 	name=$1; url=$2
@@ -32,7 +32,7 @@ series=$(curl -s "$PROM/api/v1/label/service_name/values" | jq -r '.data[]?' | g
 if [ "$series" -ge 1 ]; then
 	echo "  metrics: nb-backend series present in Prometheus"
 else
-	echo "  metrics: none yet - is OTEL_EXPORTER_OTLP_ENDPOINT set in .env, apps restarted, and any request made?"
+	echo "  metrics: none yet - is APPS_OTEL_EXPORTER_OTLP_ENDPOINT set in .env, apps restarted, and any request made?"
 fi
 traces=$(curl -s "$TEMPO/api/search?tags=service.name%3Dnb-backend&limit=1" | jq -r '.traces | length' 2>/dev/null)
 if [ "${traces:-0}" -ge 1 ]; then

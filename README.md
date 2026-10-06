@@ -44,6 +44,8 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | apps | Backend REST | http://localhost:8080 | `backend:8080` | FastAPI |
 | apps | Backend GraphQL | http://localhost:8080/graphql | `backend:8080/graphql` | Strawberry |
 | apps | MCP server | http://localhost:8080/mcp | `backend:8080/mcp` | Streamable HTTP |
+| apps | MCP login (OAuth) | http://localhost:8080/.well-known/oauth-authorization-server, `/oauth/register`, `/oauth/authorize`, `/oauth/token` | `backend:8080/...` | Only with `APPS_MCP_AUTH_REQUIRED=true` - see [Requiring a login for `/mcp`](#requiring-a-login-for-mcp). Not part of the OpenAPI contract, and left out of the MCP tool list |
+| apps | MCP login page | http://localhost:5173/mcp-authorize | `frontend:5173/mcp-authorize` | Where an MCP client's browser login lands (sign in, then **Allow**) |
 | apps | MySQL | localhost:3306 | `mysql-server:3306` | database `demo` |
 | Kong | Proxy | http://localhost:8000 | `kong:8000` | HTTPS: 8443 (host), `kong:8443` (in-network) |
 | Kong | Proxy `/api/*` | http://localhost:8000/api/accounts | `kong:8000/api/accounts` | -> `apps_backend` (real backend by default - see [Kong: routing...](#kong-routing-to-the-real-backend-or-to-a-contract-mock-instead)), needs `apps:up` |
@@ -57,13 +59,13 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 | Keycloak | Token endpoint (realm `nasebanal`) | http://localhost:8180/realms/nasebanal/... | `keycloak:8080/realms/nasebanal/...` | Client `apps-demo`, user `keycloak-demo` / `nasebanal-demo` - see [Keycloak: a real login, and a real token the backend verifies](#keycloak-a-real-login-and-a-real-token-the-backend-verifies) |
 | Vault | UI / API | http://localhost:8200 | `vault:8200` | `VAULT_PORT`; dev-mode root token `VAULT_ROOT_TOKEN` |
 | Locust | Web UI | http://localhost:8089 | `locust-master:8089` | |
-| MCP Inspector | Web UI | http://localhost:6274 | `mcp-inspector:6274` | `MCP_INSPECTOR_PORT`; started by `apps:up`, opened by `make apps:mcp`; lists the backend's `/mcp` and agentgateway's `/mcp` (`apps/mcp-inspector/config.json`) |
+| MCP Inspector | Web UI | http://localhost:6274 | `mcp-inspector:6274` | `APPS_MCP_INSPECTOR_PORT`; started by `apps:up`, opened by `make apps:mcp`; lists the backend's `/mcp` and agentgateway's `/mcp` (`apps/mcp-inspector/config.json`) |
 | agentgateway | MCP (Streamable HTTP) | http://localhost:8010/mcp | `agentgateway:3000/mcp` | `AGENTGATEWAY_PORT`; reads `shared/openapi/openapi.yaml`; tool calls need `apps:up` |
 | agentgateway | Dashboard UI | http://localhost:15000 | `agentgateway:15000` | `AGENTGATEWAY_ADMIN_PORT`; redirects to `/ui` |
-| Observability | Grafana | http://localhost:3030 | `grafana:3000` | `GRAFANA_PORT`; anonymous Admin, no login; dashboard "Apps backend (OpenTelemetry)" is pre-provisioned |
-| Observability | Prometheus | http://localhost:9094 | `prometheus:9090` | `PROMETHEUS_PORT` |
-| Observability | Tempo (query API) | http://localhost:3200 | `tempo:3200` | `TEMPO_PORT` |
-| Observability | OTLP (HTTP / gRPC) | http://localhost:4318, localhost:4317 | `otel-collector:4318`, `otel-collector:4317` | `OTEL_HTTP_PORT` / `OTEL_GRPC_PORT`; what apps export to |
+| Observability | Grafana | http://localhost:3030 | `grafana:3000` | `OBSERVABILITY_GRAFANA_PORT`; anonymous Admin, no login; dashboard "Apps backend (OpenTelemetry)" is pre-provisioned |
+| Observability | Prometheus | http://localhost:9094 | `prometheus:9090` | `OBSERVABILITY_PROMETHEUS_PORT` |
+| Observability | Tempo (query API) | http://localhost:3200 | `tempo:3200` | `OBSERVABILITY_TEMPO_PORT` |
+| Observability | OTLP (HTTP / gRPC) | http://localhost:4318, localhost:4317 | `otel-collector:4318`, `otel-collector:4317` | `OBSERVABILITY_OTEL_HTTP_PORT` / `OBSERVABILITY_OTEL_GRPC_PORT`; what apps export to |
 
 ## 🏁 Getting Started
 
@@ -131,7 +133,7 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
    make agentgateway:open
 
    # Observability (OTel Collector + Prometheus + Tempo + Grafana)
-   # Set OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 in .env first,
+   # Set APPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 in .env first,
    # then apps:restart so apps/backend starts exporting.
    make observability:up
    make observability:verify
@@ -163,7 +165,7 @@ make apps:mysql SQL="SELECT username, email, display_name, language, provider FR
 
 ### MCP: trying the backend's MCP server
 
-`apps/backend` serves MCP natively at `/mcp`, and MCP Inspector (started by `apps:up`, official image) is the quickest way to try it. `make apps:mcp` opens it with two servers listed - `apps-backend` (this one) and `agentgateway` (see [below](#agentgateway-exposing-appsbackend-as-mcp-tools); it only connects while `make agentgateway:up` is running). Its server list is the read-only `apps/mcp-inspector/config.json`, reached over `apps-network` by the Inspector's own server process; its UI token is pinned (`MCP_INSPECTOR_TOKEN`) and `apps:mcp` puts it in the URL.
+`apps/backend` serves MCP natively at `/mcp`, and MCP Inspector (started by `apps:up`, official image) is the quickest way to try it. `make apps:mcp` opens it with two servers listed - `apps-backend` (this one) and `agentgateway` (see [below](#agentgateway-exposing-appsbackend-as-mcp-tools); it only connects while `make agentgateway:up` is running). Its server list is the read-only `apps/mcp-inspector/config.json`, reached over `apps-network` by the Inspector's own server process; its UI token is pinned (`APPS_MCP_INSPECTOR_TOKEN`) and `apps:mcp` puts it in the URL.
 
 1. `make apps:mcp` opens the Inspector with both servers listed (disconnected):
 
@@ -183,12 +185,12 @@ make apps:mysql SQL="SELECT username, email, display_name, language, provider FR
 
 #### Also from Claude (or another MCP client)
 
-MCP Inspector is only one client - any MCP client that speaks Streamable HTTP can use the same endpoints (agentgateway's needs `make agentgateway:up`):
+MCP Inspector is only one client - any MCP client that speaks Streamable HTTP can use the same endpoint (agentgateway's own endpoint is registered in [its scenario](#agentgateway-exposing-appsbackend-as-mcp-tools)):
 
 | | Claude Code | Claude Desktop |
 |---|---|---|
 | How it connects | Directly - Streamable HTTP is supported as is | Through the `mcp-remote` bridge (a local `http://` address can't be a custom connector, which needs a public https URL) |
-| How to add | `claude mcp add --transport http <name> <url>` | An `mcpServers` entry in `claude_desktop_config.json` (use `http://localhost:8010/mcp` for agentgateway) |
+| How to add | `claude mcp add --transport http <name> <url>` | An `mcpServers` entry in `claude_desktop_config.json` |
 | Then | Restart Claude Code, or reconnect with `/mcp` - a running session doesn't pick up a newly added server | Restart Claude Desktop |
 | Check | `/mcp` lists the servers and their tools | The servers' tools show up in a new chat |
 
@@ -196,7 +198,6 @@ MCP Inspector is only one client - any MCP client that speaks Streamable HTTP ca
 
 ```bash
 claude mcp add --transport http apps-backend http://localhost:8080/mcp
-claude mcp add --transport http agentgateway http://localhost:8010/mcp
 claude mcp list
 ```
 
@@ -216,6 +217,29 @@ claude mcp list
 ```
 
 Then ask e.g. "list the accounts and their balances" - Claude calls `list_accounts_accounts_get` after you approve it. Remove the Claude Code entries afterwards with `claude mcp remove <name>`.
+
+#### Requiring a login for `/mcp`
+
+By default `/mcp` is open. Three of the tools need a bearer token anyway - `get_me`, `update_profile` and `create_transaction` answer `invalid or missing token` without one - and an MCP client has no way to supply it. `APPS_MCP_AUTH_REQUIRED=true` fixes that: `/mcp` answers `401` until the client has logged in through the browser, and the token it ends up with goes along with every tool call.
+
+```bash
+# .env: APPS_MCP_AUTH_REQUIRED=true
+make apps:restart
+claude mcp remove apps-backend        # forget a registration (and token) from before
+claude mcp add --transport http apps-backend http://localhost:8080/mcp
+```
+
+Restart Claude Code, open `/mcp`, pick `apps-backend` (it says *needs authentication*) and **Authenticate**:
+
+1. The browser opens `http://localhost:5173/mcp-authorize?...` - the app's own login, the same one as the front page: **Demo login** (`demo` / `demo`) or, with `KEYCLOAK_ISSUER` set and `make keycloak:up` running, **Keycloak** (`keycloak-demo` / `nasebanal-demo`). A Keycloak login leaves for Keycloak and comes back to this page.
+2. The page says which client wants in and as whom you are signed in. **Allow** hands the login back; **Deny** tells the client `access_denied`.
+3. The browser lands on Claude Code's own *Authentication successful* page (`http://localhost:<port>/callback?code=...`) - close the tab. Ask for `get_me`: it returns your profile.
+
+Claude Code keeps the token, so the browser should open again only after it is removed (`claude mcp remove`, or the stored login is cleared) or `TOKEN_SECRET` changes.
+
+How it works (`apps/backend/app/mcp_oauth.py`): the MCP authorization flow with the backend as the authorization server - `401` with a `WWW-Authenticate` pointing at `/.well-known/oauth-protected-resource`, authorization-server metadata, dynamic client registration (`POST /oauth/register`), authorization code + PKCE (`S256`), `POST /oauth/token`. The login itself is the frontend's: `/mcp-authorize` calls `POST /oauth/authorize` with the token of whoever just signed in (a demo token or a Keycloak JWT - `get_current_principal` takes either), so both login methods work with no extra code, and the access token that comes out is the ordinary demo token, which every protected route already accepts. Everything is signed and self-contained like that token (no store, any backend instance verifies it): the `client_id` carries its redirect URIs, the code lives 60 seconds. Registration accepts only loopback `http://` redirect URIs and `claude.ai` / `claude.com` callbacks. The OAuth routes are tagged `mcp-oauth` and left out of the MCP tool list.
+
+Things to know with it on: MCP Inspector (and any client without a token) now gets `401` too; **agentgateway is unaffected** - it builds its tools from the OpenAPI contract and calls the REST routes, never `/mcp` (see [its authentication note](#agentgateway-exposing-appsbackend-as-mcp-tools)). `fastapi-mcp` builds the tool list from the app's routes, so the `mcp-oauth` tag - not the OpenAPI contract - is what keeps the login plumbing out of it. Editing backend code while an MCP client is connected makes uvicorn's reload hang on the open `GET /mcp` stream: `docker restart nb-backend` instead. Turn it off again by removing the line and `apps:restart`.
 
 ### Specmatic: contract testing (Provider and Consumer)
 
@@ -241,7 +265,7 @@ make vitest:contract-test    # Consumer: apps/frontend's real api.ts calls again
 
 ```bash
 make kong:up   # DB mode (KONG_DB=postgres) is the default, so Kong Manager can save edits; KONG_DB=off is DB-less: declarative.yml only, read-only Admin API
-# .env: NEXT_PUBLIC_API_BASE=http://localhost:8000/api
+# .env: APPS_API_BASE=http://localhost:8000/api
 make apps:restart   # frontend needs recreating - Next.js dev mode bakes NEXT_PUBLIC_* into the bundle at server start
 ```
 
@@ -275,6 +299,8 @@ make apps:restart          # backend and frontend need recreating to pick it up
 
 Then open http://localhost:5173, click Login, pick **Keycloak**, and sign in as `keycloak-demo` / `nasebanal-demo` (or **Sign up** for a new user — the form is Keycloak's own; `make keycloak:open` shows the user in the admin console). The user menu shows a Keycloak badge, and recording a transaction succeeds because the backend verified the token's signature against Keycloak's public keys.
 
+The same Keycloak login also works for an MCP client: with `APPS_MCP_AUTH_REQUIRED=true` the page the browser opens (`/mcp-authorize`) offers the same **Demo login / Keycloak** toggle - see [Requiring a login for `/mcp`](#requiring-a-login-for-mcp).
+
 Without a browser: `make keycloak:verify-apps` gets a token for the demo user (password grant) and sends it as `Authorization: Bearer` to `POST /transactions`; `make keycloak:login` just prints one, for trying by hand with curl. A token without a valid signature, or no token at all, gets a `401`. `KEYCLOAK_ISSUER` is the address the *browser* logs in at (and the `iss` every token carries); the backend fetches the signing keys from `KEYCLOAK_JWKS_URL` (default `http://keycloak:8080/...`, the in-network address). Setting `KEYCLOAK_ISSUER` back to empty and restarting returns to mock-token-only.
 
 ### Vault: the backend has no MySQL password - Vault creates a user for it
@@ -291,7 +317,7 @@ make vault:db-users           # the v-token-... users in MySQL itself
 make vault:leases             # Vault's live leases for them
 ```
 
-Both prove targets recreate the backend once with `BACKEND_MYSQL_PASSWORD` set but empty (and, for the second, `VAULT_ADDR`/`VAULT_TOKEN`) — `.env` is untouched. To do it by hand instead, set `BACKEND_MYSQL_PASSWORD=` (empty) in `.env` and `apps:restart` to watch the backend fail, then add `VAULT_ADDR=http://vault:8200` and `VAULT_TOKEN=nb-vault-root-token` and `apps:restart` again; each backend start gets a different Vault-issued user. `make apps:restart` after removing those lines returns to the normal configuration. The older static path still works as a fallback (`make vault:put-mysql-secret` writes a fixed credential to `secret/apps/mysql`).
+Both prove targets recreate the backend once with `APPS_BACKEND_MYSQL_PASSWORD` set but empty (and, for the second, `VAULT_ADDR`/`VAULT_TOKEN`) — `.env` is untouched. To do it by hand instead, set `APPS_BACKEND_MYSQL_PASSWORD=` (empty) in `.env` and `apps:restart` to watch the backend fail, then add `VAULT_ADDR=http://vault:8200` and `VAULT_TOKEN=nb-vault-root-token` and `apps:restart` again; each backend start gets a different Vault-issued user. `make apps:restart` after removing those lines returns to the normal configuration. The older static path still works as a fallback (`make vault:put-mysql-secret` writes a fixed credential to `secret/apps/mysql`).
 
 Vault's dev server is in-memory only — everything written to it is gone on `vault:down`/`vault:restart`, by design (see `AGENTS.md`); users it already created stay in MySQL until `make apps:reset`.
 
@@ -316,7 +342,33 @@ Switch `agentgateway` on, open **Tools**, pick `list_accounts_accounts_get` and 
 
 Verified end-to-end: `agentgateway:tools` lists eight tools - `health_health_get`, `login_auth_login_post`, `get_me_me_get`, `update_profile_me_profile_put`, `list_transactions_transactions_get`, `create_transaction_transactions_post`, `get_transaction_transactions__transaction_id__get`, `list_accounts_accounts_get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_accounts_accounts_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
 
+**Register it in Claude Code or Claude Desktop** (needs `make agentgateway:up`; the steps for the backend's own `/mcp` are in [MCP: trying the backend's MCP server](#mcp-trying-the-backends-mcp-server)):
+
+```bash
+claude mcp add --transport http agentgateway http://localhost:8010/mcp
+claude mcp list
+```
+
+Restart Claude Code (or reconnect with `/mcp`) before asking for anything, as there. For Claude Desktop, add an `mcpServers` entry that goes through the `mcp-remote` bridge, with `http://localhost:8010/mcp` as the URL:
+
+```json
+{ "mcpServers": { "agentgateway": { "command": "npx", "args": ["-y", "mcp-remote", "http://localhost:8010/mcp"] } } }
+```
+
+This registers the open tools (`list_accounts`, `list_transactions`, ...); the ones that need a token are covered under **Authentication** below.
+
 Point an MCP client (Claude Desktop, [mcp-inspector](https://github.com/modelcontextprotocol/inspector), ...) at `http://localhost:8010/mcp` to use it interactively. `create_transaction_transactions_post` needs a real bearer token, same as `POST /transactions` itself does everywhere else - call `login_auth_login_post` first and pass its token back as an `Authorization` header, or the tool call 401s the same way an unauthenticated `curl` would.
+
+**Authentication.** agentgateway has no login of its own here, and `APPS_MCP_AUTH_REQUIRED` does not reach it (it calls the REST routes, not `/mcp`). So in Claude Code's `/mcp` the server shows *not authenticated* and **Authenticate** fails (`Dynamic Client Registration rejected (HTTP 406)` - every path other than `/mcp` is answered by agentgateway's MCP handler, and there is no OAuth endpoint to register with); pick **Reconnect** instead. The three tools that need a token - `get_me`, `update_profile`, `create_transaction` - get `invalid or missing token`, because the tool arguments carry no `Authorization` header. agentgateway does pass the *connection's* `Authorization` header through to the backend (checked with a demo token and with a Keycloak one), so give the connection a token once:
+
+```bash
+TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \
+  -d '{"username":"demo","password":"demo"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+claude mcp remove agentgateway
+claude mcp add --transport http agentgateway http://localhost:8010/mcp --header "Authorization: Bearer $TOKEN"
+```
+
+(Restart Claude Code afterwards; `claude mcp get agentgateway` does not list headers, and its `Connected` says nothing about them - `~/.claude.json` does.) The demo token never expires; a Keycloak access token lasts minutes. A browser login through agentgateway itself would need `policies.mcpAuthentication`, which only validates JWTs - the demo token is not one - so it waits for the backend to issue JWTs. `provider: keycloak` is no way around it: agentgateway issue [#3668](https://github.com/agentgateway/agentgateway/issues/3668) makes Claude Code reject that login (RFC 9207 issuer mismatch).
 
 agentgateway also ships a real dashboard UI (a React SPA, built into the image by default - `Dockerfile`'s `CARGO_FEATURES=agentgateway-app/ui`), served off its **admin** port, separate from the MCP port above:
 
@@ -330,11 +382,11 @@ agentgateway reads the OpenAPI contract from the mounted `shared/openapi/openapi
 
 ### Observability: OpenTelemetry, Prometheus, Tempo and Grafana
 
-`apps/backend` can export OpenTelemetry traces (FastAPI requests + SQLAlchemy queries), HTTP server metrics and application logs over OTLP. It's **off by default** - `apps:up` behaves exactly as before unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. The `observability` module is the local place to send it: an OTel Collector receives OTLP, forwards traces to Tempo and logs to Loki and exposes metrics for Prometheus, and Grafana ships with the data sources and one dashboard already provisioned. Prometheus also evaluates alert rules (`observability/alert-rules.yml`) and sends firing alerts to Alertmanager, which routes them to a webhook sink that stands in for Slack/email - `make observability:alerts` shows the result.
+`apps/backend` can export OpenTelemetry traces (FastAPI requests + SQLAlchemy queries), HTTP server metrics and application logs over OTLP. It's **off by default** - `apps:up` behaves exactly as before unless `APPS_OTEL_EXPORTER_OTLP_ENDPOINT` is set. The `observability` module is the local place to send it: an OTel Collector receives OTLP, forwards traces to Tempo and logs to Loki and exposes metrics for Prometheus, and Grafana ships with the data sources and one dashboard already provisioned. Prometheus also evaluates alert rules (`observability/alert-rules.yml`) and sends firing alerts to Alertmanager, which routes them to a webhook sink that stands in for Slack/email - `make observability:alerts` shows the result.
 
 ```bash
 # .env
-OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+APPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
 
 make observability:up
 make apps:restart          # backend reads the endpoint at startup
@@ -345,7 +397,7 @@ make observability:open    # Grafana -> NASEBANAL -> "Apps backend (OpenTelemetr
 
 The dashboard shows request rate per path, 5xx ratio, p50/p95/p99 latency, active requests / DB connections in use, and recent traces (click through to the span waterfall, including each SQL query). `/health` is excluded from instrumentation, since healthchecks would otherwise dominate every panel.
 
-The instrumentation is standard OTel SDK code (`apps/backend/app/telemetry.py`) that honors the usual `OTEL_*` env vars, so pointing `OTEL_EXPORTER_OTLP_ENDPOINT` (plus `OTEL_EXPORTER_OTLP_HEADERS`) at another OTLP backend such as NewRelic - which the real NASEBANAL apps use - works without code changes. Only the Collector's config (`observability/otel-collector.yaml`) is specific to the local stack.
+The instrumentation is standard OTel SDK code (`apps/backend/app/telemetry.py`) that honors the usual `OTEL_*` env vars, so pointing `APPS_OTEL_EXPORTER_OTLP_ENDPOINT` (plus `OTEL_EXPORTER_OTLP_HEADERS`) at another OTLP backend such as NewRelic - which the real NASEBANAL apps use - works without code changes. Only the Collector's config (`observability/otel-collector.yaml`) is specific to the local stack.
 
 Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't export to Destinations, and Cloudflare can't reach a `localhost` collector), and Kafka metrics, and Kong's/agentgateway's metrics (each has its own Prometheus/OTel integration that could be added to `observability/prometheus.yml` / their own config). Kong and agentgateway do export **traces** to the same Collector (`opentelemetry` plugin on Kong's `apps_backend` service; `config.tracing` in `agentgateway/config.yaml`), and the trace context is passed on, so a request through either gateway is one trace with the backend's spans under the gateway's - see Scenario 4. The Grafana dashboard's bottom panel, "Gateway traces", lists them.
 
@@ -369,7 +421,7 @@ Two matching Locust scenarios make the case for putting Kafka in front of a writ
 
 **Steps** (300 / 100 shown; swap in 600 / 200 / `60s` for the heavier run):
 
-1. Start the target and the Kafka path (optionally Grafana too - set `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318` in `.env`, then `apps:restart`):
+1. Start the target and the Kafka path (optionally Grafana too - set `APPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318` in `.env`, then `apps:restart`):
    ```bash
    make apps:up
    make kafka:up && make kafka:bridge-up
@@ -497,6 +549,17 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 
 `apps/` holds the actual apps under test - `apps/backend` (FastAPI: REST + GraphQL + an MCP server, over a MySQL-backed accounting ledger), `apps/frontend` (Next.js), and `mysql-server`. Its lifecycle is independent from every test tool - `apps:up`/`apps:down` only, never started or stopped automatically by pytest/vitest/playwright/specmatic/locust/etc. See the [Endpoints](#endpoints) table above for every URL it exposes once up, and `AGENTS.md` for the full architecture writeup.
 
+A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KAFKA_`, `KEYCLOAK_`, `VAULT_`, `PLAYWRIGHT_`, `SPECMATIC_`, `ZAP_`, `AGENTGATEWAY_`, `OBSERVABILITY_`, `LOCUST_`); settings shared by several modules have no prefix and sit in the Common section at the top of `.env`.
+
+### Common
+
+| Variable | Default | Description |
+|---|---|---|
+| `NB_TOKEN` | *(empty)* | PAT / service-account token for NASEBANAL Assurance - what `<module>:report-upload` sends with. Empty = use the credentials from `nb auth login` (CI needs the token) |
+| `NB_BASE_URL` | `https://api.assurance.nasebanal.com` | The Assurance **API** (not the web UI). A local `npm run dev` of nb-assurance-api is `http://localhost:8791` |
+| `PROJECT_NAME` | `nb-quickstarts` | The Assurance project the runs go to (created on first upload) |
+| `NB_RUN_KEY` | *(`local-<commit>-<day>`)* | Groups several uploads into one run |
+
 ### Apps
 
 | Variable | Default | Description |
@@ -504,11 +567,13 @@ make locust:up LOCUST_FILE=locustfile_mysql.py LOCUST_MYSQL_HOST=prod-db
 | `APPS_MYSQL_USER` / `APPS_MYSQL_PASSWORD` | `demo` / `demo` | The application's MySQL login. Used by `apps/backend`, the SQL client, the Vault module and Locust's MySQL scenario. Created when the data volume is first initialised - changing them later needs `make apps:reset`. A blank value falls back to the default; it does **not** mean "no password" |
 | `APPS_MYSQL_DATABASE` / `APPS_MYSQL_ROOT_PASSWORD` | `demo` / `rootpassword` | The database name, and the root password (used by the SQL client and `make apps:mysql`) |
 | `APPS_MYSQL_PORT` / `APPS_MYSQL_VERSION` | `3306` / `8.4` | Host-published MySQL port, and the image version |
-| `MCP_INSPECTOR_PORT` / `MCP_INSPECTOR_VERSION` | `6274` / `2.9` | Host-published MCP Inspector UI port, and the image tag (minor-pinned) |
-| `MCP_INSPECTOR_SANDBOX_PORT` | `6275` | Host-published port of the Inspector's MCP Apps sandbox |
-| `MCP_INSPECTOR_TOKEN` | `nb-mcp-inspector-token` | The Inspector UI's auth token, pinned (random per start otherwise) and put in the URL by `make apps:mcp`. A fixed public default - local demo only |
-| `NEXT_PUBLIC_API_BASE` | `http://localhost:8080` | Where `apps/frontend` calls the backend - direct, or `http://localhost:8000/api` to route through Kong instead (needs `kong:up` + `apps:restart`) |
-| `NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL` | `http://localhost:8090` | Where the frontend checks kafka-bridge's health - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
+| `APPS_MCP_INSPECTOR_PORT` / `APPS_MCP_INSPECTOR_VERSION` | `6274` / `2.9` | Host-published MCP Inspector UI port, and the image tag (minor-pinned) |
+| `APPS_MCP_INSPECTOR_SANDBOX_PORT` | `6275` | Host-published port of the Inspector's MCP Apps sandbox |
+| `APPS_MCP_INSPECTOR_TOKEN` | `nb-mcp-inspector-token` | The Inspector UI's auth token, pinned (random per start otherwise) and put in the URL by `make apps:mcp`. A fixed public default - local demo only |
+| `APPS_API_BASE` | `http://localhost:8080` | Where `apps/frontend` calls the backend - direct, or `http://localhost:8000/api` to route through Kong instead (needs `kong:up` + `apps:restart`) |
+| `APPS_KAFKA_BRIDGE_HEALTH_URL` | `http://localhost:8090` | Where the frontend checks kafka-bridge's health - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
+| `APPS_MCP_AUTH_REQUIRED` | *(empty = off)* | `true` puts `/mcp` behind a login: an MCP client such as Claude Code gets a 401, opens the browser on the frontend's `/mcp-authorize` page (the app's usual demo / Keycloak login) and carries the resulting token into every tool call. Needs `apps:restart`; MCP Inspector and agentgateway then need a token too |
+| `APPS_PUBLIC_BASE_URL` / `APPS_MCP_AUTHORIZE_URL` | `http://localhost:8080` / `http://localhost:5173/mcp-authorize` | The addresses the MCP client and browser use for the MCP login (host-published, not in-network) - change only when the backend / frontend are reached elsewhere |
 | `KEYCLOAK_ISSUER` | *(empty = off)* | Turns on Keycloak for `apps/backend` and the login page: `http://localhost:8180/realms/nasebanal` - see [Keycloak](#keycloak) |
 | `VAULT_ADDR` / `VAULT_TOKEN` | *(both empty = off)* | Where `apps/backend` asks for a Vault-issued MySQL credential - see [Vault](#vault) |
 
@@ -594,13 +659,13 @@ No target-host variable, unlike every module above - see [OWASP ZAP: scanning ap
 
 | Variable | Default | Description |
 |---|---|---|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | *(empty = off)* | Where `apps/backend` exports OTLP. Set to `http://otel-collector:4318` for the local stack (needs `apps:restart`) |
-| `GRAFANA_PORT` | `3030` | Host-published Grafana port - defaults away from Grafana's own `3000`, a common Node/React dev-server port |
-| `PROMETHEUS_PORT` | `9094` | Host-published Prometheus port (`9091` is taken by Specmatic) |
-| `TEMPO_PORT` | `3200` | Host-published Tempo query API port |
-| `OTEL_GRPC_PORT` / `OTEL_HTTP_PORT` | `4317` / `4318` | Host-published OTLP ports |
-| `PROMETHEUS_RETENTION` | `7d` | How long Prometheus keeps metrics |
-| `OTEL_COLLECTOR_VERSION` / `PROMETHEUS_VERSION` / `TEMPO_VERSION` / `GRAFANA_VERSION` | see `.env.example` | Image tags |
+| `APPS_OTEL_EXPORTER_OTLP_ENDPOINT` | *(empty = off)* | Where `apps/backend` exports OTLP. Set to `http://otel-collector:4318` for the local stack (needs `apps:restart`) |
+| `OBSERVABILITY_GRAFANA_PORT` | `3030` | Host-published Grafana port - defaults away from Grafana's own `3000`, a common Node/React dev-server port |
+| `OBSERVABILITY_PROMETHEUS_PORT` | `9094` | Host-published Prometheus port (`9091` is taken by Specmatic) |
+| `OBSERVABILITY_TEMPO_PORT` | `3200` | Host-published Tempo query API port |
+| `OBSERVABILITY_OTEL_GRPC_PORT` / `OBSERVABILITY_OTEL_HTTP_PORT` | `4317` / `4318` | Host-published OTLP ports |
+| `OBSERVABILITY_PROMETHEUS_RETENTION` | `7d` | How long Prometheus keeps metrics |
+| `OBSERVABILITY_OTEL_COLLECTOR_VERSION` / `OBSERVABILITY_PROMETHEUS_VERSION` / `OBSERVABILITY_TEMPO_VERSION` / `OBSERVABILITY_GRAFANA_VERSION` | see `.env.example` | Image tags |
 
 ### Test Results
 
@@ -616,7 +681,7 @@ Every `make <module>:test` run leaves a browsable report behind. These are all g
 | `locust` | `locust/logs/<timestamp>/report.html`, plus the files below |
 | `zap` | `zap/report/<scan>-report.html` (also `.json`) - `baseline`/`full-scan`/`api-scan`, overwritten each run |
 
-**Send a run to NASEBANAL Assurance:** `make pytest:report-upload` (likewise `vitest:report-upload`, `playwright:report-upload`, `specmatic:report-upload`, `locust:report-upload`, `zap:report-upload`) uploads the last run's summary through the `nb` CLI. With no `NB_TOKEN` and no stored session it opens the browser for `nb auth login` (CI / no terminal: set `NB_TOKEN`). For production instead of a local `nb-assurance-api`, set for production instead of a local `nb-assurance-api`, `NB_BASE_URL` in `.env` - see `.env.example`. Everything uploaded for one commit on one day lands in one Assurance run (project `ASSURANCE_PROJECT`, default `nb-quickstarts`). `zap:report-upload` uploads every scan in `zap/report/` (converted to JUnit by `bin/zap_to_junit.mjs`, kind `security`, one suite per scan; an alert of Low or above counts as a failure) and, like `locust:report-upload` (after `make locust:load`), is not part of `all:report-upload`, just as neither Locust nor ZAP is part of `all:test`.
+**Send a run to NASEBANAL Assurance:** `make pytest:report-upload` (likewise `vitest:report-upload`, `playwright:report-upload`, `specmatic:report-upload`, `locust:report-upload`, `zap:report-upload`) uploads the last run's summary through the `nb` CLI. With no `NB_TOKEN` and no stored session it opens the browser for `nb auth login` (CI / no terminal: set `NB_TOKEN`). For production instead of a local `nb-assurance-api`, set for production instead of a local `nb-assurance-api`, `NB_BASE_URL` in `.env` - see `.env.example`. Everything uploaded for one commit on one day lands in one Assurance run (project `PROJECT_NAME`, default `nb-quickstarts`). `zap:report-upload` uploads every scan in `zap/report/` (converted to JUnit by `bin/zap_to_junit.mjs`, kind `security`, one suite per scan; an alert of Low or above counts as a failure) and, like `locust:report-upload` (after `make locust:load`), is not part of `all:report-upload`, just as neither Locust nor ZAP is part of `all:test`.
 
 **Locust** writes a whole timestamped directory per run, `locust/logs/YYYYMMDD_HHMMSS/`:
 

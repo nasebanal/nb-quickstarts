@@ -1559,6 +1559,33 @@ body:has(> .nb-header) {
   box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
 }
 
+/* Same shape as the primary CTA, outline only - the "no" next to a "yes"
+   (the MCP consent page: Allow / Deny). */
+.nb-cta-button-outline {
+  background: transparent;
+  color: var(--nb-fg);
+  border: 1px solid var(--nb-border);
+  box-shadow: none;
+}
+
+.nb-cta-button-outline:hover {
+  background: var(--nb-border-soft);
+  box-shadow: none;
+}
+
+/* A row of equally sized buttons; wraps on a narrow screen. */
+.nb-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.nb-button-row > button {
+  flex: 1 1 140px;
+  max-width: 220px;
+}
+
 @media (max-width: 768px) {
   .nb-hero {
     flex-direction: column;

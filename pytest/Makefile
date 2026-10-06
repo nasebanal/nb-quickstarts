@@ -50,6 +50,6 @@ pytest-report:
 	@bin/open_browser.sh pytest/report/report.html
 
 # Sends the last run's summary to NASEBANAL Assurance - see bin/report_upload.sh
-# for NB_TOKEN / NB_BASE_URL / ASSURANCE_PROJECT.
+# for NB_TOKEN / NB_BASE_URL / PROJECT_NAME.
 pytest-report-upload:
 	@bin/report_upload.sh pytest:test unit pytest backend pytest/report/junit.xml

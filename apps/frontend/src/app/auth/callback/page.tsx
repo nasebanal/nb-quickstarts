@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/components/LocaleProvider";
+import { takePendingMcpAuthorize } from "@/lib/mcpAuth";
 import { completeKeycloakLogin } from "@/lib/oidc";
 
 // Where Keycloak sends the browser back to after login/sign-up
@@ -23,7 +24,9 @@ export default function AuthCallbackPage() {
     completeKeycloakLogin(new URLSearchParams(window.location.search))
       .then((session) => {
         setAuth(session.token, session.username, { provider: "keycloak", idToken: session.idToken });
-        router.replace("/accounts");
+        // A login that an MCP client started goes back to its consent page
+        // instead of /accounts (see app/mcp-authorize).
+        router.replace(takePendingMcpAuthorize() ?? "/accounts");
       })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on arrival

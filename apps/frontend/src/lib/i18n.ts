@@ -45,6 +45,17 @@ export interface Dictionary {
     callbackWorking: string;
     callbackError: string;
     backToHome: string;
+    mcpTitle: string;
+    mcpIntro: string;
+    mcpUnknownClient: string;
+    mcpNeedLogin: string;
+    mcpOpenLogin: string;
+    mcpSignedInAs: string;
+    mcpAllow: string;
+    mcpDeny: string;
+    mcpAuthorizing: string;
+    mcpFailed: string;
+    mcpInvalidRequest: string;
   };
   profile: {
     title: string;
@@ -136,6 +147,17 @@ export const dictionaries: Record<Locale, Dictionary> = {
       callbackWorking: "Completing login...",
       callbackError: "Login failed",
       backToHome: "Back",
+      mcpTitle: "Connect an MCP client",
+      mcpIntro: "wants to use this app's MCP tools as you (balances, transactions, your profile).",
+      mcpUnknownClient: "An MCP client",
+      mcpNeedLogin: "Log in first - the same demo login or Keycloak you use for this app.",
+      mcpOpenLogin: "Log in",
+      mcpSignedInAs: "Signed in as",
+      mcpAllow: "Allow",
+      mcpDeny: "Deny",
+      mcpAuthorizing: "Handing the login back to the MCP client...",
+      mcpFailed: "Could not authorize the MCP client",
+      mcpInvalidRequest: "This page is opened by an MCP client's login request, and this request is incomplete.",
     },
     profile: {
       title: "Profile",
@@ -244,6 +266,17 @@ export const dictionaries: Record<Locale, Dictionary> = {
       callbackWorking: "ログインを完了しています...",
       callbackError: "ログインに失敗しました",
       backToHome: "戻る",
+      mcpTitle: "MCPクライアントを接続",
+      mcpIntro: "が、あなたとしてこのアプリのMCPツール(残高、取引、プロフィール)を使おうとしています。",
+      mcpUnknownClient: "MCPクライアント",
+      mcpNeedLogin: "先にログインしてください。このアプリと同じデモログイン、またはKeycloakが使えます。",
+      mcpOpenLogin: "ログイン",
+      mcpSignedInAs: "ログイン中のユーザー",
+      mcpAllow: "許可",
+      mcpDeny: "拒否",
+      mcpAuthorizing: "ログイン結果をMCPクライアントに返しています...",
+      mcpFailed: "MCPクライアントを認可できませんでした",
+      mcpInvalidRequest: "このページはMCPクライアントのログイン要求から開かれます。要求の内容が不足しています。",
     },
     profile: {
       title: "プロフィール",

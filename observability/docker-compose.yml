@@ -5,14 +5,14 @@ services:
   # NewRelic, which also ingests OTLP) is a change to otel-collector.yaml
   # only - the apps' instrumentation stays the same.
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:${OTEL_COLLECTOR_VERSION:-0.161.0}
+    image: otel/opentelemetry-collector-contrib:${OBSERVABILITY_OTEL_COLLECTOR_VERSION:-0.161.0}
     container_name: nb-otel-collector
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
       - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
     ports:
-      - "${OTEL_GRPC_PORT:-4317}:4317"
-      - "${OTEL_HTTP_PORT:-4318}:4318"
+      - "${OBSERVABILITY_OTEL_GRPC_PORT:-4317}:4317"
+      - "${OBSERVABILITY_OTEL_HTTP_PORT:-4318}:4318"
     depends_on:
       - tempo
       - loki
@@ -21,18 +21,18 @@ services:
       - apps-network
 
   prometheus:
-    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.15.0}
+    image: prom/prometheus:${OBSERVABILITY_PROMETHEUS_VERSION:-v3.15.0}
     container_name: nb-prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-7d}
+      - --storage.tsdb.retention.time=${OBSERVABILITY_PROMETHEUS_RETENTION:-7d}
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - prometheus-data:/prometheus
     ports:
-      - "${PROMETHEUS_PORT:-9094}:9090"
+      - "${OBSERVABILITY_PROMETHEUS_PORT:-9094}:9090"
     networks:
       - observability-net
       # Also on apps-network so prometheus.yml can scrape modules' own
@@ -40,7 +40,7 @@ services:
       - apps-network
 
   tempo:
-    image: grafana/tempo:${TEMPO_VERSION:-2.10.8}
+    image: grafana/tempo:${OBSERVABILITY_TEMPO_VERSION:-2.10.8}
     container_name: nb-tempo
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     # Named volumes are created root-owned but Tempo runs as a non-root
@@ -50,14 +50,14 @@ services:
       - ./tempo.yaml:/etc/tempo/tempo.yaml:ro
       - tempo-data:/var/tempo
     ports:
-      - "${TEMPO_PORT:-3200}:3200"
+      - "${OBSERVABILITY_TEMPO_PORT:-3200}:3200"
     networks:
       - observability-net
 
   # Application logs. Receives OTLP logs from the collector on its native
   # /otlp endpoint; Grafana queries it (LogQL) alongside metrics and traces.
   loki:
-    image: grafana/loki:${LOKI_VERSION:-3.7.8}
+    image: grafana/loki:${OBSERVABILITY_LOKI_VERSION:-3.7.8}
     container_name: nb-loki
     command: ["-config.file=/etc/loki/loki.yaml"]
     # Same reason as tempo above: root-owned named volume, non-root process.
@@ -66,14 +66,14 @@ services:
       - ./loki.yaml:/etc/loki/loki.yaml:ro
       - loki-data:/loki
     ports:
-      - "${LOKI_PORT:-3100}:3100"
+      - "${OBSERVABILITY_LOKI_PORT:-3100}:3100"
     networks:
       - observability-net
 
   # Receives alerts from Prometheus (alert-rules.yml), groups/dedupes them and
   # routes them to a receiver (alertmanager.yml).
   alertmanager:
-    image: prom/alertmanager:${ALERTMANAGER_VERSION:-v0.34.1}
+    image: prom/alertmanager:${OBSERVABILITY_ALERTMANAGER_VERSION:-v0.34.1}
     container_name: nb-alertmanager
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
@@ -84,7 +84,7 @@ services:
     ports:
       # 9095, not Alertmanager's own 9093 default - 9093 is Kafka's
       # controller port on the host.
-      - "${ALERTMANAGER_PORT:-9095}:9093"
+      - "${OBSERVABILITY_ALERTMANAGER_PORT:-9095}:9093"
     depends_on:
       - alert-sink
     networks:
@@ -102,7 +102,7 @@ services:
       - observability-net
 
   grafana:
-    image: grafana/grafana:${GRAFANA_VERSION:-11.6.16}
+    image: grafana/grafana:${OBSERVABILITY_GRAFANA_VERSION:-11.6.16}
     container_name: nb-grafana
     environment:
       # Local-only quickstart: anonymous access as Admin, no login screen.
@@ -117,7 +117,7 @@ services:
       # 3030, not Grafana's own 3000 default - 3000 is a very common
       # Node/React dev-server port on the host (same reasoning as
       # agentgateway's AGENTGATEWAY_PORT).
-      - "${GRAFANA_PORT:-3030}:3000"
+      - "${OBSERVABILITY_GRAFANA_PORT:-3030}:3000"
     depends_on:
       - prometheus
       - tempo

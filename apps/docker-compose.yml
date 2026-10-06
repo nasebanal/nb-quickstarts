@@ -32,10 +32,10 @@ services:
   # users Vault creates in the Vault scenario appear. Local demo only: a root
   # login with no prompt is exactly what you would never expose anywhere else.
   sql-client:
-    image: phpmyadmin:${PHPMYADMIN_VERSION:-5.2}
+    image: phpmyadmin:${APPS_PHPMYADMIN_VERSION:-5.2}
     container_name: nb-sql-client
     ports:
-      - "${SQL_CLIENT_PORT:-8081}:80"
+      - "${APPS_SQL_CLIENT_PORT:-8081}:80"
     environment:
       PMA_HOST: mysql-server
       PMA_USER: root
@@ -65,19 +65,19 @@ services:
       # The backend's own MySQL login. Defaults to the same credential the
       # mysql-server container is created with (APPS_MYSQL_*), but has its own override
       # (BACKEND_MYSQL_*) so the Vault scenario can take the password out of
-      # the backend's config entirely: `BACKEND_MYSQL_PASSWORD=` (set but
+      # the backend's config entirely: `APPS_BACKEND_MYSQL_PASSWORD=` (set but
       # empty - note `-`, not `:-`, so empty is kept rather than replaced
       # by the default) leaves the backend unable to log in on its own, and
       # only a credential issued by Vault gets it in.
-      MYSQL_USER: ${BACKEND_MYSQL_USER-${APPS_MYSQL_USER:-demo}}
-      MYSQL_PASSWORD: ${BACKEND_MYSQL_PASSWORD-${APPS_MYSQL_PASSWORD:-demo}}
+      MYSQL_USER: ${APPS_BACKEND_MYSQL_USER-${APPS_MYSQL_USER:-demo}}
+      MYSQL_PASSWORD: ${APPS_BACKEND_MYSQL_PASSWORD-${APPS_MYSQL_PASSWORD:-demo}}
       MYSQL_DATABASE: ${APPS_MYSQL_DATABASE:-demo}
       PYTHONUNBUFFERED: 1
       # OpenTelemetry export - empty (the default) leaves it off. Set
-      # OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 in .env to
+      # APPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 in .env to
       # send traces/metrics to the observability module (needs
       # observability:up, and apps:restart to pick it up).
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${APPS_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_SERVICE_NAME: nb-backend
       # Keycloak JWT validation (app/auth.py) - empty (the default) leaves
       # it off, only the mock /auth/login token is accepted. Set to
@@ -89,6 +89,16 @@ services:
       # logs in at; the backend fetches the signing keys from the
       # in-network address below instead.
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
+      # MCP login (app/mcp_oauth.py) - empty (the default) leaves /mcp open.
+      # Set APPS_MCP_AUTH_REQUIRED=true in .env (+ `apps:restart`) and /mcp answers
+      # 401 until the client has logged in: an MCP client such as Claude Code
+      # then opens the browser on the frontend's /mcp-authorize page, which
+      # takes the same login as the app (demo login, or Keycloak when
+      # KEYCLOAK_ISSUER is set). The two URLs are the addresses the MCP client
+      # and browser use (host-published), not the in-network ones.
+      MCP_AUTH_REQUIRED: ${APPS_MCP_AUTH_REQUIRED:-}
+      PUBLIC_BASE_URL: ${APPS_PUBLIC_BASE_URL:-http://localhost:8080}
+      MCP_AUTHORIZE_URL: ${APPS_MCP_AUTHORIZE_URL:-http://localhost:5173/mcp-authorize}
       KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-http://keycloak:8080/realms/nasebanal/protocol/openid-connect/certs}
       # Vault-sourced MySQL credential (app/config.py) - empty (the
       # default) leaves it off, MYSQL_USER/MYSQL_PASSWORD above are used
@@ -125,13 +135,13 @@ services:
       # (apps:restart) to pick up the new value, since Next.js dev mode
       # bakes NEXT_PUBLIC_* into the bundle at server start, not
       # per-request.
-      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8080}
+      NEXT_PUBLIC_API_BASE: ${APPS_API_BASE:-http://localhost:8080}
       # Same idea, for kafka-bridge's health endpoint (make
       # kafka:bridge-up - see kafka/bridge/consumer.py's _HealthHandler)
       # instead of the main backend - kafka-bridge is a separate,
       # standalone container with its own host-published port, not
       # proxied through backend or Kong.
-      NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL: ${NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL:-http://localhost:8090}
+      NEXT_PUBLIC_KAFKA_BRIDGE_HEALTH_URL: ${APPS_KAFKA_BRIDGE_HEALTH_URL:-http://localhost:8090}
       # Keycloak login (LoginModal.tsx): the same KEYCLOAK_ISSUER the backend
       # validates against, and the browser talks to it directly - so it must
       # be the host-published address (http://localhost:8180/realms/...).
@@ -153,15 +163,15 @@ services:
   # start otherwise); `make apps:mcp` opens the UI with it already in the URL.
   # Local demo only - the token is a fixed, public default.
   mcp-inspector:
-    image: ghcr.io/modelcontextprotocol/inspector:${MCP_INSPECTOR_VERSION:-2.9}
+    image: ghcr.io/modelcontextprotocol/inspector:${APPS_MCP_INSPECTOR_VERSION:-2.9}
     container_name: nb-mcp-inspector
     command: ["--web", "--config", "/config/config.json"]
     ports:
-      - "${MCP_INSPECTOR_PORT:-6274}:6274"
+      - "${APPS_MCP_INSPECTOR_PORT:-6274}:6274"
       # Sandbox origin for MCP Apps rendered by the UI.
-      - "${MCP_INSPECTOR_SANDBOX_PORT:-6275}:6275"
+      - "${APPS_MCP_INSPECTOR_SANDBOX_PORT:-6275}:6275"
     environment:
-      MCP_INSPECTOR_API_TOKEN: ${MCP_INSPECTOR_TOKEN:-nb-mcp-inspector-token}
+      MCP_INSPECTOR_API_TOKEN: ${APPS_MCP_INSPECTOR_TOKEN:-nb-mcp-inspector-token}
       # No OS keychain in a container; secrets stay in memory (nothing to save).
       MCP_INSPECTOR_SECRET_STORE: memory
     volumes:

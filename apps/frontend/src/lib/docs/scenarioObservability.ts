@@ -26,7 +26,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         code: [
           {
             code:
-              "# .env\nOTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318\n\n" +
+              "# .env\nAPPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318\n\n" +
               "make observability:up\n" +
               "make apps:restart          # backend reads the endpoint at startup\n" +
               "make observability:verify  # each component ready + nb-backend metrics/traces arrived\n" +
@@ -258,7 +258,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         heading: "Beyond the local stack",
         body: [
           "The instrumentation itself is standard OTel SDK code (app/telemetry.py) that honors the " +
-            "usual OTEL_* env vars, so pointing OTEL_EXPORTER_OTLP_ENDPOINT (plus " +
+            "usual OTEL_* env vars, so pointing APPS_OTEL_EXPORTER_OTLP_ENDPOINT (plus " +
             "OTEL_EXPORTER_OTLP_HEADERS) at another OTLP backend - NewRelic, which the real NASEBANAL " +
             "apps use - works without code changes. Only the Collector's own config " +
             "(observability/otel-collector.yaml) is specific to this local stack.",
@@ -268,7 +268,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         heading: "Cleanup",
         code: [{ code: "make observability:down" }],
         note:
-          "Turn export back off with OTEL_EXPORTER_OTLP_ENDPOINT= in .env, then apps:restart, once " +
+          "Turn export back off with APPS_OTEL_EXPORTER_OTLP_ENDPOINT= in .env, then apps:restart, once " +
           "you're done - otherwise the backend keeps retrying an export target that's no longer there. " +
           "observability:reset additionally wipes stored metrics, traces, logs and Grafana state.",
       },
@@ -299,7 +299,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         code: [
           {
             code:
-              "# .env\nOTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318\n\n" +
+              "# .env\nAPPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318\n\n" +
               "make observability:up\n" +
               "make apps:restart          # backendが起動時にエンドポイントを読み込む\n" +
               "make observability:verify  # 各コンポーネントの準備 + nb-backendのメトリクス/トレース到達を確認\n" +
@@ -531,7 +531,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         heading: "ローカルスタックの先へ",
         body: [
           "計装自体は標準的なOTel SDKのコード(app/telemetry.py)で、通常のOTEL_*環境変数に従います。" +
-            "そのためOTEL_EXPORTER_OTLP_ENDPOINT(および必要ならOTEL_EXPORTER_OTLP_HEADERS)を別の" +
+            "そのためAPPS_OTEL_EXPORTER_OTLP_ENDPOINT(および必要ならOTEL_EXPORTER_OTLP_HEADERS)を別の" +
             "OTLPバックエンド — 実際のNASEBANALのアプリ群が使っているNewRelicなど — に向けても、コード" +
             "変更なしで動作します。ローカルスタック固有なのはCollector自体の設定" +
             "(observability/otel-collector.yaml)だけです。",
@@ -541,7 +541,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         heading: "環境のクリーンアップ",
         code: [{ code: "make observability:down" }],
         note:
-          "終わったら.envのOTEL_EXPORTER_OTLP_ENDPOINT=を空に戻し、apps:restartしてください — そうしない" +
+          "終わったら.envのAPPS_OTEL_EXPORTER_OTLP_ENDPOINT=を空に戻し、apps:restartしてください — そうしない" +
           "と、backendはもう存在しない送信先へのエクスポートをリトライし続けます。observability:resetは" +
           "さらに、保存済みのメトリクス・トレース・ログとGrafanaの状態も消します。",
       },

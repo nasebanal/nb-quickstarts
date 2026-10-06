@@ -92,7 +92,7 @@ export const scenarioVault: LocalizedDocsPage = {
         code: [
           {
             label: ".env (set but empty - the backend now has no MySQL password of its own):",
-            code: "BACKEND_MYSQL_PASSWORD=",
+            code: "APPS_BACKEND_MYSQL_PASSWORD=",
           },
           { code: "make apps:restart" },
         ],
@@ -121,7 +121,7 @@ export const scenarioVault: LocalizedDocsPage = {
         heading: "3. Give the backend Vault - it logs in with a Vault-issued user",
         code: [
           {
-            label: ".env (keep BACKEND_MYSQL_PASSWORD empty):",
+            label: ".env (keep APPS_BACKEND_MYSQL_PASSWORD empty):",
             code: "VAULT_ADDR=http://vault:8200\nVAULT_TOKEN=nb-vault-root-token",
           },
           { code: "make apps:restart" },
@@ -188,7 +188,7 @@ export const scenarioVault: LocalizedDocsPage = {
       {
         heading: "Returning to the normal configuration",
         code: [
-          { label: ".env:", code: "VAULT_ADDR=\nVAULT_TOKEN=\n# and remove the BACKEND_MYSQL_PASSWORD= line" },
+          { label: ".env:", code: "VAULT_ADDR=\nVAULT_TOKEN=\n# and remove the APPS_BACKEND_MYSQL_PASSWORD= line" },
           { code: "make apps:restart" },
         ],
       },
@@ -293,7 +293,7 @@ export const scenarioVault: LocalizedDocsPage = {
         code: [
           {
             label: ".env(設定するが空にする — backendは自前のMySQLパスワードを持たなくなる):",
-            code: "BACKEND_MYSQL_PASSWORD=",
+            code: "APPS_BACKEND_MYSQL_PASSWORD=",
           },
           { code: "make apps:restart" },
         ],
@@ -322,7 +322,7 @@ export const scenarioVault: LocalizedDocsPage = {
         heading: "3. backendにVaultを渡す — Vaultが発行したユーザーでログインする",
         code: [
           {
-            label: ".env(BACKEND_MYSQL_PASSWORDは空のまま):",
+            label: ".env(APPS_BACKEND_MYSQL_PASSWORDは空のまま):",
             code: "VAULT_ADDR=http://vault:8200\nVAULT_TOKEN=nb-vault-root-token",
           },
           { code: "make apps:restart" },
@@ -385,7 +385,7 @@ export const scenarioVault: LocalizedDocsPage = {
       {
         heading: "通常の構成に戻す",
         code: [
-          { label: ".env:", code: "VAULT_ADDR=\nVAULT_TOKEN=\n# BACKEND_MYSQL_PASSWORD=の行は削除" },
+          { label: ".env:", code: "VAULT_ADDR=\nVAULT_TOKEN=\n# APPS_BACKEND_MYSQL_PASSWORD=の行は削除" },
           { code: "make apps:restart" },
         ],
       },

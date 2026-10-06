@@ -14,7 +14,7 @@
 #                       API (`nb auth login` also works when it is unset)
 #   NB_BASE_URL         Assurance API; defaults to the local `npm run dev` of
 #                       nb-assurance-api (http://localhost:8791)
-#   ASSURANCE_PROJECT   Assurance project name (default: nb-quickstarts); created
+#   PROJECT_NAME        Assurance project name (default: nb-quickstarts); created
 #                       on first upload
 #   NB_RUN_KEY          optional - group several uploads into one run (default:
 #                       local-<commit>-<day>, so everything uploaded today for
@@ -35,7 +35,7 @@ fi
 
 NB_BASE_URL=${NB_BASE_URL:-http://localhost:8791}
 export NB_BASE_URL
-project=${ASSURANCE_PROJECT:-nb-quickstarts}
+project=${PROJECT_NAME:-nb-quickstarts}
 
 if [ -d "$target" ]; then
   # Locust: nb takes a run directory; pick the newest one under locust/logs.
