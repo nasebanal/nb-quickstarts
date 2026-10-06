@@ -9,7 +9,9 @@ import { useLocale } from "./LocaleProvider";
 type LoginMode = "mock" | "keycloak";
 const MODE_KEY = "nb-quickstarts-login-mode";
 
-export function LoginModal({ onClose }: { onClose: () => void }) {
+// `onLoggedIn` replaces the default "go to /accounts" after a demo login - the
+// MCP login page (app/mcp-authorize) uses it to stay put and ask for consent.
+export function LoginModal({ onClose, onLoggedIn }: { onClose: () => void; onLoggedIn?: () => void }) {
   const { t, locale, navigate } = useLocale();
   const { setAuth } = useAuth();
   const [usernameInput, setUsernameInput] = useState("");
@@ -49,7 +51,8 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
       const result = await login(usernameInput, passwordInput);
       setAuth(result.token, result.username);
       onClose();
-      navigate("/accounts");
+      if (onLoggedIn) onLoggedIn();
+      else navigate("/accounts");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }

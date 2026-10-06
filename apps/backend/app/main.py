@@ -3,12 +3,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import yaml
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi_mcp import FastApiMCP
+from fastapi_mcp import AuthConfig, FastApiMCP
 
 from app.db import Base, SessionLocal, engine, wait_for_database
 from app.graphql.schema import graphql_router
+from app.mcp_oauth import MCP_AUTH_REQUIRED, require_mcp_token
+from app.mcp_oauth import router as mcp_oauth_router
 from app.routers import accounts, auth, health, me, transactions
 from app.seed import seed_if_empty
 from app.telemetry import setup_telemetry
@@ -75,5 +77,20 @@ app.include_router(graphql_router, prefix="/graphql")
 # balances directly. Must be mounted after the routers above are
 # registered, since it introspects the app's OpenAPI schema to build the
 # tool list.
-mcp = FastApiMCP(app)
+#
+# MCP_AUTH_REQUIRED=true (see app/mcp_oauth.py) puts /mcp behind a login: a
+# client without a token gets a 401 that makes it open the browser, and the
+# token it ends up with is forwarded to each tool call, so protected routes
+# (/me, POST /transactions) work through MCP too. Unset, /mcp stays open.
+if MCP_AUTH_REQUIRED:
+    app.include_router(mcp_oauth_router)
+    # The OAuth routes are the login's plumbing, not tools for the model:
+    # leave them (tag "mcp-oauth") out of the tool list.
+    mcp = FastApiMCP(
+        app,
+        auth_config=AuthConfig(dependencies=[Depends(require_mcp_token)]),
+        exclude_tags=["mcp-oauth"],
+    )
+else:
+    mcp = FastApiMCP(app)
 mcp.mount_http()

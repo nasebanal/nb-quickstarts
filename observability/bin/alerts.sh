@@ -1,7 +1,7 @@
 #!/bin/sh
 # What Alertmanager currently holds, and what its webhook receiver got.
 
-ALERTMANAGER="http://localhost:${ALERTMANAGER_PORT:-9095}"
+ALERTMANAGER="http://localhost:${OBSERVABILITY_ALERTMANAGER_PORT:-9095}"
 
 echo "Alerts in Alertmanager (active):"
 alerts=$(curl -s "$ALERTMANAGER/api/v2/alerts?active=true&inhibited=false" | jq -r '.[] | "  [\(.labels.severity)] \(.labels.alertname) - \(.annotations.summary)"')

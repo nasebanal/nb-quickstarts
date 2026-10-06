@@ -107,28 +107,36 @@ export const scenarioKeycloak: LocalizedDocsPage = {
       {
         heading: "1. Start Keycloak and turn it on",
         body: [
+          "Starting Keycloak is not enough: the login page offers Keycloak, and the backend accepts its tokens, " +
+            "only when KEYCLOAK_ISSUER is set in .env. That one variable is how the apps learn that Keycloak " +
+            "exists - until it is set, the login dialog shows only the demo login, even with Keycloak running. " +
+            "So there are three steps: start Keycloak, add the line to .env, recreate the apps.",
           "keycloak:up imports a fixed realm (nasebanal) on every start: a demo user (keycloak-demo / " +
             "nasebanal-demo), the apps-demo client, and sign-up enabled. KEYCLOAK_ISSUER is the address " +
             "the browser logs in at - it is also the iss every token carries (keycloak/docker-compose.yml " +
-            "pins it). One variable turns on both halves: the backend starts accepting Keycloak tokens " +
-            "(fetching the signing keys from Keycloak's in-network address, KEYCLOAK_JWKS_URL), and the " +
-            "login page starts offering Keycloak.",
+            "pins it). It turns on both halves: the backend starts accepting Keycloak tokens (fetching the " +
+            "signing keys from Keycloak's in-network address, KEYCLOAK_JWKS_URL), and the login page starts " +
+            "offering Keycloak.",
         ],
         code: [
+          { label: "1. Start Keycloak", code: "make apps:up\nmake keycloak:up" },
           {
-            code:
-              "make apps:up\n" +
-              "make keycloak:up\n" +
-              "# .env: KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal\n" +
-              "make apps:restart   # backend and frontend need recreating to pick it up",
+            label: "2. In .env, uncomment this line (remove the leading \"# \"; it is commented out in .env.example) - this is what makes the login page show Keycloak",
+            code: "KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal",
           },
+          { label: "3. Recreate the backend and frontend so they pick it up", code: "make apps:restart" },
         ],
+        note:
+          "No Demo login / Keycloak toggle in the login dialog? KEYCLOAK_ISSUER is missing from .env (or " +
+          "commented out with a #), or apps:restart has not run since you set it. Check what the frontend " +
+          "received: docker exec nb-frontend printenv NEXT_PUBLIC_KEYCLOAK_ISSUER prints the issuer when it is on, " +
+          "and nothing when it is off.",
       },
       {
         heading: "2. Log in with Keycloak",
         bullets: [
           "Open http://localhost:5173 and click Login. The dialog now has a Demo login / Keycloak toggle " +
-            "(it isn't there when KEYCLOAK_ISSUER is empty).",
+            "(it isn't there when KEYCLOAK_ISSUER is not set in .env - see step 1).",
           "Pick Keycloak and click \"Log in with Keycloak\". The browser goes to Keycloak's own login page " +
             "(localhost:8180) - note the URL: this is where the password is typed, not in the app.",
           "Sign in as keycloak-demo / nasebanal-demo. Keycloak sends you back to /auth/callback, the app " +
@@ -151,6 +159,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
             caption: "Where \"Log in with Keycloak\" lands: Keycloak's own page (localhost:8180) - the password is typed here, not in the app. \"Register\" is the sign-up.",
           },
         ],
+        imagesLayout: "stack",
         note:
           "Tokens are valid for 30 minutes (the realm's access token lifespan). After that, recording a " +
           "transaction gets a 401 and the app logs you out - log in again.",
@@ -197,9 +206,20 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           "to the mock lookup.",
       },
       {
+        heading: "5. Use it for an MCP client's login",
+        body: [
+          "The same Keycloak login works when an MCP client logs in. With APPS_MCP_AUTH_REQUIRED=true, Claude Code's " +
+            "Authenticate opens the frontend's /mcp-authorize page, which has the same Demo login / Keycloak " +
+            "toggle. Pick Keycloak, sign in as keycloak-demo, and you come back to that page (not to /accounts) " +
+            "to press Allow - then get_me answers with the Keycloak user's profile. The backend verifies the " +
+            "Keycloak JWT as it does everywhere, then issues the MCP client the ordinary demo token for that " +
+            "username. The full flow is in Getting Started: \"Requiring a login for /mcp\".",
+        ],
+      },
+      {
         heading: "Returning to mock-login-only",
         code: [
-          { label: ".env:", code: "KEYCLOAK_ISSUER=" },
+          { label: ".env (comment the line out again):", code: "# KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal" },
           { code: "make apps:restart" },
           { code: "make keycloak:down" },
         ],
@@ -314,28 +334,36 @@ export const scenarioKeycloak: LocalizedDocsPage = {
       {
         heading: "1. Keycloakを起動して有効化する",
         body: [
+          "Keycloakを起動しただけでは足りません: ログイン画面にKeycloakが出て、backendがそのトークンを受け付けるのは、" +
+            ".envにKEYCLOAK_ISSUERを設定したときだけです。この1つの変数が、アプリにKeycloakの存在を伝える手段です" +
+            " — 設定するまでは、Keycloakが動いていてもログインのダイアログにはデモログインしか出ません。" +
+            "手順は3つです: Keycloakを起動し、.envに1行を足し、アプリを再作成します。",
           "keycloak:upは起動のたびに固定のレルム(nasebanal)をインポートします: デモユーザー(keycloak-demo / " +
             "nasebanal-demo)、apps-demoクライアント、そしてサインアップが有効な状態です。KEYCLOAK_ISSUERは" +
             "ブラウザがログインするアドレスで、すべてのトークンのissでもあります(keycloak/docker-compose.ymlで" +
-            "固定しています)。1つの変数で両側が有効になります: backendがKeycloakのトークンを受け付け始め" +
+            "固定しています)。これで両側が有効になります: backendがKeycloakのトークンを受け付け始め" +
             "(署名鍵はKeycloakのネットワーク内アドレス、KEYCLOAK_JWKS_URLから取得)、ログイン画面が" +
             "Keycloakを選べるようになります。",
         ],
         code: [
+          { label: "1. Keycloakを起動する", code: "make apps:up\nmake keycloak:up" },
           {
-            code:
-              "make apps:up\n" +
-              "make keycloak:up\n" +
-              "# .env: KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal\n" +
-              "make apps:restart   # backendとfrontendを再作成して反映",
+            label: "2. .envの次の行のコメントを外す(先頭の「# 」を消します。.env.exampleではコメントアウトされています) — ログイン画面にKeycloakを出すのはこの行です",
+            code: "KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal",
           },
+          { label: "3. backendとfrontendを再作成して反映する", code: "make apps:restart" },
         ],
+        note:
+          "ログインのダイアログに「デモログイン / Keycloak」の切り替えが出ませんか? .envにKEYCLOAK_ISSUERが無い" +
+          "(または先頭の#でコメントアウトされている)か、設定したあとにapps:restartを実行していません。" +
+          "frontendが受け取った値は、docker exec nb-frontend printenv NEXT_PUBLIC_KEYCLOAK_ISSUERで確認できます" +
+          "(有効なら発行元が表示され、無効なら何も表示されません)。",
       },
       {
         heading: "2. Keycloakでログインする",
         bullets: [
           "http://localhost:5173を開いてLoginをクリックします。ダイアログに「デモログイン / Keycloak」の" +
-            "トグルが現れます(KEYCLOAK_ISSUERが空のときは表示されません)。",
+            "トグルが現れます(.envにKEYCLOAK_ISSUERを設定していないと表示されません — 手順1を見てください)。",
           "Keycloakを選んで「Keycloakでログイン」をクリックします。ブラウザはKeycloak自身のログイン画面" +
             "(localhost:8180)へ移動します — URLに注目してください: パスワードを入力する場所はアプリではなく" +
             "ここです。",
@@ -359,6 +387,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
             caption: "「Keycloakでログイン」の遷移先: Keycloak自身のページ(localhost:8180)で、パスワードはアプリではなくここで入力します。「Register」がサインアップです。",
           },
         ],
+        imagesLayout: "stack",
         note:
           "トークンの有効期間は30分です(レルムのアクセストークン有効期間)。それを過ぎると、取引の記帳は" +
           "401になり、アプリがログアウトします — 再度ログインしてください。",
@@ -405,9 +434,20 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           "照合にフォールバックします。",
       },
       {
+        heading: "5. MCPクライアントのログインに使う",
+        body: [
+          "MCPクライアントのログインでも同じKeycloakログインが使えます。APPS_MCP_AUTH_REQUIRED=trueのとき、" +
+            "Claude CodeのAuthenticateはfrontendの/mcp-authorizeを開き、そこにも同じデモログイン / Keycloakの" +
+            "切り替えがあります。Keycloakを選んでkeycloak-demoでサインインすると、/accountsではなくこのページに" +
+            "戻るので、Allowを押します — するとget_meがKeycloakユーザーのプロフィールで答えます。backendは" +
+            "いつもどおりKeycloakのJWTを検証し、そのユーザー名に対する通常のデモトークンをMCPクライアントへ" +
+            "発行します。全体の流れはGetting Startedの「/mcpにログインを必須にする」にあります。",
+        ],
+      },
+      {
         heading: "モックログインのみに戻す",
         code: [
-          { label: ".env:", code: "KEYCLOAK_ISSUER=" },
+          { label: ".env(行をもう一度コメントアウトする):", code: "# KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal" },
           { code: "make apps:restart" },
           { code: "make keycloak:down" },
         ],

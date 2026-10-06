@@ -38,9 +38,9 @@ apps:
 	@echo "  apps:mcp            - Open MCP Inspector in browser (lists both the backend's MCP and agentgateway's MCP)"
 	@echo ""
 	@echo "Configuration (.env file):"
-	@echo "  MCP_INSPECTOR_VERSION=2.9     # ghcr.io/modelcontextprotocol/inspector image tag"
-	@echo "  MCP_INSPECTOR_PORT=6274       # Host-published MCP Inspector UI port"
-	@echo "  NEXT_PUBLIC_API_BASE=http://localhost:8080 # URL apps/frontend calls from the"
+	@echo "  APPS_MCP_INSPECTOR_VERSION=2.9     # ghcr.io/modelcontextprotocol/inspector image tag"
+	@echo "  APPS_MCP_INSPECTOR_PORT=6274       # Host-published MCP Inspector UI port"
+	@echo "  APPS_API_BASE=http://localhost:8080 # URL apps/frontend calls from the"
 	@echo "                                              # browser - set to http://localhost:8000/api"
 	@echo "                                              # to route through Kong's apps_backend"
 	@echo "                                              # route instead (needs kong:up too)"
@@ -86,9 +86,9 @@ apps-up: apps-network-ensure
 	@echo "  Backend REST:    http://localhost:8080"
 	@echo "  Backend GraphQL: http://localhost:8080/graphql"
 	@echo "  MCP server:      http://localhost:8080/mcp"
-	@echo "  MCP Inspector:   http://localhost:$${MCP_INSPECTOR_PORT:-6274} (make apps:mcp)"
+	@echo "  MCP Inspector:   http://localhost:$${APPS_MCP_INSPECTOR_PORT:-6274} (make apps:mcp)"
 	@echo "  MySQL:           localhost:$${APPS_MYSQL_PORT:-3306}"
-	@echo "  SQL client:      http://localhost:$${SQL_CLIENT_PORT:-8081} (phpMyAdmin, already logged in)"
+	@echo "  SQL client:      http://localhost:$${APPS_SQL_CLIENT_PORT:-8081} (phpMyAdmin, already logged in)"
 
 apps-down:
 	@echo "Stopping apps containers..."
@@ -112,7 +112,7 @@ apps-open:
 	@bin/open_browser.sh http://localhost:5173
 
 apps-sql:
-	@bin/open_browser.sh "http://localhost:$${SQL_CLIENT_PORT:-8081}/index.php?route=/database/structure&db=$${APPS_MYSQL_DATABASE:-demo}"
+	@bin/open_browser.sh "http://localhost:$${APPS_SQL_CLIENT_PORT:-8081}/index.php?route=/database/structure&db=$${APPS_MYSQL_DATABASE:-demo}"
 
 # MCP Inspector starts with apps:up (already-running is a no-op here). Its
 # server list (apps/mcp-inspector/config.json) has both the backend's own /mcp
@@ -121,9 +121,9 @@ apps-sql:
 apps-mcp: apps-network-ensure
 	@docker compose -p apps -f apps/docker-compose.yml up -d mcp-inspector
 	@printf "Waiting for MCP Inspector"
-	@i=0; until curl -fs -o /dev/null "http://localhost:$${MCP_INSPECTOR_PORT:-6274}/" || [ $$i -ge 30 ]; do printf "."; sleep 1; i=$$((i+1)); done; echo ""
+	@i=0; until curl -fs -o /dev/null "http://localhost:$${APPS_MCP_INSPECTOR_PORT:-6274}/" || [ $$i -ge 30 ]; do printf "."; sleep 1; i=$$((i+1)); done; echo ""
 	@if ! docker ps --format '{{.Names}}' | grep -q '^nb-agentgateway$$'; then echo "Note: agentgateway is not running - its server will fail to connect until 'make agentgateway:up'."; fi
-	@bin/open_browser.sh "http://localhost:$${MCP_INSPECTOR_PORT:-6274}/?MCP_INSPECTOR_API_TOKEN=$${MCP_INSPECTOR_TOKEN:-nb-mcp-inspector-token}"
+	@bin/open_browser.sh "http://localhost:$${APPS_MCP_INSPECTOR_PORT:-6274}/?MCP_INSPECTOR_API_TOKEN=$${APPS_MCP_INSPECTOR_TOKEN:-nb-mcp-inspector-token}"
 
 # With SQL='...' runs that one statement; without, opens an interactive shell.
 apps-mysql:

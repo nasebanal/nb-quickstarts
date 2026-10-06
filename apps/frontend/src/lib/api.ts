@@ -115,6 +115,24 @@ export function login(username: string, password: string): Promise<{ token: stri
   });
 }
 
+// The MCP login (backend app/mcp_oauth.py, only with MCP_AUTH_REQUIRED): who is
+// asking, and - once the user has signed in here and clicked Allow - the URL
+// that hands an authorization code back to that MCP client.
+export function describeMcpClient(clientId: string): Promise<{ client_name: string }> {
+  return request(`/oauth/client?client_id=${encodeURIComponent(clientId)}`);
+}
+
+export function authorizeMcpClient(
+  token: string,
+  input: { client_id: string; redirect_uri: string; state: string | null; code_challenge: string; code_challenge_method: string },
+): Promise<{ redirect_to: string }> {
+  return request("/oauth/authorize", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(input),
+  });
+}
+
 // The current user's profile (GET /me). The email is recorded but not
 // editable: it comes from the seed data for a demo user, and is mirrored from
 // the token for a Keycloak user.

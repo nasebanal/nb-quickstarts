@@ -26,7 +26,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         code: [
           {
             code:
-              "# .env\nOTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318\n\n" +
+              "# .env\nAPPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318\n\n" +
               "make observability:up\n" +
               "make apps:restart          # backend reads the endpoint at startup\n" +
               "make observability:verify  # each component ready + nb-backend metrics/traces arrived\n" +
@@ -104,6 +104,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "A later run on the full stack: the firing-alerts panel, Loki's backend logs and the 5xx ratio panel, all populated by the same overload.",
           },
         ],
+        imagesLayout: "stack",
       },
       {
         heading: "What to look for",
@@ -242,6 +243,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "An MCP tool call through agentgateway: tools/call, the tool it resolved to, then the backend's REST request and query - the MCP call and the REST call in one trace.",
           },
         ],
+        imagesLayout: "stack",
         note:
           "Real runs. Every Kong trace of /api/accounts that was checked contained both nb-kong " +
           "and nb-backend spans, so the trace context is passed on to the backend (the plugin's " +
@@ -258,7 +260,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         heading: "Beyond the local stack",
         body: [
           "The instrumentation itself is standard OTel SDK code (app/telemetry.py) that honors the " +
-            "usual OTEL_* env vars, so pointing OTEL_EXPORTER_OTLP_ENDPOINT (plus " +
+            "usual OTEL_* env vars, so pointing APPS_OTEL_EXPORTER_OTLP_ENDPOINT (plus " +
             "OTEL_EXPORTER_OTLP_HEADERS) at another OTLP backend - NewRelic, which the real NASEBANAL " +
             "apps use - works without code changes. Only the Collector's own config " +
             "(observability/otel-collector.yaml) is specific to this local stack.",
@@ -268,7 +270,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         heading: "Cleanup",
         code: [{ code: "make observability:down" }],
         note:
-          "Turn export back off with OTEL_EXPORTER_OTLP_ENDPOINT= in .env, then apps:restart, once " +
+          "Turn export back off by commenting out APPS_OTEL_EXPORTER_OTLP_ENDPOINT in .env, then apps:restart, once " +
           "you're done - otherwise the backend keeps retrying an export target that's no longer there. " +
           "observability:reset additionally wipes stored metrics, traces, logs and Grafana state.",
       },
@@ -299,7 +301,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         code: [
           {
             code:
-              "# .env\nOTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318\n\n" +
+              "# .env\nAPPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318\n\n" +
               "make observability:up\n" +
               "make apps:restart          # backendが起動時にエンドポイントを読み込む\n" +
               "make observability:verify  # 各コンポーネントの準備 + nb-backendのメトリクス/トレース到達を確認\n" +
@@ -377,6 +379,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "スタック全体を起動した後の別の実行: 発火中アラートのパネル、Lokiのbackendログ、5xx比率のパネルが、同じoverloadですべて埋まる。",
           },
         ],
+        imagesLayout: "stack",
       },
       {
         heading: "確認するポイント",
@@ -515,6 +518,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "agentgateway経由のMCPツール呼び出し: tools/call、解決されたツール、そしてbackendのRESTリクエストとクエリ — MCP呼び出しとREST呼び出しが1本のトレースに入る。",
           },
         ],
+        imagesLayout: "stack",
         note:
           "実際の実行結果です。確認したKong経由の/api/accountsのトレースはすべて、nb-kongとnb-backendの" +
           "両方のスパンを含んでいたので、トレースコンテキストはbackendへ引き継がれています(プラグインの" +
@@ -531,7 +535,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         heading: "ローカルスタックの先へ",
         body: [
           "計装自体は標準的なOTel SDKのコード(app/telemetry.py)で、通常のOTEL_*環境変数に従います。" +
-            "そのためOTEL_EXPORTER_OTLP_ENDPOINT(および必要ならOTEL_EXPORTER_OTLP_HEADERS)を別の" +
+            "そのためAPPS_OTEL_EXPORTER_OTLP_ENDPOINT(および必要ならOTEL_EXPORTER_OTLP_HEADERS)を別の" +
             "OTLPバックエンド — 実際のNASEBANALのアプリ群が使っているNewRelicなど — に向けても、コード" +
             "変更なしで動作します。ローカルスタック固有なのはCollector自体の設定" +
             "(observability/otel-collector.yaml)だけです。",
@@ -541,7 +545,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         heading: "環境のクリーンアップ",
         code: [{ code: "make observability:down" }],
         note:
-          "終わったら.envのOTEL_EXPORTER_OTLP_ENDPOINT=を空に戻し、apps:restartしてください — そうしない" +
+          "終わったら.envのAPPS_OTEL_EXPORTER_OTLP_ENDPOINTの行をコメントアウトして、apps:restartしてください — そうしない" +
           "と、backendはもう存在しない送信先へのエクスポートをリトライし続けます。observability:resetは" +
           "さらに、保存済みのメトリクス・トレース・ログとGrafanaの状態も消します。",
       },
