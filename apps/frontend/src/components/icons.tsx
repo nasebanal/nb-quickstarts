@@ -2,27 +2,39 @@
 // air-gapped-friendly) styled like nb-dentiscope's stroke icons.
 export function GlobeIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M3 12h18" />
-      <path d="M12 3c2.5 2.5 4 5.5 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.5-4-9s1.5-6.5 4-9z" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M2 12h20" />
+      <path d="M4 7.5h16" />
+      <path d="M4 16.5h16" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z" />
     </svg>
   );
 }
 
 export function SunIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+      <circle cx="12" cy="12" r="4.2" fill="currentColor" />
+      <g stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <line x1="12" y1="2.4" x2="12" y2="4.9" />
+        <line x1="12" y1="19.1" x2="12" y2="21.6" />
+        <line x1="2.4" y1="12" x2="4.9" y2="12" />
+        <line x1="19.1" y1="12" x2="21.6" y2="12" />
+        <line x1="5.3" y1="5.3" x2="7.1" y2="7.1" />
+        <line x1="16.9" y1="16.9" x2="18.7" y2="18.7" />
+        <line x1="5.3" y1="18.7" x2="7.1" y2="16.9" />
+        <line x1="16.9" y1="7.1" x2="18.7" y2="5.3" />
+      </g>
     </svg>
   );
 }
 
 export function MoonIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+      <path d="M20.4 13.3a8.3 8.3 0 1 1-9.7-9.7 0.9 0.9 0 0 1 1 1.3 6.5 6.5 0 0 0 7.4 7.4 0.9 0.9 0 0 1 1.3 1z" />
+      <path d="M17.9 3.2c.26 1.14.62 1.5 1.76 1.76-1.14.26-1.5.62-1.76 1.76-.26-1.14-.62-1.5-1.76-1.76 1.14-.26 1.5-.62 1.76-1.76z" />
     </svg>
   );
 }

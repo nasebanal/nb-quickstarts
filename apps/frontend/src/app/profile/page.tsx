@@ -60,6 +60,7 @@ export default function ProfilePage() {
 
   return (
     <main className="container">
+<div className="nb-panel">
       <div className="nb-content nb-profile" data-testid="profile-page">
         <h1>{t.profile.title}</h1>
         {!profile ? (
@@ -115,6 +116,7 @@ export default function ProfilePage() {
           </form>
         )}
       </div>
+</div>
     </main>
   );
 }

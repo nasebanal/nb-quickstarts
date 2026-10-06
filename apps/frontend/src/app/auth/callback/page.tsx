@@ -31,6 +31,7 @@ export default function AuthCallbackPage() {
 
   return (
     <main className="container">
+<div className="nb-panel">
       <div className="nb-content" data-testid="auth-callback">
         {error ? (
           <>
@@ -45,6 +46,7 @@ export default function AuthCallbackPage() {
           <p>{t.login.callbackWorking}</p>
         )}
       </div>
+</div>
     </main>
   );
 }

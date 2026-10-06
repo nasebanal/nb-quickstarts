@@ -189,7 +189,7 @@ MCP Inspector is only one client - any MCP client that speaks Streamable HTTP ca
 |---|---|---|
 | How it connects | Directly - Streamable HTTP is supported as is | Through the `mcp-remote` bridge (a local `http://` address can't be a custom connector, which needs a public https URL) |
 | How to add | `claude mcp add --transport http <name> <url>` | An `mcpServers` entry in `claude_desktop_config.json` (use `http://localhost:8010/mcp` for agentgateway) |
-| Then | Start (or restart) Claude Code | Restart Claude Desktop |
+| Then | Restart Claude Code, or reconnect with `/mcp` - a running session doesn't pick up a newly added server | Restart Claude Desktop |
 | Check | `/mcp` lists the servers and their tools | The servers' tools show up in a new chat |
 
 **Claude Code:**
@@ -199,6 +199,8 @@ claude mcp add --transport http apps-backend http://localhost:8080/mcp
 claude mcp add --transport http agentgateway http://localhost:8010/mcp
 claude mcp list
 ```
+
+`claude mcp list` shows `Connected` once the server is reachable, but a Claude Code session that was already running doesn't load its tools yet - restart Claude Code, or reconnect with `/mcp`, before asking for anything. Without a scope option the server is added to the current project only; add `-s user` to use it from any directory.
 
 **Claude Desktop** (`claude_desktop_config.json`):
 

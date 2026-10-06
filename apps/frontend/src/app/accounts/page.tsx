@@ -100,6 +100,7 @@ export default function AccountsPage() {
 
   return (
     <main className="container">
+<div className="nb-panel">
       <div className="nb-content">
         <p className="nb-concept-description" data-testid="concept-description">
           {t.app.conceptDescription}
@@ -207,6 +208,7 @@ export default function AccountsPage() {
           </p>
         </section>
       </div>
+</div>
     </main>
   );
 }

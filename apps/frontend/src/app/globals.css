@@ -4,16 +4,19 @@
    ThemeToggle.tsx and the no-flash inline script in layout.tsx; "system"
    (or no selection yet) resolves via prefers-color-scheme below. */
 :root {
+  color-scheme: light;
   --nb-fg: #333;
   --nb-fg-muted: #666;
   --nb-fg-subtle: #999;
   --nb-accent: #2563eb;
   --nb-accent-hover: #1d4ed8;
-  --nb-logo-fg: #475569; /* nav wordmark (NASEBANAL) */
-  --nb-brand-sub: #64748b; /* nav sub-word (Tools): mid slate, legible on both themes */
+  --nb-logo-fg: #6b7a90; /* nav wordmark (NASEBANAL) */
+  --nb-brand-sub: #7c3aed; /* nav sub-word (Tools): violet - distinct from Growth teal, Evolution blue, Demo lime */
   --nb-header-bg: rgba(255, 255, 255, 0.95);
   --nb-page-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   --nb-surface: #ffffff;
+  --nb-surface-raised: #f5f5f5;
+  --nb-border-strong: #ccc;
   --nb-note-bg: #f5f5f5;
   --nb-note-code-bg: #e8eaed;
   --nb-border: #e5e7eb;
@@ -23,16 +26,19 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --nb-fg: #e6e8eb;
   --nb-fg-muted: #9aa4b2;
   --nb-fg-subtle: #6b7684;
   --nb-accent: #3b82f6;
   --nb-accent-hover: #60a5fa;
-  --nb-logo-fg: #e2e8f0;
-  --nb-brand-sub: #64748b;
+  --nb-logo-fg: #6b7a90;
+  --nb-brand-sub: #a78bfa;
   --nb-header-bg: rgba(20, 22, 27, 0.95);
   --nb-page-gradient: linear-gradient(135deg, #14161a 0%, #1b2430 100%);
   --nb-surface: #1a1d23;
+  --nb-surface-raised: #1c2028;
+  --nb-border-strong: #3a4048;
   --nb-note-bg: #22262d;
   --nb-note-code-bg: #2f353e;
   --nb-border: #2d333b;
@@ -44,16 +50,19 @@
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"],
   :root:not([data-theme]) {
+    color-scheme: dark;
     --nb-fg: #e6e8eb;
     --nb-fg-muted: #9aa4b2;
     --nb-fg-subtle: #6b7684;
     --nb-accent: #3b82f6;
     --nb-accent-hover: #60a5fa;
-    --nb-logo-fg: #e2e8f0;
-    --nb-brand-sub: #64748b;
+    --nb-logo-fg: #6b7a90;
+    --nb-brand-sub: #a78bfa;
     --nb-header-bg: rgba(20, 22, 27, 0.95);
     --nb-page-gradient: linear-gradient(135deg, #14161a 0%, #1b2430 100%);
     --nb-surface: #1a1d23;
+    --nb-surface-raised: #1c2028;
+    --nb-border-strong: #3a4048;
     --nb-note-bg: #22262d;
     --nb-note-code-bg: #2f353e;
     --nb-border: #2d333b;
@@ -66,6 +75,23 @@
 /* Body font/line-height/color/smoothing — same values as
    nb-shared-navigation's base typography rule, so this app reads
    consistently with every other NASEBANAL app. */
+/* Solid colour of the header panel (--nb-header-bg is translucent), for the
+   area revealed past the top of the page. */
+:root { --nb-header-solid: #ffffff; }
+:root[data-theme="dark"] { --nb-header-solid: #14161b; }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"],
+  :root:not([data-theme]) { --nb-header-solid: #14161b; }
+}
+
+/* Rubber-band overscroll shows what is behind the page: the top half of the
+   viewport is the header colour, the bottom half the footer colour. Fixed to
+   the viewport (not the document), so it stays correct however tall the page
+   is and whichever edge is pulled. */
+html {
+  background: linear-gradient(to bottom, var(--nb-header-solid) 50%, var(--nb-footer-bg) 50%) no-repeat fixed 0 0 / 100% 100%;
+}
+
 body {
   font-family: "Arial", sans-serif;
   line-height: 1.6;
@@ -85,8 +111,12 @@ body {
   flex-direction: column;
 }
 
+/* Same as nb-recorder's .nb-main: the page gradient is painted on <main>
+   itself (as well as body), so it runs from just under the header to just
+   above the footer instead of across the whole page. */
 body > main {
   flex: 1 0 auto;
+  background: var(--nb-page-gradient);
 }
 
 .container {
@@ -101,22 +131,24 @@ h1 {
   margin-bottom: 4px;
 }
 
-/* Sticky, not fixed: this is already the first element under <body> (see
-   AppChrome.tsx), so sticky "sticks" from the very first scroll pixel -
-   same always-visible-on-scroll result as nb-landing-page's fixed
-   ScrollAwareHeader (@nasebanal/shared-navigation, not depended on here -
-   see the "Branding" note in AGENTS.md), without also needing that
-   approach's padding-top compensation on whatever follows it, since a
-   sticky element never leaves the document's normal flow. */
+/* Fixed, like nb-recorder's header: it never moves, so pulling the page down
+   past its top stretches the page (the panel) under it instead of dragging
+   the navbar along. body's padding-top (below) clears it. */
 .nb-header {
-  padding: 12px 0;
+  padding: 1rem 0;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
   background: var(--nb-header-bg);
-  border-bottom: 1px solid var(--nb-border-soft);
-  position: sticky;
+  position: fixed;
   top: 0;
+  width: 100%;
   z-index: 1000;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+}
+
+/* Only where the header is rendered (/api-specs opts out of the chrome). */
+body:has(> .nb-header) {
+  padding-top: 72px;
 }
 
 .nb-header-inner {
@@ -128,7 +160,13 @@ h1 {
 .nb-header-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.5rem;
+}
+
+/* Same size as nb-shared-navigation's .nb-nav-logo-img (height 32px). */
+.nb-header-brand img {
+  height: 32px;
+  width: auto;
 }
 
 .nb-header-brand-button {
@@ -318,16 +356,17 @@ h1 {
 
 /* Sub-word ("Tools") color. The class name matches nb-shared-navigation's
    .nb-nav-brand-demo (nb-dentiscope's lime "Demo"), but this app deliberately
-   uses its own --nb-brand-sub (mid slate, same in both themes). */
+   uses its own --nb-brand-sub (violet, lighter in dark theme). */
 .nb-nav-brand-demo {
   font-weight: 800;
   color: var(--nb-brand-sub);
 }
 
+/* Same spacing as nb-shared-navigation's .nb-nav-links (gap 1.5rem). */
 .nb-header-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 1.5rem;
 }
 
 .nb-icon-button {
@@ -336,15 +375,16 @@ h1 {
   justify-content: center;
   background: none;
   border: none;
-  padding: 4px;
+  padding: 0.5rem;
   color: var(--nb-fg-muted);
   cursor: pointer;
   border-radius: 6px;
+  transition: color 0.3s ease;
 }
 
 .nb-icon-button:hover {
-  background: var(--nb-border-soft);
-  color: var(--nb-fg);
+  background: none;
+  color: #47b1e8;
 }
 
 /* Active state — same idea as nb-shared-navigation's language switcher
@@ -385,6 +425,11 @@ h1 {
   cursor: pointer;
 }
 
+.nb-dropdown-item svg {
+  width: 16px;
+  height: 16px;
+}
+
 .nb-dropdown-item:hover {
   background: var(--nb-border-soft);
 }
@@ -394,13 +439,35 @@ h1 {
   font-weight: 600;
 }
 
+/* Same two-layer panel as nb-recorder: .nb-panel is its outer
+   .dashboard-panel (raised surface, strong border, 40px padding), .nb-content
+   its inner .dashboard-white-panel (surface, 8px radius, 24px padding). */
+.nb-panel {
+  background-color: var(--nb-surface-raised);
+  padding: 40px;
+  margin: 24px 0;
+  border-radius: 8px;
+  border: 1px solid var(--nb-border-strong);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 .nb-content {
-  max-width: 720px;
-  margin: 40px auto;
-  padding: 24px 32px 32px;
   background: var(--nb-surface);
-  border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+@media (max-width: 768px) {
+  .nb-panel {
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .nb-content {
+    padding: 8px;
+  }
 }
 
 /* Stands in for the h1 this panel used to have - explains the app's
@@ -416,11 +483,10 @@ h1 {
 /* /docs — a two-column shell (sidebar + article) laid out directly inside
    .container by docs/layout.tsx, not by AppChrome - every other route stays
    a single column. */
-.nb-docs-layout {
+.nb-docs-panel {
   display: flex;
   align-items: flex-start;
   gap: 32px;
-  padding: 40px 0 80px;
 }
 
 .nb-docs-main {
@@ -429,8 +495,7 @@ h1 {
 }
 
 /* Sticky so the tree stays visible while a long scenario page scrolls -
-   88px clears the sticky-ish header (12px*2 padding + ~48px logo/controls
-   row + a little breathing room) so the sidebar's own top item isn't
+   88px clears the fixed header (72px + a little breathing room) so the sidebar's own top item isn't
    flush against it. */
 .nb-docs-sidebar {
   flex: 0 0 220px;
@@ -494,10 +559,9 @@ h1 {
 }
 
 @media (max-width: 768px) {
-  .nb-docs-layout {
+  .nb-docs-panel {
     flex-direction: column;
     gap: 16px;
-    padding: 24px 0 60px;
   }
 
   .nb-docs-sidebar {
@@ -1524,7 +1588,6 @@ h1 {
   color: var(--nb-footer-fg);
   padding: 2rem 0;
   text-align: center;
-  margin-top: 40px;
 }
 
 .nb-footer-container p {
@@ -1957,9 +2020,12 @@ h1 {
     flex: none;
   }
 
-  .nb-docs-layout {
+  .nb-docs-panel {
     display: block;
     padding: 0;
+    border: 0;
+    background: none;
+    margin: 0;
   }
 
   .nb-docs-main {
