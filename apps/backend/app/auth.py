@@ -11,25 +11,20 @@ from jwt import PyJWKClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.jwt_tokens import (  # noqa: F401 - issue_token is re-exported for the routers
+    decode_token,
+    issue_token,
+)
 from app.models import User
 from app.passwords import verify_password
 
-# Mock authentication for a demo app. A token is self-contained and signed:
-# `nb1~<username>~<HMAC of it>`, with a secret every instance shares (the
-# TOKEN_SECRET env var - a fixed demo default, since this is a local demo, so
-# instances agree without configuring anything). Any backend instance can
-# verify it on its own, with no shared store and no database query - which is
-# what running several instances behind a load balancer needs, and what keeps login as
-# cheap as it always was for the load-test scenarios (login must not compete
-# with POST /transactions for the DB connection pool). It also survives restarts
-# for free. There is no expiry and no revocation, by design: it is the demo
-# login, not a session system. (It used to be an in-memory dict persisted to
-# a JSON file; several instances writing that file overwrote each other's
-# tokens.)
+# Access tokens are RS256 JWTs signed by this backend (app/jwt_tokens.py) and verified with its public
+# key, so no instance needs a shared secret or a database query to check one. Keycloak's tokens
+# (below) are verified the same way, against Keycloak's own JWKS.
 #
-# No `.` in the format, deliberately: Keycloak's tokens are JWTs (three
-# dot-separated parts) and are tried as such first; a mock token skips that
-# branch immediately instead of costing a wasted key lookup.
+# TOKEN_SECRET is no longer a user's token: it only seals the self-contained `client_id` and
+# authorization code of the MCP login (app/mcp_oauth.py) - a fixed demo default, so every
+# instance agrees on it without configuring anything.
 _TOKEN_SECRET = os.getenv("TOKEN_SECRET", "nb-quickstarts-demo-secret").encode()
 
 
@@ -66,22 +61,6 @@ _KEYCLOAK_JWKS_URL = os.getenv("KEYCLOAK_JWKS_URL") or f"{_KEYCLOAK_ISSUER}/prot
 _jwks_client = PyJWKClient(_KEYCLOAK_JWKS_URL) if _KEYCLOAK_ISSUER else None
 
 
-def _lookup_token(token: str) -> str | None:
-    """The username a mock token was issued to, or None if it is not one of ours."""
-    try:
-        version, payload, signature = token.split("~")
-        if version != "nb1" or not hmac.compare_digest(signature, _sign(payload)):
-            return None
-        return _unb64(payload).decode()
-    except (ValueError, UnicodeDecodeError):
-        return None
-
-
-def issue_token(username: str) -> str:
-    payload = _b64(username.encode())
-    return f"nb1~{payload}~{_sign(payload)}"
-
-
 @dataclass
 class Principal:
     """Who is calling: the username, plus what the identity provider told us
@@ -116,10 +95,8 @@ def authenticate(db: Session, username: str, password: str) -> bool:
 def _decode_keycloak_token(token: str) -> Principal | None:
     """Validates `token` as a Keycloak-issued JWT against the configured
     realm's live JWKS and returns who it is - or None if Keycloak isn't
-    configured, the token isn't a JWT at all (the mock /auth/login token
-    is a plain secrets.token_urlsafe() string, never containing a `.`), or
-    signature/issuer validation fails, so the caller falls back to the
-    legacy opaque-token lookup below. Audience isn't checked - this demo
+    configured, the token isn't a JWT at all (no two dots), or
+    signature/issuer validation fails. Audience isn't checked - this demo
     realm's one public client has no need for it, and Keycloak clients
     other than apps-demo aren't part of the scenario."""
     if _jwks_client is None or token.count(".") != 2:
@@ -141,18 +118,22 @@ def _decode_keycloak_token(token: str) -> Principal | None:
     return Principal(username=username, provider="keycloak", email=claims.get("email"), name=claims.get("name"))
 
 
+def _decode_own_token(token: str) -> Principal | None:
+    claims = decode_token(token)
+    if claims is None:
+        return None
+    return Principal(username=claims["sub"])
+
+
 def get_current_principal(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
 ) -> Principal:
-    if credentials is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid or missing token")
-    keycloak_principal = _decode_keycloak_token(credentials.credentials)
-    if keycloak_principal is not None:
-        return keycloak_principal
-    username = _lookup_token(credentials.credentials)
-    if username is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid or missing token")
-    return Principal(username=username)
+    if credentials is not None:
+        # Our own token first (a local signature check, no network), then Keycloak's.
+        principal = _decode_own_token(credentials.credentials) or _decode_keycloak_token(credentials.credentials)
+        if principal is not None:
+            return principal
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid or missing token")
 
 
 def get_current_username(principal: Principal = Depends(get_current_principal)) -> str:

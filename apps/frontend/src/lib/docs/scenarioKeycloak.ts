@@ -2,10 +2,10 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioKeycloak: LocalizedDocsPage = {
   en: {
-    title: "Scenario 4: Use Keycloak",
+    title: "Scenario 5: Use Keycloak",
     description:
       "POST /transactions is protected by app/auth.py's get_current_username - until now, only " +
-      "satisfiable with a mock token from POST /auth/login. This scenario turns on a real login: the " +
+      "satisfiable with the token from POST /auth/login. This scenario turns on a real login: the " +
       "login page gains a Keycloak option (with sign-up), you authenticate at Keycloak like you would " +
       "with \"Sign in with Google\", and the backend accepts the token Keycloak issued on that exact " +
       "same route.",
@@ -92,7 +92,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
               from: "app",
               to: "fe",
               text: "201 Created",
-              detail: "(401 if the token fails - the mock-token lookup is tried first)",
+              detail: "(401 if the token fails - the backend's own token check is tried first)",
               dashed: true,
             },
           ],
@@ -216,9 +216,9 @@ export const scenarioKeycloak: LocalizedDocsPage = {
         },
         closing: [
           "Real output. The tampered token is rejected because its signature no longer matches Keycloak's " +
-          "public key - the backend trusts the signature, not the token's contents. The mock token from the " +
-          "Demo login tab keeps working alongside: the backend tries the Keycloak check first and falls back " +
-          "to the mock lookup.",
+          "public key - the backend trusts the signature, not the token's contents. The token from the " +
+          "Demo login tab keeps working alongside: the backend tries its own token check first (a local " +
+          "signature check) and falls back to the Keycloak check.",
         ],
       },
       {
@@ -271,10 +271,10 @@ export const scenarioKeycloak: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ4: Keycloakの利用",
+    title: "シナリオ5: Keycloakの利用",
     description:
       "POST /transactionsは、app/auth.pyのget_current_usernameによって保護されています — これまでは" +
-      "POST /auth/loginが発行するモックトークンでしか満たせませんでした。このシナリオでは本物のログインを" +
+      "POST /auth/loginが発行するトークンでしか満たせませんでした。このシナリオでは本物のログインを" +
       "有効にします: ログイン画面にKeycloakの選択肢(サインアップ付き)が加わり、「Googleでログイン」と同じ" +
       "ように、Keycloak側で認証し、まさにこのルートでKeycloakが発行したトークンをbackendが受け入れます。",
     sections: [
@@ -359,7 +359,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
               from: "app",
               to: "fe",
               text: "201 Created",
-              detail: "(トークンが不正なら401 — その前にモックトークンとしての照合を試す)",
+              detail: "(トークンが不正なら401 — その前にbackend自身のトークン検証を試す)",
               dashed: true,
             },
           ],
@@ -483,8 +483,8 @@ export const scenarioKeycloak: LocalizedDocsPage = {
         closing: [
           "実際の出力です。書き換えたトークンが拒否されるのは、署名がKeycloakの公開鍵と一致しなくなる" +
           "ためです — backendが信頼するのはトークンの中身ではなく署名です。デモログインのタブで得られる" +
-          "モックトークンも並行して使えます: backendはまずKeycloakとしての検証を試し、失敗したらモックの" +
-          "照合にフォールバックします。",
+          "デモログインのタブで得られるトークンも並行して使えます: backendはまず自前のトークン検証(ローカルでの署名" +
+          "検証)を試し、失敗したらKeycloakとしての検証にフォールバックします。",
         ],
       },
       {

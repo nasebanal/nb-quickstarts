@@ -146,7 +146,8 @@ vault-verify-apps: vault-setup-mysql
 	@docker logs nb-backend 2>&1 | grep -i vault || echo "  (no Vault log line yet - the container may still be starting; re-run in a few seconds)"
 	@echo ""
 	@echo "A real request over that connection (a MySQL round-trip, not just 'container is up')..."
-	@curl -s http://localhost:8080/accounts | jq -c '.[0:2]'
+	@TOKEN=$$(curl -s -X POST http://localhost:8080/auth/login -H 'content-type: application/json' -d '{"username":"demo","password":"demo"}' | jq -r .token); \
+		curl -s -H "Authorization: Bearer $$TOKEN" http://localhost:8080/accounts | jq -c '.[0:2]'
 	@echo ""
 	@$(MAKE) --no-print-directory vault-db-users
 	@echo ""

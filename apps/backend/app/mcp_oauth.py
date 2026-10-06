@@ -11,7 +11,8 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
-from app.auth import Principal, _b64, _sign, _unb64, get_current_principal, issue_token
+from app.auth import Principal, _b64, _sign, _unb64, get_current_principal
+from app.jwt_tokens import MCP_TTL_SECONDS, issue_token
 
 # OAuth for /mcp (MCP's authorization flow: RFC 9728 protected-resource
 # metadata, RFC 8414 authorization-server metadata, RFC 7591 dynamic client
@@ -29,7 +30,7 @@ from app.auth import Principal, _b64, _sign, _unb64, get_current_principal, issu
 # Stateless, like the demo token in auth.py: a client_id and an authorization
 # code are signed, self-contained strings, so any backend instance can verify
 # them and nothing is stored. The access token handed out is the ordinary
-# demo token (auth.issue_token), which every protected route already accepts -
+# JWT this backend signs (jwt_tokens.issue_token, valid for a day), which every protected route accepts -
 # even when the person signed in through Keycloak (their username carries over).
 MCP_AUTH_REQUIRED = (os.getenv("MCP_AUTH_REQUIRED") or "true").strip().lower() not in ("0", "false", "no", "off")
 
@@ -204,4 +205,4 @@ def token(
         or not hmac.compare_digest(grant["k"], _pkce_challenge(code_verifier))
     ):
         return _oauth_error("invalid_grant", "the authorization code is invalid, expired, or does not match")
-    return {"access_token": issue_token(grant["u"]), "token_type": "Bearer"}
+    return {"access_token": issue_token(grant["u"], ttl_seconds=MCP_TTL_SECONDS), "token_type": "Bearer", "expires_in": MCP_TTL_SECONDS}

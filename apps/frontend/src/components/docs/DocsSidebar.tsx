@@ -37,7 +37,7 @@ function NavItem({ item, pathname }: { item: DocsNavItem; pathname: string | nul
 }
 
 // A plain nested <ul> tree (see nav.ts) - two top-level pages plus one
-// "Scenarios" group holding the seven walkthroughs, in the order requested.
+// "Scenarios" group holding the eight walkthroughs, in the order requested.
 // Active-link highlighting is exact-pathname, not prefix-matching: each
 // scenario is its own leaf page, not a sub-route of another one.
 export function DocsSidebar() {

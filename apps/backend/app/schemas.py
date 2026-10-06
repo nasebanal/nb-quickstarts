@@ -30,8 +30,10 @@ class TransactionCreate(CamelModel):
     """`quantity` is a signed delta (e.g. -3 to record consumption), not an
     absolute value — see `Transaction` in models.py."""
 
-    name: str
-    quantity: int = 0
+    # The limits are the columns' own (models.py): a longer name or a bigger number used to reach the database and
+    # come back as a 500 - found by ZAP's API scan once it could log in. Now a 422.
+    name: str = Field(min_length=1, max_length=128)
+    quantity: int = Field(default=0, ge=-2147483648, le=2147483647)
 
 
 class TransactionOut(CamelModel):
@@ -62,6 +64,19 @@ class LoginRequest(CamelModel):
 class LoginResponse(CamelModel):
     token: str
     username: str
+
+
+class JwkKey(CamelModel):
+    kty: str
+    use: str
+    alg: str
+    kid: str
+    n: str
+    e: str
+
+
+class Jwks(CamelModel):
+    keys: list[JwkKey]
 
 
 class Profile(CamelModel):

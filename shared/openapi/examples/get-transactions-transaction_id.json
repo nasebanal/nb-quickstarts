@@ -1,7 +1,10 @@
 {
   "http-request": {
     "method": "GET",
-    "path": "/transactions/1"
+    "path": "/transactions/1",
+    "headers": {
+      "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6Im1YZmJOUEFmS0M0TUN1ZDAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJzdWIiOiJkZW1vIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGVtbyIsImF1ZCI6Im5iLXF1aWNrc3RhcnRzLWFwaSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.egX-L8FA_KK2GhL7Gsg2mYtsWDhmxDxCz6P1h7jUMSAu5xU2oTb5fbib4vBVpay-ExfdBbOvyJ2qDx3M2t2XdrqsdkyWo-GVZFgXCBLVjPY_8s8-CGaVSnhOJMJ2bZOsGHnMTd9ay5LrKw5hHTVAFK1V0Gf9Sk3eqQNIkk987IhEi6b7g2pWE8AS9BrVt9RbRSANo8I_iWVPHpQCF-KsTizgHciTuHvDS0viGa-w_4N8o3nXSMIeTxhuzVgOAJKfccDYhMpUZXc6m0Sco0sxNkGY-J-5p1FEAmEaZ5r_mqWvPKm3xXJ1cr1L5WiJrUY9GyFs2uN0P6T-Jn4ynBpA5Q"
+    }
   },
   "http-response": {
     "status": 200,

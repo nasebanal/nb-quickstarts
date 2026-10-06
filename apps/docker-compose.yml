@@ -97,6 +97,8 @@ services:
       # The two URLs are the addresses the MCP client and browser use
       # (host-published), not the in-network ones.
       MCP_AUTH_REQUIRED: ${APPS_MCP_AUTH_REQUIRED:-true}
+      # How long a login token (an RS256 JWT, see app/jwt_tokens.py) is valid, in seconds - a day by default.
+      JWT_TTL_SECONDS: ${APPS_JWT_TTL_SECONDS:-86400}
       PUBLIC_BASE_URL: ${APPS_PUBLIC_BASE_URL:-http://localhost:8080}
       MCP_AUTHORIZE_URL: ${APPS_MCP_AUTHORIZE_URL:-http://localhost:5173/mcp-authorize}
       KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-http://keycloak:8080/realms/nasebanal/protocol/openid-connect/certs}

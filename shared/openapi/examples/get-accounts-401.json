@@ -1,0 +1,15 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/accounts",
+    "headers": {
+      "Authorization": "Bearer invalid-token"
+    }
+  },
+  "http-response": {
+    "status": 401,
+    "body": {
+      "detail": "invalid or missing token"
+    }
+  }
+}

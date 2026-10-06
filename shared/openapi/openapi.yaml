@@ -47,12 +47,17 @@ info:
     /accounts is the balance view derived from it. This contract
     (openapi.yaml) is the source of truth, and the implementation follows it.
   version: 0.1.0
+# Every operation needs a bearer token (an RS256 JWT, see /auth/login) unless it says `security: []`
+# itself: the login, the health check and the JWKS that verifies the tokens.
+security:
+  - HTTPBearer: []
 paths:
   /health:
     get:
       tags: [health]
       summary: Health
       operationId: health_health_get
+      security: []
       responses:
         "200":
           description: Successful Response
@@ -69,6 +74,7 @@ paths:
       tags: [auth]
       summary: Login
       operationId: login_auth_login_post
+      security: []
       requestBody:
         required: true
         content:
@@ -94,7 +100,7 @@ paths:
                 demo_login:
                   value:
                     # Matches the demo token in authenticated external examples.
-                    token: nb1~ZGVtbw~o8ULBzbbQm6Lrym32BZVUdAXhtlQYQJL1emk2ZCkMqY
+                    token: eyJhbGciOiJSUzI1NiIsImtpZCI6Im1YZmJOUEFmS0M0TUN1ZDAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJzdWIiOiJkZW1vIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGVtbyIsImF1ZCI6Im5iLXF1aWNrc3RhcnRzLWFwaSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.egX-L8FA_KK2GhL7Gsg2mYtsWDhmxDxCz6P1h7jUMSAu5xU2oTb5fbib4vBVpay-ExfdBbOvyJ2qDx3M2t2XdrqsdkyWo-GVZFgXCBLVjPY_8s8-CGaVSnhOJMJ2bZOsGHnMTd9ay5LrKw5hHTVAFK1V0Gf9Sk3eqQNIkk987IhEi6b7g2pWE8AS9BrVt9RbRSANo8I_iWVPHpQCF-KsTizgHciTuHvDS0viGa-w_4N8o3nXSMIeTxhuzVgOAJKfccDYhMpUZXc6m0Sco0sxNkGY-J-5p1FEAmEaZ5r_mqWvPKm3xXJ1cr1L5WiJrUY9GyFs2uN0P6T-Jn4ynBpA5Q
                     username: demo
         "401":
           description: Unknown username or wrong password
@@ -179,12 +185,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HTTPValidationError"
+  /.well-known/jwks.json:
+    get:
+      tags: [auth]
+      summary: Get Jwks
+      description: The public key that verifies this API's access tokens (RS256 JWTs), as a JSON Web Key Set.
+      operationId: get_jwks_well_known_jwks_json_get
+      security: []
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Jwks"
+              examples:
+                signing_key:
+                  value:
+                    keys:
+                      - kty: RSA
+                        use: sig
+                        alg: RS256
+                        kid: mXfbNPAfKC4MCud0
+                        n: vG017uolFi2_VSJwcxfroKDhll4i_x31yScBe6nhL7l-L86Za6jGTkhrsNm4yv3O0RPGrA_eiFxM7OimL0c0vckCtP57fusQrnhcoAoqAFcRwtjHabee-G-mP3C5G46nj-1SudRpXFkEBYmjI3CNAad3MzQUFQ6kMtj8XkcK1KRJx0PRMdDLmZKpUhMIS5JnpMKnlNOQcL_dfQxHWjJrq8OKo2kYBrOl3JTKBWUTLPUWP22wAJUm_EODZ6GT1sUh82YRAsYSNaA9fKdm7qKeN7M7t2D8IEcG3QiG6iH0fvjMRrOjKeFzUWXwLk-AqtuJ6rRiVWDb_89A9Nl0Lhb1Jw
+                        e: AQAB
   /transactions:
     get:
       tags: [transactions]
       summary: List Transactions
       operationId: list_transactions_transactions_get
       responses:
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
         "200":
           description: Successful Response
           content:
@@ -194,19 +230,6 @@ paths:
                 title: Response List Transactions Transactions Get
                 items:
                   $ref: "#/components/schemas/TransactionOut"
-              examples:
-                seeded_transactions:
-                  value:
-                    - id: 1
-                      name: Cash
-                      quantity: 100000
-                      source: seed
-                      createdAt: "2024-01-01T00:00:00Z"
-                    - id: 2
-                      name: Rent Expense
-                      quantity: 30000
-                      source: seed
-                      createdAt: "2024-01-01T00:00:00Z"
     post:
       tags: [transactions]
       # Not "Create Account": quantity is a signed delta (see
@@ -272,25 +295,19 @@ paths:
           schema:
             type: integer
             title: Transaction Id
-          examples:
-            cash_seed_transaction:
-              summary: The seed data's first row - always present
-              value: 1
       responses:
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
         "200":
           description: Successful Response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/TransactionOut"
-              examples:
-                cash_seed_transaction:
-                  value:
-                    id: 1
-                    name: Cash
-                    quantity: 100000
-                    source: seed
-                    createdAt: "2024-01-01T00:00:00Z"
         "404":
           description: Transaction not found
           content:
@@ -319,6 +336,12 @@ paths:
       summary: List Accounts
       operationId: list_accounts_accounts_get
       responses:
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
         "200":
           description: Successful Response
           content:
@@ -328,23 +351,12 @@ paths:
                 title: Response List Accounts Accounts Get
                 items:
                   $ref: "#/components/schemas/AccountBalance"
-              examples:
-                seeded_balances:
-                  value:
-                    - name: Cash
-                      balance: 120000
-                      eventCount: 3
-                    - name: Rent Expense
-                      balance: 30000
-                      eventCount: 1
-                    - name: Sales Revenue
-                      balance: 50000
-                      eventCount: 1
 components:
   securitySchemes:
     HTTPBearer:
       type: http
       scheme: bearer
+      bearerFormat: JWT
   schemas:
     AccountBalance:
       type: object
@@ -375,10 +387,14 @@ components:
         name:
           type: string
           title: Name
+          minLength: 1
+          maxLength: 128
         quantity:
           type: integer
           title: Quantity
           default: 0
+          minimum: -2147483648
+          maximum: 2147483647
     TransactionOut:
       type: object
       title: TransactionOut
@@ -469,9 +485,30 @@ components:
         token:
           type: string
           title: Token
+          description: "An RS256 JWT access token (send it as `Authorization: Bearer <token>`); verify it with /.well-known/jwks.json."
         username:
           type: string
           title: Username
+    JwkKey:
+      type: object
+      title: JwkKey
+      required: [kty, use, alg, kid, n, e]
+      properties:
+        kty: {type: string}
+        use: {type: string}
+        alg: {type: string}
+        kid: {type: string}
+        n: {type: string}
+        e: {type: string}
+    Jwks:
+      type: object
+      title: Jwks
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/JwkKey"
     HTTPError:
       type: object
       title: HTTPError

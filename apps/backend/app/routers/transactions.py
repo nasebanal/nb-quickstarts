@@ -13,7 +13,8 @@ from app.services import account_service
 # resource's {transaction_id} previously being called "{account_id}" (when
 # both lived under /accounts) meant the same path parameter silently meant
 # two different things depending which operation you were reading.
-router = APIRouter(prefix="/transactions", tags=["transactions"])
+# Every operation needs a valid access token (the whole API does, except /health, /auth/login and the JWKS).
+router = APIRouter(prefix="/transactions", tags=["transactions"], dependencies=[Depends(get_current_username)])
 
 
 @router.get("", response_model=list[TransactionOut])

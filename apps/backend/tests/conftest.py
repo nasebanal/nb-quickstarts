@@ -35,3 +35,10 @@ import pytest  # noqa: E402 - must be imported after the patch above
 def client():
     with TestClient(fastapi_app) as test_client:
         yield test_client
+
+
+@pytest.fixture()
+def auth(client):
+    """The Authorization header of a logged-in demo user - every route but /health, /auth/login and the JWKS needs it."""
+    token = client.post("/auth/login", json={"username": "demo", "password": "demo"}).json()["token"]
+    return {"Authorization": f"Bearer {token}"}

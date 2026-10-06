@@ -11,7 +11,7 @@ from app.db import Base, SessionLocal, engine, wait_for_database
 from app.graphql.schema import graphql_router
 from app.mcp_oauth import MCP_AUTH_REQUIRED, require_mcp_token
 from app.mcp_oauth import router as mcp_oauth_router
-from app.routers import accounts, auth, health, me, transactions
+from app.routers import accounts, auth, health, jwks, me, transactions
 from app.seed import seed_if_empty
 from app.telemetry import setup_telemetry
 
@@ -67,6 +67,7 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(jwks.router)
 app.include_router(transactions.router)
 app.include_router(accounts.router)
 app.include_router(me.router)

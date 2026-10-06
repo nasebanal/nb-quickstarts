@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DOCS_NAV } from "./nav";
 import { overview } from "./overview";
 import { scenarioAgentgateway } from "./scenarioAgentgateway";
+import { scenarioAuth } from "./scenarioAuth";
 import { scenarioKafka } from "./scenarioKafka";
 import { scenarioKeycloak } from "./scenarioKeycloak";
 import { scenarioKong } from "./scenarioKong";
@@ -9,11 +10,12 @@ import { scenarioObservability } from "./scenarioObservability";
 import { scenarioTesting } from "./scenarioTesting";
 import { scenarioVault } from "./scenarioVault";
 
-// Sidebar order (see nav.ts): the Overview lists the seven scenarios in this order (scenario 1 is the Testing page).
+// Sidebar order (see nav.ts): the Overview lists the eight scenarios in this order (scenario 1 is the Testing page).
 const SCENARIOS = [
   scenarioTesting,
   scenarioKong,
   scenarioKafka,
+  scenarioAuth,
   scenarioKeycloak,
   scenarioVault,
   scenarioAgentgateway,

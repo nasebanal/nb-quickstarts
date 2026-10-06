@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_username
 from app.db import get_db
 from app.schemas import AccountBalance
 from app.services import account_service
@@ -15,7 +16,8 @@ from app.services import account_service
 # side is the immutable log; this is a read-side projection over it), just
 # without a separate datastore or event store for it - both still come from
 # the one `transactions` table (account_service.py).
-router = APIRouter(prefix="/accounts", tags=["accounts"])
+# Every operation needs a valid access token (the whole API does, except /health, /auth/login and the JWKS).
+router = APIRouter(prefix="/accounts", tags=["accounts"], dependencies=[Depends(get_current_username)])
 
 
 @router.get("", response_model=list[AccountBalance])

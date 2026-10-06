@@ -31,7 +31,9 @@ export default function AccountsPage() {
   const { t, navigate } = useLocale();
   const { token, initializing, logout } = useAuth();
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const { balances, refresh } = useBalances(autoRefresh);
+  // A token the backend rejects (expired, or signed by a key it no longer has) ends the session: the guard effect
+  // below then sends the viewer back to log in, instead of the balances poll hitting a 401 every second.
+  const { balances, refresh } = useBalances(token, autoRefresh, logout);
   const [accountName, setAccountName] = useState("");
   const [accountQuantity, setAccountQuantity] = useState("0");
   const [accountError, setAccountError] = useState("");
@@ -81,10 +83,10 @@ export default function AccountsPage() {
       await refresh();
     } catch (err) {
       if (err instanceof UnauthorizedError) {
-        // The backend's token store is in-memory only (see auth.py) - if
-        // it restarted since you logged in, sessionStorage still has a
-        // token the backend no longer recognizes. Explain why, then clear
-        // it: the page's own token-guard effect above reacts to that by
+        // The token is an expiring JWT (a day by default, see jwt_tokens.py)
+        // - or the backend's signing key changed since you logged in -
+        // so sessionStorage can still hold a token the backend no longer
+        // accepts. Explain why, then clear it: the page's own token-guard effect above reacts to that by
         // sending the viewer back home to log in again.
         setAccountError(t.app.sessionExpiredError);
         setTimeout(logout, 1500);

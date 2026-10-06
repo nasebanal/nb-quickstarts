@@ -11,14 +11,23 @@ class WebsiteUser(HttpUser):
     host = os.getenv("HTTP_HOST", "http://localhost:8080")
     debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
 
+    def on_start(self):
+        # Every route, GraphQL included, needs an access token: log in once per simulated user.
+        response = self.client.post(
+            "/auth/login",
+            name="/auth/login",
+            json={"username": "demo", "password": os.getenv("DEMO_PASSWORD", "demo")},
+        )
+        self.client.headers["Authorization"] = f"Bearer {response.json()['token']}"
+
     @task
     @tag('graphql-query')
     def graphql_query(self):
-        """GraphQL: Query accounts (read operation)"""
+        """GraphQL: Query transactions (read operation)"""
         response = self.client.post("/graphql", name="/graphql (query)", json={
             "query": """
                 query {
-                    accounts {
+                    transactions {
                         id
                         name
                         quantity
@@ -32,7 +41,7 @@ class WebsiteUser(HttpUser):
         if self.debug_mode and response.status_code == 200:
             try:
                 data = response.json()
-                accounts = data.get("data", {}).get("accounts")
+                accounts = data.get("data", {}).get("transactions")
                 if accounts is not None:
                     print(f"✅ [GraphQL Query] Retrieved {len(accounts)} account(s)", flush=True)
                     for account in accounts[:3]:  # Show first 3 only
@@ -51,7 +60,7 @@ class WebsiteUser(HttpUser):
         self.client.post("/graphql", name="/graphql (mutation)", json={
             "query": f"""
                 mutation {{
-                    createAccount(input: {{
+                    createTransaction(input: {{
                         name: "Load Test Account {suffix}"
                         quantity: {suffix % 100}
                     }}) {{

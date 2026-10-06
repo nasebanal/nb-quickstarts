@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listAccounts, type AccountBalance } from "./api";
+import { listAccounts, UnauthorizedError, type AccountBalance } from "./api";
 
 const POLL_INTERVAL_MS = 1000;
 
@@ -18,21 +18,29 @@ const POLL_INTERVAL_MS = 1000;
  * randomly-generated value per request for anything without a matching
  * example - see specmatic/docker-compose.yml - so a live poll against it
  * looks like the screen is constantly changing). */
-export function useBalances(autoRefresh = true) {
+export function useBalances(token: string | null, autoRefresh = true, onUnauthorized?: () => void) {
   const [balances, setBalances] = useState<AccountBalance[]>([]);
   // Avoids overlapping requests if one poll is still in flight when the
   // next interval tick fires (e.g. a slow response during heavy load).
   const inFlight = useRef(false);
+  // Kept in a ref: the caller passes a fresh function every render, and that must not restart the poll.
+  const onUnauthorizedRef = useRef(onUnauthorized);
+  onUnauthorizedRef.current = onUnauthorized;
 
   const refresh = useCallback(async () => {
-    if (inFlight.current) return;
+    // Every route needs a token now; without one (not logged in yet) there is nothing to poll.
+    if (!token || inFlight.current) return;
     inFlight.current = true;
     try {
-      setBalances(await listAccounts());
+      setBalances(await listAccounts(token));
+    } catch (err) {
+      // An expired or rejected token: let the page send the user back to log in instead of polling a 401 forever.
+      if (err instanceof UnauthorizedError && onUnauthorizedRef.current) onUnauthorizedRef.current();
+      else throw err;
     } finally {
       inFlight.current = false;
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     refresh().catch((err) => {
