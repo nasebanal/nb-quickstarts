@@ -23,7 +23,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             "side (the real backend answers as the contract specifies) and serves a mock for the consumer side " +
             "(the frontend's calls are made against a mock built from the same file, with no real backend). " +
             "Kong can route the frontend to that mock without a " +
-            "frontend change ([Scenario 2](/docs/scenario-kong)); agentgateway builds its MCP tools from the same " +
+            "frontend change ([Scenario 3](/docs/scenario-kong)); agentgateway builds its MCP tools from the same " +
             "file ([Scenario 7](/docs/scenario-agentgateway)).",
           "Every test command leaves an HTML report (git-ignored, regenerated on each run). Open the file " +
             "directly in a browser, or serve its folder with python3 -m http.server.",
@@ -32,11 +32,11 @@ export const scenarioTesting: LocalizedDocsPage = {
           headers: ["Layer", "Tool", "What it checks"],
           nowrapColumns: [0, 1],
           rows: [
-            ["Unit (backend)", "pytest", "22 tests: accounts and balances, password login, profile, Keycloak JWT validation (including forged and tampered tokens). Uses an in-memory database."],
-            ["Unit (frontend)", "Vitest", "20 tests: the API client, the OIDC PKCE flow, and the backend resolver (round robin, fallback to the next instance)."],
-            ["End to end", "Playwright", "9 tests in a real browser: login and logout, profile, a wrong password, the frontend server's resolver API."],
-            ["Contract (provider)", "Specmatic", "20 scenarios: does the real backend honour openapi.yaml? 100% of paths, methods and response codes covered."],
-            ["Contract (consumer)", "Vitest + Specmatic mock", "Using 9 tests verifies if the frontend's own API usage hold up against a mock built from the same contract?"],
+            ["Unit (backend)", "pytest", "Accounts and balances, password login, profile, JWT authentication (every route needs a token; expired, forged and tampered tokens are refused), Keycloak JWT validation, the MCP login. Uses an in-memory database."],
+            ["Unit (frontend)", "Vitest", "The API client (including the bearer token it sends), the OIDC PKCE flow, and the rendering and order of these docs pages."],
+            ["End to end", "Playwright", "In a real browser: login and logout, profile, a wrong password, the /en and /ja language routing."],
+            ["Contract (provider)", "Specmatic", "Does the real backend honour openapi.yaml? Every path, method and response code is covered, the 401 of each protected route included."],
+            ["Contract (consumer)", "Vitest + Specmatic mock", "Does the frontend's own API usage hold up against a mock built from the same contract?"],
             ["Load", "Locust", "HTTP, GraphQL and MySQL scenarios, an overload scenario, and the same overload sent through Kafka."],
             ["Security", "OWASP ZAP", "A passive scan of the frontend, an active scan, and an OpenAPI-driven scan of every backend route."],
           ],
@@ -71,7 +71,8 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "Evaluation",
             body: [
-              "All 22 tests pass. They cover accounts and balances, password login, the profile, and Keycloak JWT " +
+              "All tests pass. They cover accounts and balances, password login, the profile, JWT authentication - " +
+                "test_auth_required.py asserts that every protected route answers 401 without a token - and Keycloak JWT " +
                 "validation, including forged and tampered tokens.",
             ],
           },
@@ -91,16 +92,16 @@ export const scenarioTesting: LocalizedDocsPage = {
             images: [
               {
                 src: "/docs/screenshots/report-vitest.png",
-                alt: "Vitest HTML report: 20 passed, 0 failed, with the test tree of api.test.ts, oidc.test.ts and backendResolver.test.ts on the left",
-                caption: "Vitest: a dashboard (20 passed) and a browsable tree of every test, grouped by file.",
+                alt: "Vitest HTML report: all tests passed, none failed, with the test tree grouped by file on the left",
+                caption: "Vitest: a pass/fail dashboard and a browsable tree of every test, grouped by file.",
               },
             ],
           },
           {
             heading: "Evaluation",
             body: [
-              "All 20 tests pass, with no failures. They cover the API client, the OIDC PKCE flow, and the backend " +
-                "resolver, including round robin and fallback to the next instance.",
+              "All tests pass, with no failures. They cover the API client, including the bearer token it sends, the OIDC " +
+                "PKCE flow, and the rendering and order of the docs pages.",
             ],
           },
         ],
@@ -119,7 +120,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             images: [
               {
                 src: "/docs/screenshots/report-playwright.png",
-                alt: "Playwright HTML report listing the 9 end-to-end tests as passed, with durations",
+                alt: "Playwright HTML report listing the end-to-end tests as passed, with durations",
                 caption: "Playwright: one row per test with its duration.",
               },
             ],
@@ -127,8 +128,8 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "Evaluation",
             body: [
-              "All 9 tests pass in a real browser: login and logout, the profile, a wrong password, and the " +
-                "frontend server's resolver API.",
+              "All tests pass in a real browser: login and logout, the profile, a wrong password, and the " +
+                "language routing (/en, /ja).",
             ],
           },
         ],
@@ -154,17 +155,17 @@ export const scenarioTesting: LocalizedDocsPage = {
             images: [
               {
                 src: "/docs/screenshots/report-specmatic.png",
-                alt: "Specmatic contract test results: 100% API coverage, 20 successes, and a table of every path, method and response code marked Covered",
-                caption: "Specmatic: 20 of 20 scenarios passed, 100% API coverage, broken down by path, method and response code.",
+                alt: "Specmatic contract test results: 100% API coverage, every scenario a success, and a table of every path, method and response code marked Covered",
+                caption: "Specmatic: every scenario passed, 100% API coverage, broken down by path, method and response code.",
               },
             ],
           },
           {
             heading: "Evaluation",
             body: [
-              "All 20 scenarios pass, and 100% of paths, methods and response codes are covered. The scenarios are " +
-                "the requests built from the contract plus 20 examples checked in next to it (shared/openapi/examples), " +
-                "so the error cases and the authenticated calls are exercised as well.",
+              "Every scenario passes, and 100% of paths, methods and response codes are covered. The scenarios are " +
+                "the requests built from the contract plus the examples checked in next to it (shared/openapi/examples), " +
+                "so the error cases - the 401 of each protected route among them - and the authenticated calls are exercised as well.",
             ],
           },
         ],
@@ -182,7 +183,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             heading: "Checking the results",
             body: [
               "Locust runs against the running apps stack (make apps:up first) and reports response times and failures per endpoint. The available scenarios are HTTP, GraphQL " +
-                "and MySQL, an overload scenario, and the same overload sent through Kafka; [Scenario 3](/docs/scenario-kafka) " +
+                "and MySQL, an overload scenario, and the same overload sent through Kafka; [Scenario 4](/docs/scenario-kafka) " +
                 "and [Scenario 8](/docs/scenario-observability) use it to show the effect of an overload and how " +
                 "Kafka and observability each respond. The report is locust/logs/<timestamp>/report.html. " +
                 "make locust:load is a separate command from the test targets (and is not run by make all:test), since it puts sustained load on the stack.",
@@ -191,15 +192,15 @@ export const scenarioTesting: LocalizedDocsPage = {
             images: [
               {
                 src: "/docs/screenshots/report-locust.png",
-                alt: "Locust test report: a 20-second run of locustfile_http.py against http://backend:8080 with 97 requests, 0 failures, and response time percentiles per endpoint",
-                caption: "Locust: request statistics and response-time percentiles per endpoint (a short 10-user, 20-second run: 97 requests, 0 failures).",
+                alt: "Locust test report: a short run of locustfile_http.py against http://backend:8080 with no failures, and response time percentiles per endpoint",
+                caption: "Locust: request statistics and response-time percentiles per endpoint (a short 10-user, 30-second run with no failures).",
               },
             ],
           },
           {
             heading: "Evaluation",
             body: [
-              "The sample run (10 users, 20 seconds, locustfile_http.py against the backend) completed 97 requests " +
+              "The sample run (10 users, 30 seconds, locustfile_http.py against the backend) completed " +
                 "with no failures. The report gives the request statistics and the response-time percentiles for " +
                 "each endpoint.",
             ],
@@ -220,8 +221,8 @@ export const scenarioTesting: LocalizedDocsPage = {
             images: [
               {
                 src: "/docs/screenshots/report-zap.png",
-                alt: "ZAP scanning report for http://backend:8080: no High or Medium alerts, 2 Low, 5 informational, 27 endpoints",
-                caption: "ZAP api-scan of the backend: 27 endpoints, no High or Medium alerts (2 Low). The scan passed 116 rules with 0 failures and 2 warnings.",
+                alt: "ZAP scanning report for http://backend:8080: a summary of alerts with no High or Medium ones, and insights about the endpoints it reached",
+                caption: "ZAP api-scan of the backend: no High or Medium alerts. The scan logs in first, so its requests reach the protected routes.",
               },
             ],
             closing: ["There's also make zap:full-scan, a deeper active scan of the frontend itself - deliberately left out of the walkthrough above. Its attack payloads against the frontend's many hashed _next/static/* asset URLs can drive the Next.js dev server (Turbopack) into a CPU-pinning recompile loop that doesn't recover on its own, even after the scan stops. If that happens, restart just the frontend: docker compose -p apps -f apps/docker-compose.yml restart frontend."],
@@ -229,10 +230,12 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "Evaluation",
             body: [
-              "The api-scan of the backend covered 27 endpoints and raised no High or Medium alerts (2 Low, 5 " +
-                "informational); 116 rules passed, with 0 failures and 2 warnings.",
-              "The baseline scan of the frontend, a Next.js development server that is not hardened, passed 52 " +
-                "rules and raised 15 warnings, mostly missing security headers, with 0 failures.",
+              "The api-scan of the backend raised no High or Medium alerts and no failures. It logs in first and sends the " +
+                "token with every request (zap/hooks/bearer_token.py), so the active rules reach the protected routes - " +
+                "without it nearly every request would be a 401. That is how it found a real bug: a transaction name longer " +
+                "than its column was a 500 (now a 422).",
+              "The baseline scan of the frontend, a Next.js development server that is not hardened, raised warnings, " +
+                "mostly missing security headers, with no failures.",
             ],
             closing: ["These are results from a development stack. They demonstrate the tooling and are not a security audit."],
           },
@@ -265,7 +268,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             "それが確認する意味を生みます。Specmaticはプロバイダー側(実際のbackendがコントラクトどおりに" +
             "応答するか)を検証し、コンシューマー側にはmockを提供します(frontendの呼び出しを、同じファイルから" +
             "作ったモックに対して行い、実際のbackendは使いません)。" +
-            "Kongはfrontendを変更せずに、そのモックへ経路を切り替えられます([シナリオ2](/docs/scenario-kong))。" +
+            "Kongはfrontendを変更せずに、そのモックへ経路を切り替えられます([シナリオ3](/docs/scenario-kong))。" +
             "agentgatewayも、同じファイルからMCPツールを作ります([シナリオ7](/docs/scenario-agentgateway))。",
           "どのテストコマンドも、HTMLレポートを出力します(gitignore対象で、実行のたびに再生成されます)。" +
             "ファイルをブラウザで直接開くか、フォルダをpython3 -m http.serverで配信して参照します。",
@@ -274,10 +277,10 @@ export const scenarioTesting: LocalizedDocsPage = {
           headers: ["レイヤー", "ツール", "確認すること"],
           nowrapColumns: [0, 1],
           rows: [
-            ["ユニット(backend)", "pytest", "22件: 口座と残高、パスワードログイン、プロフィール、KeycloakのJWT検証(偽造・改ざんトークンを含む)。インメモリDBを使う。"],
-            ["ユニット(frontend)", "Vitest", "20件: APIクライアント、OIDCのPKCEフロー、backend resolver(ラウンドロビンと次のインスタンスへのフォールバック)。"],
-            ["E2E", "Playwright", "実ブラウザで9件: ログイン・ログアウト、プロフィール、誤ったパスワード、frontendサーバーのresolver API。"],
-            ["コントラクト(プロバイダー)", "Specmatic", "20シナリオ: 実際のbackendがopenapi.yamlどおりに応答するか。パス・メソッド・レスポンスコードの100%をカバー。"],
+            ["ユニット(backend)", "pytest", "口座と残高、パスワードログイン、プロフィール、JWT認証(APIはすべてトークン必須で、期限切れ・偽造・改ざんされたトークンは拒否される)、KeycloakのJWT検証、MCPログイン。インメモリDBを使う。"],
+            ["ユニット(frontend)", "Vitest", "APIクライアント(送信するbearerトークンを含む)、OIDCのPKCEフロー、このドキュメントページの表示と並び順。"],
+            ["E2E", "Playwright", "実ブラウザで: ログイン・ログアウト、プロフィール、誤ったパスワード、/enと/jaの言語ルーティング。"],
+            ["コントラクト(プロバイダー)", "Specmatic", "実際のbackendがopenapi.yamlどおりに応答するか。全パス・メソッド・レスポンスコードをカバーし、保護された各ルートの401も含む。"],
             ["コントラクト(コンシューマー)", "Vitest + Specmaticのmock", "frontend自身のAPI利用が、同じコントラクトから作ったモックに対して成立するか。"],
             ["負荷", "Locust", "HTTP・GraphQL・MySQLのシナリオ、overloadシナリオ、同じ負荷をKafka経由にしたもの。"],
             ["セキュリティ", "OWASP ZAP", "frontendのパッシブスキャン、アクティブスキャン、backendの全ルートを対象にしたOpenAPI駆動のスキャン。"],
@@ -313,7 +316,8 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "評価結果",
             body: [
-              "22件すべてが成功しました。対象は、口座と残高、パスワードログイン、プロフィール、KeycloakのJWT検証" +
+              "すべてのテストが成功しました。対象は、口座と残高、パスワードログイン、プロフィール、JWT認証" +
+                "(test_auth_required.pyが、保護されたルートすべてがトークンなしで401を返すことを確かめます)、KeycloakのJWT検証" +
                 "(偽造・改ざんされたトークンを含む)です。",
             ],
           },
@@ -333,16 +337,16 @@ export const scenarioTesting: LocalizedDocsPage = {
             images: [
               {
                 src: "/docs/screenshots/report-vitest.png",
-                alt: "VitestのHTMLレポート。20件Pass・0件Failで、左にapi.test.ts・oidc.test.ts・backendResolver.test.tsのテストツリーが表示されている",
-                caption: "Vitest: ダッシュボード(20件Pass)と、ファイル別にまとまった全テストのツリー。",
+                alt: "VitestのHTMLレポート。すべてPassで、Failはなく、左にファイル別のテストツリーが表示されている",
+                caption: "Vitest: 成功・失敗のダッシュボードと、ファイル別にまとまった全テストのツリー。",
               },
             ],
           },
           {
             heading: "評価結果",
             body: [
-              "20件すべてが成功し、失敗はありません。対象は、APIクライアント、OIDCのPKCEフロー、backend resolver" +
-                "(ラウンドロビンと次のインスタンスへのフォールバックを含む)です。",
+              "すべてのテストが成功し、失敗はありません。対象は、APIクライアント(送信するbearerトークンを含む)、OIDCのPKCEフロー、" +
+                "ドキュメントページの表示と並び順です。",
             ],
           },
         ],
@@ -362,7 +366,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             images: [
               {
                 src: "/docs/screenshots/report-playwright.png",
-                alt: "PlaywrightのHTMLレポート。9件のE2Eテストがpassedで、所要時間とともに一覧されている",
+                alt: "PlaywrightのHTMLレポート。E2Eテストがすべてpassedで、所要時間とともに一覧されている",
                 caption: "Playwright: テストごとに1行と所要時間。",
               },
             ],
@@ -370,8 +374,8 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "評価結果",
             body: [
-              "実ブラウザでの9件すべてが成功しました。対象は、ログイン・ログアウト、プロフィール、誤ったパスワード、" +
-                "frontendサーバーのresolver APIです。",
+              "実ブラウザでのテストがすべて成功しました。対象は、ログイン・ログアウト、プロフィール、誤ったパスワード、" +
+                "言語ルーティング(/en、/ja)です。",
             ],
           },
         ],
@@ -397,17 +401,17 @@ export const scenarioTesting: LocalizedDocsPage = {
             images: [
               {
                 src: "/docs/screenshots/report-specmatic.png",
-                alt: "Specmaticのコントラクトテスト結果。APIカバレッジ100%、成功20件で、全パス・メソッド・レスポンスコードがCoveredの表",
-                caption: "Specmatic: 20シナリオ中20件が成功、APIカバレッジ100%。パス・メソッド・レスポンスコード別の内訳付き。",
+                alt: "Specmaticのコントラクトテスト結果。APIカバレッジ100%、すべてのシナリオが成功で、全パス・メソッド・レスポンスコードがCoveredの表",
+                caption: "Specmatic: すべてのシナリオが成功、APIカバレッジ100%。パス・メソッド・レスポンスコード別の内訳付き。",
               },
             ],
           },
           {
             heading: "評価結果",
             body: [
-              "20シナリオすべてが成功し、パス・メソッド・レスポンスコードの100%をカバーしました。シナリオは、" +
-                "コントラクトから作ったリクエストと、同じ場所(shared/openapi/examples)にチェックインした20個のexampleで構成されるため、" +
-                "エラーケースと認証つきの呼び出しも実行されます。",
+              "すべてのシナリオが成功し、パス・メソッド・レスポンスコードの100%をカバーしました。シナリオは、" +
+                "コントラクトから作ったリクエストと、同じ場所(shared/openapi/examples)にチェックインしたexampleで構成されるため、" +
+                "エラーケース(保護された各ルートの401を含む)と認証つきの呼び出しも実行されます。",
             ],
           },
         ],
@@ -423,7 +427,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             heading: "確認方法",
             body: [
               "Locustは、稼働中のappsスタック(先にmake apps:up)に対して実行し、エンドポイントごとの応答時間と失敗を報告します。用意されているシナリオは、HTTP・GraphQL・MySQL、" +
-                "overloadシナリオ、同じ負荷をKafka経由にしたものです。[シナリオ3](/docs/scenario-kafka)と" +
+                "overloadシナリオ、同じ負荷をKafka経由にしたものです。[シナリオ4](/docs/scenario-kafka)と" +
                 "[シナリオ8](/docs/scenario-observability)は、これを使って、過負荷が何を起こし、Kafkaとオブザーバビリティが" +
                 "それぞれどう応えるかを示します。レポートは locust/logs/<タイムスタンプ>/report.html です。" +
                 "make locust:load はtest系のターゲットとは別のコマンドで(make all:testでは実行されません)、スタックに持続的な負荷をかけるためです。",
@@ -432,15 +436,15 @@ export const scenarioTesting: LocalizedDocsPage = {
             images: [
               {
                 src: "/docs/screenshots/report-locust.png",
-                alt: "Locustのテストレポート。http://backend:8080に対するlocustfile_http.pyの20秒間の実行で、97リクエスト・失敗0件と、エンドポイントごとの応答時間パーセンタイル",
-                caption: "Locust: エンドポイントごとのリクエスト統計と応答時間のパーセンタイル(10ユーザー・20秒の短い実行: 97リクエスト、失敗0件)。",
+                alt: "Locustのテストレポート。http://backend:8080に対するlocustfile_http.pyの短い実行で、失敗なしと、エンドポイントごとの応答時間パーセンタイル",
+                caption: "Locust: エンドポイントごとのリクエスト統計と応答時間のパーセンタイル(10ユーザー・30秒の短い実行、失敗なし)。",
               },
             ],
           },
           {
             heading: "評価結果",
             body: [
-              "サンプルの実行(10ユーザー、20秒、backendに対するlocustfile_http.py)では、97リクエストが失敗なく" +
+              "サンプルの実行(10ユーザー、30秒、backendに対するlocustfile_http.py)は、失敗なく" +
                 "完了しました。レポートには、エンドポイントごとのリクエスト統計と応答時間のパーセンタイルが" +
                 "示されます。",
             ],
@@ -461,8 +465,8 @@ export const scenarioTesting: LocalizedDocsPage = {
             images: [
               {
                 src: "/docs/screenshots/report-zap.png",
-                alt: "http://backend:8080に対するZAPのスキャンレポート。HighとMediumのアラートはなく、Lowが2件、Informationalが5件、エンドポイント数は27",
-                caption: "backendのZAP api-scan: 27エンドポイントでHigh・Mediumのアラートなし(Lowが2件)。116ルールに合格し、失敗0件・警告2件。",
+                alt: "http://backend:8080に対するZAPのスキャンレポート。HighとMediumのアラートはなく、到達したエンドポイントの統計が表示されている",
+                caption: "backendのZAP api-scan: High・Mediumのアラートなし。先にログインするため、リクエストは保護されたルートまで届く。",
               },
             ],
             closing: ["make zap:full-scanというコマンドもあります。frontend自体に対するより踏み込んだアクティブスキャンですが、上記のウォークスルーからは意図的に外しています。frontendの大量のハッシュ付き _next/static/* アセットURLへの攻撃ペイロードが、Next.jsの開発サーバー(Turbopack)を再コンパイル/キャッシュ書き換えの無限ループに陥らせ、スキャンを止めた後もCPUが張り付いたまま回復しないことがあるためです。発生した場合は frontend コンテナだけを再起動してください: docker compose -p apps -f apps/docker-compose.yml restart frontend"],
@@ -470,10 +474,12 @@ export const scenarioTesting: LocalizedDocsPage = {
           {
             heading: "評価結果",
             body: [
-              "backendのapi-scanは27エンドポイントを対象とし、HighとMediumのアラートはありませんでした(Lowが2件、" +
-                "Informationalが5件)。116ルールに合格し、失敗は0件、警告は2件でした。",
-              "frontend(強化されていないNext.jsの開発サーバー)のベースラインスキャンは、52ルールに合格し、" +
-                "15件で警告(多くはセキュリティヘッダーの欠如)、失敗は0件でした。",
+              "backendのapi-scanは、HighとMediumのアラートも失敗もありませんでした。先にログインして、すべてのリクエストに" +
+                "トークンを付けて(zap/hooks/bearer_token.py)送るので、アクティブなルールは保護されたルートまで届きます" +
+                " — 付けないと、ほとんどのリクエストが401になります。実際にこれで、トランザクション名が列の長さを超えると" +
+                "500になる不具合(現在は422)が見つかりました。",
+              "frontend(強化されていないNext.jsの開発サーバー)のベースラインスキャンは、警告(多くはセキュリティヘッダーの" +
+                "欠如)がありましたが、失敗はありませんでした。",
             ],
             closing: ["開発用スタックでの結果です。ツールの実演であり、セキュリティ監査ではありません。"],
           },

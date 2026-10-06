@@ -23,7 +23,7 @@ const JA_CHART_LABELS = {
 
 export const scenarioKafka: LocalizedDocsPage = {
   en: {
-    title: "Scenario 3: Switch to Kafka",
+    title: "Scenario 4: Switch to Kafka",
     description:
       "kafka-bridge is a small standalone consumer that reads events off a Kafka topic and forwards " +
       "each one to the real backend via POST /transactions - the same write every other client uses. This " +
@@ -177,7 +177,7 @@ export const scenarioKafka: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ3: Kafka経由への切り替え",
+    title: "シナリオ4: Kafka経由への切り替え",
     description:
       "kafka-bridgeは、Kafkaトピックからイベントを読み取り、1件ずつ実際のbackendへPOST /transactionsとして" +
       "転送する、小さな独立したconsumerです — 他のどのクライアントとも同じ書き込みです。このシナリオでは、" +

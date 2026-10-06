@@ -1,6 +1,6 @@
 import type { LocalizedDocsPage } from "./types";
 
-// Scenario 4: the backend's JWT authentication, checked by hand (curl) and by the automated tests.
+// Scenario 2: the backend's JWT authentication, checked by hand (curl) and by the automated tests.
 // The commands and outputs below are real runs against `make apps:up`.
 
 const LOGIN_COMMAND =
@@ -39,7 +39,7 @@ const REFUSED_COMMAND =
 
 export const scenarioAuth: LocalizedDocsPage = {
   en: {
-    title: "Scenario 4: Verify JWT authentication",
+    title: "Scenario 2: Verify JWT authentication",
     description:
       "Every API route needs an access token - an RS256 JWT the backend signs at login and publishes the " +
       "public key for. This scenario checks that by hand: read a token, verify it against the published key, " +
@@ -222,7 +222,7 @@ export const scenarioAuth: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ4: JWT認証の検証",
+    title: "シナリオ2: JWT認証の検証",
     description:
       "APIはすべてアクセストークンが必要です。トークンは、backendがログイン時に署名して発行するRS256のJWTで、" +
       "公開鍵も公開されています。このシナリオでは、トークンを読み、公開された鍵で検証し、トークンなしのリクエストを" +

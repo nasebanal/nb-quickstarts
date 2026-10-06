@@ -12,7 +12,7 @@ export const scenarioVault: LocalizedDocsPage = {
       {
         heading: "Why Vault",
         body: [
-          "Every write - including the ones the Kafka bridge (Scenario 3) makes - reaches MySQL through the backend's own connection, so all of them use the credential Vault issued.",
+          "Every write - including the ones the Kafka bridge (Scenario 4) makes - reaches MySQL through the backend's own connection, so all of them use the credential Vault issued.",
         ],
         bullets: [
           "Secrets live in one audited store instead of scattered across .env files, images and CI settings.",
@@ -228,7 +228,7 @@ export const scenarioVault: LocalizedDocsPage = {
       {
         heading: "Vaultを使うメリット",
         body: [
-          "すべての書き込み — Kafkaブリッジ(シナリオ3)が行うものも含む — は、backend自身の接続を通してMySQLに届くので、すべてがVaultの発行した認証情報を使います。",
+          "すべての書き込み — Kafkaブリッジ(シナリオ4)が行うものも含む — は、backend自身の接続を通してMySQLに届くので、すべてがVaultの発行した認証情報を使います。",
         ],
         bullets: [
           "シークレットを.envやイメージ、CI設定に散らさず、監査可能な1か所のストアに集約できます。",

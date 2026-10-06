@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioKong: LocalizedDocsPage = {
   en: {
-    title: "Scenario 2: Switch to Kong",
+    title: "Scenario 3: Switch to Kong",
     description:
       "Kong's apps_backend gateway service proxies http://localhost:8000/api/* to the real backend's " +
       "own root (strip_path: true, so /api/transactions reaches backend:8080/transactions). This scenario " +
@@ -12,7 +12,7 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "Why Kong and Specmatic",
         body: [
-          "Kafka's path (Scenario 3) does not go through Kong: by default the bridge posts to the backend directly. Kong is where the REST clients - the browser, the load tests - are routed, and where a contract mock can be swapped in.",
+          "Kafka's path (Scenario 4) does not go through Kong: by default the bridge posts to the backend directly. Kong is where the REST clients - the browser, the load tests - are routed, and where a contract mock can be swapped in.",
         ],
         bullets: [
           "Kong: put auth, rate limiting and routing in one gateway in front of the backend, and change where traffic goes at runtime - no application code change.",
@@ -208,7 +208,7 @@ export const scenarioKong: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ2: Kong経由への切り替え",
+    title: "シナリオ3: Kong経由への切り替え",
     description:
       "Kongのapps_backendというGateway Serviceは、http://localhost:8000/api/*を実際のbackendのルートへ" +
       "そのままプロキシします(strip_path: trueなので、/api/transactionsはbackend:8080/transactionsに届きます)。" +
@@ -218,7 +218,7 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "Kong・Specmaticを使うメリット",
         body: [
-          "Kafkaの経路(シナリオ3)はKongを通りません: ブリッジはデフォルトでbackendへ直接POSTします。Kongは、RESTのクライアント — ブラウザや負荷テスト — をルーティングし、契約モックへ差し替えられる場所です。",
+          "Kafkaの経路(シナリオ4)はKongを通りません: ブリッジはデフォルトでbackendへ直接POSTします。Kongは、RESTのクライアント — ブラウザや負荷テスト — をルーティングし、契約モックへ差し替えられる場所です。",
         ],
         bullets: [
           "Kong: 認証・レート制限・ルーティングをbackendの前段のゲートウェイに集約でき、向き先の変更もアプリのコードを触らず実行時に行えます。",

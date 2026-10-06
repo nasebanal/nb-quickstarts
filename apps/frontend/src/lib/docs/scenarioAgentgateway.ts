@@ -12,7 +12,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "Why agentgateway",
         body: [
-          "An agent's create-transaction tool call is the same POST /transactions that the Kafka bridge (Scenario 3) makes for each event: another way in to the same write path.",
+          "An agent's create-transaction tool call is the same POST /transactions that the Kafka bridge (Scenario 4) makes for each event: another way in to the same write path.",
         ],
         bullets: [
           "Turns an existing OpenAPI contract into MCP tools with configuration only - no MCP server code to write or maintain in the backend.",
@@ -226,7 +226,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "agentgatewayを使うメリット",
         body: [
-          "エージェントの取引記帳ツールの呼び出しは、Kafkaブリッジ(シナリオ3)がイベントごとに行うのと同じPOST /transactionsです: 同じ書き込み経路への、もう1つの入口。",
+          "エージェントの取引記帳ツールの呼び出しは、Kafkaブリッジ(シナリオ4)がイベントごとに行うのと同じPOST /transactionsです: 同じ書き込み経路への、もう1つの入口。",
         ],
         bullets: [
           "既存のOpenAPI契約から設定だけでMCPツールを作れ、backend側にMCPサーバーのコードを書いて保守する必要がありません。",

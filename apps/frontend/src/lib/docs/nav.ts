@@ -21,9 +21,9 @@ export const DOCS_NAV: DocsNavItem[] = [
     labelJa: "シナリオ",
     children: [
       { href: "/docs/scenario-testing", labelEn: "1. Verify the demo app", labelJa: "シナリオ1: デモアプリの動作検証" },
-      { href: "/docs/scenario-kong", labelEn: "2. Switch to Kong", labelJa: "シナリオ2: Kong経由への切り替え" },
-      { href: "/docs/scenario-kafka", labelEn: "3. Switch to Kafka", labelJa: "シナリオ3: Kafka経由への切り替え" },
-      { href: "/docs/scenario-auth", labelEn: "4. JWT authentication", labelJa: "シナリオ4: JWT認証の検証" },
+      { href: "/docs/scenario-auth", labelEn: "2. JWT authentication", labelJa: "シナリオ2: JWT認証の検証" },
+      { href: "/docs/scenario-kong", labelEn: "3. Switch to Kong", labelJa: "シナリオ3: Kong経由への切り替え" },
+      { href: "/docs/scenario-kafka", labelEn: "4. Switch to Kafka", labelJa: "シナリオ4: Kafka経由への切り替え" },
       { href: "/docs/scenario-keycloak", labelEn: "5. Keycloak", labelJa: "シナリオ5: Keycloakの利用" },
       { href: "/docs/scenario-vault", labelEn: "6. Vault", labelJa: "シナリオ6: Vaultの利用" },
       {
