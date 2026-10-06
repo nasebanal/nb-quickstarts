@@ -11,7 +11,10 @@ from jwt import PyJWKClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.jwt_tokens import decode_token, issue_token  # noqa: F401 - issue_token is re-exported for the routers
+from app.jwt_tokens import (  # noqa: F401 - issue_token is re-exported for the routers
+    decode_token,
+    issue_token,
+)
 from app.models import User
 from app.passwords import verify_password
 

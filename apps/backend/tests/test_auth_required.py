@@ -1,8 +1,9 @@
 """The whole API needs an access token, except the few routes a client must reach to get one."""
 
-import pytest
 from app.main import app as fastapi_app
 from fastapi.routing import APIRoute
+
+import pytest
 
 # Login itself, the health check (Kong's and the frontend's "which gateway answered" checks use it), and the public key
 # that verifies the tokens. The OAuth plumbing of the MCP login (/oauth/*, /.well-known/oauth-*) is public by design.
