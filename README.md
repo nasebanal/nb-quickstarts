@@ -298,7 +298,7 @@ make keycloak:up                  # 1. start Keycloak
 ```
 
 ```bash
-# 2. .env (.env.example has the line, empty) - this is what makes the login page show Keycloak
+# 2. .env: uncomment this line (remove the leading "# "; it is commented out in .env.example) - this is what makes the login page show Keycloak
 KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal
 ```
 
@@ -560,7 +560,7 @@ A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KA
 
 | Variable | Default | Description |
 |---|---|---|
-| `NB_TOKEN` | *(empty)* | PAT / service-account token for NASEBANAL Assurance - what `<module>:report-upload` sends with. Empty = use the credentials from `nb auth login` (CI needs the token) |
+| `NB_TOKEN` | *(unset)* | PAT / service-account token for NASEBANAL Assurance - what `<module>:report-upload` sends with. Unset = use the credentials from `nb auth login` (CI needs the token) |
 | `NB_BASE_URL` | `https://api.assurance.nasebanal.com` | The Assurance **API** (not the web UI). A local `npm run dev` of nb-assurance-api is `http://localhost:8791` |
 | `PROJECT_NAME` | `nb-quickstarts` | The Assurance project the runs go to (created on first upload) |
 | `NB_RUN_KEY` | *(`local-<commit>-<day>`)* | Groups several uploads into one run |
@@ -577,10 +577,10 @@ A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KA
 | `APPS_MCP_INSPECTOR_TOKEN` | `nb-mcp-inspector-token` | The Inspector UI's auth token, pinned (random per start otherwise) and put in the URL by `make apps:mcp`. A fixed public default - local demo only |
 | `APPS_API_BASE` | `http://localhost:8080` | Where `apps/frontend` calls the backend - direct, or `http://localhost:8000/api` to route through Kong instead (needs `kong:up` + `apps:restart`) |
 | `APPS_KAFKA_BRIDGE_HEALTH_URL` | `http://localhost:8090` | Where the frontend checks kafka-bridge's health - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
-| `APPS_MCP_AUTH_REQUIRED` | *(empty = off)* | `true` puts `/mcp` behind a login: an MCP client such as Claude Code gets a 401, opens the browser on the frontend's `/mcp-authorize` page (the app's usual demo / Keycloak login) and carries the resulting token into every tool call. Needs `apps:restart`; MCP Inspector and agentgateway then need a token too |
+| `APPS_MCP_AUTH_REQUIRED` | *(unset = off)* | `true` puts `/mcp` behind a login: an MCP client such as Claude Code gets a 401, opens the browser on the frontend's `/mcp-authorize` page (the app's usual demo / Keycloak login) and carries the resulting token into every tool call. Needs `apps:restart`; MCP Inspector and agentgateway then need a token too |
 | `APPS_PUBLIC_BASE_URL` / `APPS_MCP_AUTHORIZE_URL` | `http://localhost:8080` / `http://localhost:5173/mcp-authorize` | The addresses the MCP client and browser use for the MCP login (host-published, not in-network) - change only when the backend / frontend are reached elsewhere |
-| `KEYCLOAK_ISSUER` | *(empty = off)* | Turns on Keycloak for `apps/backend` and the login page: `http://localhost:8180/realms/nasebanal` - see [Keycloak](#keycloak) |
-| `VAULT_ADDR` / `VAULT_TOKEN` | *(both empty = off)* | Where `apps/backend` asks for a Vault-issued MySQL credential - see [Vault](#vault) |
+| `KEYCLOAK_ISSUER` | *(unset = off)* | Turns on Keycloak for `apps/backend` and the login page: `http://localhost:8180/realms/nasebanal` - see [Keycloak](#keycloak) |
+| `VAULT_ADDR` / `VAULT_TOKEN` | *(both unset = off)* | Where `apps/backend` asks for a Vault-issued MySQL credential - see [Vault](#vault) |
 
 ### Kong
 
@@ -606,7 +606,7 @@ A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KA
 |---|---|---|
 | `KEYCLOAK_PORT` | `8180` | Host-published admin console / realm port |
 | `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` | `admin` / `admin` | Admin console login |
-| `KEYCLOAK_ISSUER` (an `apps` variable - see [Apps](#apps) below) | *(empty = off)* | Turns on Keycloak for `apps/backend` and the login page - `http://localhost:8180/realms/nasebanal` (the address the browser logs in at; match `KEYCLOAK_PORT`), plus `apps:restart` |
+| `KEYCLOAK_ISSUER` (an `apps` variable - see [Apps](#apps) below) | *(unset = off)* | Turns on Keycloak for `apps/backend` and the login page - `http://localhost:8180/realms/nasebanal` (the address the browser logs in at; match `KEYCLOAK_PORT`), plus `apps:restart` |
 
 ### Vault
 
@@ -614,7 +614,7 @@ A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KA
 |---|---|---|
 | `VAULT_PORT` | `8200` | Host-published UI / API port |
 | `VAULT_ROOT_TOKEN` | `nb-vault-root-token` | Dev-mode root token |
-| `VAULT_ADDR` / `VAULT_TOKEN` (`apps` variables - see [Apps](#apps) below) | *(both empty = off)* | Where `apps/backend` asks for a Vault-issued MySQL credential - `http://vault:8200` / `nb-vault-root-token` to turn it on (plus `apps:restart`); `make vault:verify-apps` sets them for one recreate instead |
+| `VAULT_ADDR` / `VAULT_TOKEN` (`apps` variables - see [Apps](#apps) below) | *(both unset = off)* | Where `apps/backend` asks for a Vault-issued MySQL credential - `http://vault:8200` / `nb-vault-root-token` to turn it on (plus `apps:restart`); `make vault:verify-apps` sets them for one recreate instead |
 
 ### Specmatic & Playwright
 
@@ -664,7 +664,7 @@ No target-host variable, unlike every module above - see [OWASP ZAP: scanning ap
 
 | Variable | Default | Description |
 |---|---|---|
-| `APPS_OTEL_EXPORTER_OTLP_ENDPOINT` | *(empty = off)* | Where `apps/backend` exports OTLP. Set to `http://otel-collector:4318` for the local stack (needs `apps:restart`) |
+| `APPS_OTEL_EXPORTER_OTLP_ENDPOINT` | *(unset = off)* | Where `apps/backend` exports OTLP. Set to `http://otel-collector:4318` for the local stack (needs `apps:restart`) |
 | `OBSERVABILITY_GRAFANA_PORT` | `3030` | Host-published Grafana port - defaults away from Grafana's own `3000`, a common Node/React dev-server port |
 | `OBSERVABILITY_PROMETHEUS_PORT` | `9094` | Host-published Prometheus port (`9091` is taken by Specmatic) |
 | `OBSERVABILITY_TEMPO_PORT` | `3200` | Host-published Tempo query API port |

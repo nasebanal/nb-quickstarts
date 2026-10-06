@@ -29,14 +29,14 @@ keycloak:
 	@echo "  KEYCLOAK_PORT=8180"
 	@echo "  KEYCLOAK_ADMIN=admin"
 	@echo "  KEYCLOAK_ADMIN_PASSWORD=admin"
-	@echo "  KEYCLOAK_ISSUER=      (empty = off; http://localhost:8180/realms/nasebanal turns Keycloak on for the backend AND the login page - see .env.example)"
+	@echo "  # KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal   (commented out = off; uncommenting it turns Keycloak on for the backend AND the login page - see .env.example)"
 	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  Admin console: http://localhost:$${KEYCLOAK_PORT:-8180}/admin (admin / admin by default)"
 	@echo "  Realm:         nasebanal (client apps-demo, user keycloak-demo / nasebanal-demo)"
 	@echo ""
 	@echo "Note: keycloak:verify-apps only succeeds once apps/backend actually trusts this realm -"
-	@echo "      set KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal in .env, then 'make apps:restart'."
+	@echo "      uncomment KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal in .env, then 'make apps:restart'."
 
 keycloak\:%:
 	@$(MAKE) keycloak-$(subst keycloak:,,$@)

@@ -121,7 +121,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
         code: [
           { label: "1. Start Keycloak", code: "make apps:up\nmake keycloak:up" },
           {
-            label: "2. Add this line to .env (.env.example already has it, empty) - this is what makes the login page show Keycloak",
+            label: "2. In .env, uncomment this line (remove the leading \"# \"; it is commented out in .env.example) - this is what makes the login page show Keycloak",
             code: "KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal",
           },
           { label: "3. Recreate the backend and frontend so they pick it up", code: "make apps:restart" },
@@ -159,6 +159,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
             caption: "Where \"Log in with Keycloak\" lands: Keycloak's own page (localhost:8180) - the password is typed here, not in the app. \"Register\" is the sign-up.",
           },
         ],
+        imagesLayout: "stack",
         note:
           "Tokens are valid for 30 minutes (the realm's access token lifespan). After that, recording a " +
           "transaction gets a 401 and the app logs you out - log in again.",
@@ -218,7 +219,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
       {
         heading: "Returning to mock-login-only",
         code: [
-          { label: ".env:", code: "KEYCLOAK_ISSUER=" },
+          { label: ".env (comment the line out again):", code: "# KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal" },
           { code: "make apps:restart" },
           { code: "make keycloak:down" },
         ],
@@ -347,7 +348,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
         code: [
           { label: "1. Keycloakを起動する", code: "make apps:up\nmake keycloak:up" },
           {
-            label: "2. .envに次の行を足す(.env.exampleには空の行がすでにあります) — ログイン画面にKeycloakを出すのはこの行です",
+            label: "2. .envの次の行のコメントを外す(先頭の「# 」を消します。.env.exampleではコメントアウトされています) — ログイン画面にKeycloakを出すのはこの行です",
             code: "KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal",
           },
           { label: "3. backendとfrontendを再作成して反映する", code: "make apps:restart" },
@@ -386,6 +387,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
             caption: "「Keycloakでログイン」の遷移先: Keycloak自身のページ(localhost:8180)で、パスワードはアプリではなくここで入力します。「Register」がサインアップです。",
           },
         ],
+        imagesLayout: "stack",
         note:
           "トークンの有効期間は30分です(レルムのアクセストークン有効期間)。それを過ぎると、取引の記帳は" +
           "401になり、アプリがログアウトします — 再度ログインしてください。",
@@ -445,7 +447,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
       {
         heading: "モックログインのみに戻す",
         code: [
-          { label: ".env:", code: "KEYCLOAK_ISSUER=" },
+          { label: ".env(行をもう一度コメントアウトする):", code: "# KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal" },
           { code: "make apps:restart" },
           { code: "make keycloak:down" },
         ],

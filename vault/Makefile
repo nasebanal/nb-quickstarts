@@ -34,8 +34,8 @@ vault:
 	@echo "  VAULT_VERSION=1.18"
 	@echo "  VAULT_PORT=8200"
 	@echo "  VAULT_ROOT_TOKEN=nb-vault-root-token"
-	@echo "  VAULT_ADDR=, VAULT_TOKEN=  (apps/backend's own env vars, empty = off - see .env.example)"
-	@echo "  APPS_BACKEND_MYSQL_PASSWORD=    (set but empty: the backend has no password of its own - see .env.example)"
+	@echo "  VAULT_ADDR=, VAULT_TOKEN=  (apps/backend's own env vars, unset = off - see .env.example)"
+	@echo "  APPS_BACKEND_MYSQL_PASSWORD=    (set, with no value: the backend has no password of its own - see .env.example)"
 	@echo ""
 	@echo "Endpoints once started:"
 	@echo "  UI / API: http://localhost:$${VAULT_PORT:-8200} (token: $${VAULT_ROOT_TOKEN:-nb-vault-root-token})"
@@ -77,7 +77,7 @@ vault-open:
 #################### VAULT <-> APPS INTEGRATION ###################
 # apps/backend (app/config.py) fetches secret/apps/mysql at startup when
 # VAULT_ADDR/VAULT_TOKEN are set, and falls back to its own MYSQL_USER/
-# MYSQL_PASSWORD env vars otherwise - same "empty leaves it off" shape as
+# MYSQL_PASSWORD env vars otherwise - same "unset leaves it off" shape as
 # APPS_OTEL_EXPORTER_OTLP_ENDPOINT. The value written here is deliberately the
 # *same* credential apps' MySQL already accepts (from APPS_MYSQL_USER/
 # APPS_MYSQL_PASSWORD, what apps/docker-compose.yml itself uses) - this

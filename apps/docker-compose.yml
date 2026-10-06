@@ -73,13 +73,13 @@ services:
       MYSQL_PASSWORD: ${APPS_BACKEND_MYSQL_PASSWORD-${APPS_MYSQL_PASSWORD:-demo}}
       MYSQL_DATABASE: ${APPS_MYSQL_DATABASE:-demo}
       PYTHONUNBUFFERED: 1
-      # OpenTelemetry export - empty (the default) leaves it off. Set
+      # OpenTelemetry export - unset (the default) leaves it off. Set
       # APPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 in .env to
       # send traces/metrics to the observability module (needs
       # observability:up, and apps:restart to pick it up).
       OTEL_EXPORTER_OTLP_ENDPOINT: ${APPS_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_SERVICE_NAME: nb-backend
-      # Keycloak JWT validation (app/auth.py) - empty (the default) leaves
+      # Keycloak JWT validation (app/auth.py) - unset (the default) leaves
       # it off, only the mock /auth/login token is accepted. Set to
       # http://localhost:8180/realms/nasebanal in .env (needs `make
       # keycloak:up` + `apps:restart`) to also accept real Keycloak tokens
@@ -89,7 +89,7 @@ services:
       # logs in at; the backend fetches the signing keys from the
       # in-network address below instead.
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
-      # MCP login (app/mcp_oauth.py) - empty (the default) leaves /mcp open.
+      # MCP login (app/mcp_oauth.py) - unset (the default) leaves /mcp open.
       # Set APPS_MCP_AUTH_REQUIRED=true in .env (+ `apps:restart`) and /mcp answers
       # 401 until the client has logged in: an MCP client such as Claude Code
       # then opens the browser on the frontend's /mcp-authorize page, which
@@ -100,7 +100,7 @@ services:
       PUBLIC_BASE_URL: ${APPS_PUBLIC_BASE_URL:-http://localhost:8080}
       MCP_AUTHORIZE_URL: ${APPS_MCP_AUTHORIZE_URL:-http://localhost:5173/mcp-authorize}
       KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-http://keycloak:8080/realms/nasebanal/protocol/openid-connect/certs}
-      # Vault-sourced MySQL credential (app/config.py) - empty (the
+      # Vault-sourced MySQL credential (app/config.py) - unset (the
       # default) leaves it off, MYSQL_USER/MYSQL_PASSWORD above are used
       # as-is. Set both (needs `make vault:up`) to have the real backend
       # fetch secret/apps/mysql from Vault at startup instead - see `make
@@ -145,7 +145,7 @@ services:
       # Keycloak login (LoginModal.tsx): the same KEYCLOAK_ISSUER the backend
       # validates against, and the browser talks to it directly - so it must
       # be the host-published address (http://localhost:8180/realms/...).
-      # Empty (the default) hides the Keycloak option entirely.
+      # Unset (the default) hides the Keycloak option entirely.
       NEXT_PUBLIC_KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
       NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-apps-demo}
     depends_on:

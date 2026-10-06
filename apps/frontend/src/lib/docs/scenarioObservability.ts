@@ -104,6 +104,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "A later run on the full stack: the firing-alerts panel, Loki's backend logs and the 5xx ratio panel, all populated by the same overload.",
           },
         ],
+        imagesLayout: "stack",
       },
       {
         heading: "What to look for",
@@ -242,6 +243,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "An MCP tool call through agentgateway: tools/call, the tool it resolved to, then the backend's REST request and query - the MCP call and the REST call in one trace.",
           },
         ],
+        imagesLayout: "stack",
         note:
           "Real runs. Every Kong trace of /api/accounts that was checked contained both nb-kong " +
           "and nb-backend spans, so the trace context is passed on to the backend (the plugin's " +
@@ -268,7 +270,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         heading: "Cleanup",
         code: [{ code: "make observability:down" }],
         note:
-          "Turn export back off with APPS_OTEL_EXPORTER_OTLP_ENDPOINT= in .env, then apps:restart, once " +
+          "Turn export back off by commenting out APPS_OTEL_EXPORTER_OTLP_ENDPOINT in .env, then apps:restart, once " +
           "you're done - otherwise the backend keeps retrying an export target that's no longer there. " +
           "observability:reset additionally wipes stored metrics, traces, logs and Grafana state.",
       },
@@ -377,6 +379,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "スタック全体を起動した後の別の実行: 発火中アラートのパネル、Lokiのbackendログ、5xx比率のパネルが、同じoverloadですべて埋まる。",
           },
         ],
+        imagesLayout: "stack",
       },
       {
         heading: "確認するポイント",
@@ -515,6 +518,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "agentgateway経由のMCPツール呼び出し: tools/call、解決されたツール、そしてbackendのRESTリクエストとクエリ — MCP呼び出しとREST呼び出しが1本のトレースに入る。",
           },
         ],
+        imagesLayout: "stack",
         note:
           "実際の実行結果です。確認したKong経由の/api/accountsのトレースはすべて、nb-kongとnb-backendの" +
           "両方のスパンを含んでいたので、トレースコンテキストはbackendへ引き継がれています(プラグインの" +
@@ -541,7 +545,7 @@ export const scenarioObservability: LocalizedDocsPage = {
         heading: "環境のクリーンアップ",
         code: [{ code: "make observability:down" }],
         note:
-          "終わったら.envのAPPS_OTEL_EXPORTER_OTLP_ENDPOINT=を空に戻し、apps:restartしてください — そうしない" +
+          "終わったら.envのAPPS_OTEL_EXPORTER_OTLP_ENDPOINTの行をコメントアウトして、apps:restartしてください — そうしない" +
           "と、backendはもう存在しない送信先へのエクスポートをリトライし続けます。observability:resetは" +
           "さらに、保存済みのメトリクス・トレース・ログとGrafanaの状態も消します。",
       },
