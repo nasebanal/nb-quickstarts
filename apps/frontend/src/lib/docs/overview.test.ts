@@ -13,9 +13,9 @@ import { scenarioVault } from "./scenarioVault";
 // Sidebar order (see nav.ts): the Overview lists the eight scenarios in this order (scenario 1 is the Testing page).
 const SCENARIOS = [
   scenarioTesting,
+  scenarioAuth,
   scenarioKong,
   scenarioKafka,
-  scenarioAuth,
   scenarioKeycloak,
   scenarioVault,
   scenarioAgentgateway,

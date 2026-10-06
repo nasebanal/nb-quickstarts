@@ -240,6 +240,20 @@ make vitest:contract-test    # Consumer: apps/frontend's real api.ts calls again
 
 `shared/openapi/examples/` holds 20 checked-in externalized examples (shared by both `specmatic:test` and `specmatic:mock-up`) — a bearer token (the demo token is deterministic: an RS256 JWT for `demo` with a fixed issue and expiry time, signed with the checked-in demo key, so the files stay valid as long as that key and `JWT_ISSUER` aren't overridden - `apps/backend`'s tests fail if they drift), an id that actually exists, and deliberately-invalid requests covering every documented non-2xx response — so Specmatic's own coverage report reaches 100%. They are plain files: edit them by hand next to the contract. See `AGENTS.md`'s Specmatic section for the full story, including a dead end (Specmatic's own security-token config parses correctly but has no effect on generated requests) and why `SPECMATIC_GENERATIVE_TESTS` was tried and rejected in favor of explicit negative examples.
 
+### JWT authentication: every route needs a token
+
+`POST /auth/login` hands out an RS256 JWT (valid a day, `APPS_JWT_TTL_SECONDS`), and every route but `/health`, `/auth/login` and `/.well-known/jwks.json` - REST, GraphQL and MCP - checks it. The public key is published as a JWKS, so a gateway or another service can verify a token without sharing a secret. The walkthrough with real outputs is the docs' *Scenario 2* (http://localhost:5173/docs/scenario-auth); the short version:
+
+```bash
+TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \
+  -d '{"username":"demo","password":"demo"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+curl -s localhost:8080/.well-known/jwks.json                    # the public key (kid matches the token's header)
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/accounts   # 401: no token
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOKEN" localhost:8080/accounts   # 200
+```
+
+A tampered, expired or unsigned (`alg: none`) token gets the same `401 {"detail":"invalid or missing token"}`. The automated checks: `make pytest:test` (`test_auth_required.py` walks every registered route and asserts the protected ones answer 401 without a token; `test_jwt_auth.py` covers the claims, expiry, tampering, a foreign key, issuer/audience, `alg: none`, HS256 key confusion and the JWKS), `make specmatic:test` (the contract's 401 examples against the real backend) and `make zap:api-scan` (ZAP logs in first and sends the token with every request).
+
 ### Kong: routing to the real backend, or to a contract mock instead
 
 `apps_backend` (Kong Manager → **Gateway Services**) proxies `http://localhost:8000/api/*` to `apps/backend`'s own root (`strip_path: true`, so `/api/accounts` reaches `backend:8080/accounts`). `apps/frontend` can go through it instead of calling the backend directly:
@@ -311,20 +325,6 @@ Two matching Locust scenarios make the case for putting Kafka in front of a writ
 5. **Compare**: `Failure Count` per row in `locust/logs/<timestamp>/locust_stats.csv` (or that run's `report.html`), and `curl -w '%{time_total}\n' http://localhost:8080/health` while each runs. In Grafana ("Apps backend (OpenTelemetry)"): 5xx ratio, p95 latency and DB connections used spike during step 2 and stay flat during step 4.
 
 Kafka stays flat because `kafka-bridge` drains the topic at its own steady, sequential pace and never forwards a burst to the backend. That also means the topic keeps draining into the backend long after step 4 ends (right after a 300 / 100 run, the bridge's consumer lag was still ~1.6M events - check with `docker exec nb-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka:29092 --describe --all-groups`); `make kafka:reset` clears the backlog before a fresh comparison.
-
-### JWT authentication: every route needs a token
-
-`POST /auth/login` hands out an RS256 JWT (valid a day, `APPS_JWT_TTL_SECONDS`), and every route but `/health`, `/auth/login` and `/.well-known/jwks.json` - REST, GraphQL and MCP - checks it. The public key is published as a JWKS, so a gateway or another service can verify a token without sharing a secret. The walkthrough with real outputs is the docs' *Scenario 4* (http://localhost:5173/docs/scenario-auth); the short version:
-
-```bash
-TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \
-  -d '{"username":"demo","password":"demo"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
-curl -s localhost:8080/.well-known/jwks.json                    # the public key (kid matches the token's header)
-curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/accounts   # 401: no token
-curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOKEN" localhost:8080/accounts   # 200
-```
-
-A tampered, expired or unsigned (`alg: none`) token gets the same `401 {"detail":"invalid or missing token"}`. The automated checks: `make pytest:test` (`test_auth_required.py` walks every registered route and asserts the protected ones answer 401 without a token; `test_jwt_auth.py` covers the claims, expiry, tampering, a foreign key, issuer/audience, `alg: none`, HS256 key confusion and the JWKS), `make specmatic:test` (the contract's 401 examples against the real backend) and `make zap:api-scan` (ZAP logs in first and sends the token with every request).
 
 ### Keycloak: a real login, and a real token the backend verifies
 
@@ -531,7 +531,7 @@ make zap:full-scan   # ⚠️  active scan of apps/frontend - sends real attack 
                       #    Can pin apps/frontend's CPU into a runaway loop - see the warning below before running this.
 ```
 
-Verified end-to-end against this repo's own `apps`: `baseline` found 12 WARN-level findings (missing security headers like CSP/`X-Content-Type-Options`, mostly - `apps/frontend` is a dev-mode Next.js server, not hardened for production) and 0 FAIL; `api-scan` ran every active rule (SQLi, XXE, command injection, SSTI, ...) against every `apps/backend` route from the OpenAPI schema - logged in as the demo user, since every route needs a token (`zap/hooks/bearer_token.py` adds the `Authorization` header to each request) - and came back 112 PASS, 1 WARN (the same missing-header class), 0 FAIL. Being logged in is what let it find a real bug: a `POST /transactions` name longer than its column used to be a 500, and is a 422 now. Both are cheap to run: measured directly, `baseline` took ~78s and `api-scan` ~45s, with `apps/frontend`/`apps/backend` staying at negligible CPU/memory throughout either one - that's why both are safe to bundle into `zap:scan`.
+Verified end-to-end against this repo's own `apps`: `baseline` found only WARN-level findings (missing security headers like CSP/`X-Content-Type-Options`, mostly - `apps/frontend` is a dev-mode Next.js server, not hardened for production) and 0 FAIL; `api-scan` ran every active rule (SQLi, XXE, command injection, SSTI, ...) against every `apps/backend` route from the OpenAPI schema - logged in as the demo user, since every route needs a token (`zap/hooks/bearer_token.py` adds the `Authorization` header to each request) - and came back with 0 FAIL (only the same missing-header class of WARN). Being logged in is what let it find a real bug: a `POST /transactions` name longer than its column used to be a 500, and is a 422 now. Both are cheap to run: measured directly, `baseline` took ~78s and `api-scan` ~45s, with `apps/frontend`/`apps/backend` staying at negligible CPU/memory throughout either one - that's why both are safe to bundle into `zap:scan`.
 
 Same pass/fail convention as `pytest`/`specmatic`: a real (non-INFO) alert exits non-zero, so `zap:baseline` etc. can gate a pipeline the same way; see `zap/report/<scan>-report.html` for what was actually found.
 

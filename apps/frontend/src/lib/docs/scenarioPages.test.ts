@@ -13,9 +13,9 @@ import nextConfig from "../../../next.config";
 // Scenario 1 is the Testing page (its URL predates the numbering), then the seven module scenarios.
 const SCENARIOS = [
   ["1", scenarioTesting],
-  ["2", scenarioKong],
-  ["3", scenarioKafka],
-  ["4", scenarioAuth],
+  ["2", scenarioAuth],
+  ["3", scenarioKong],
+  ["4", scenarioKafka],
   ["5", scenarioKeycloak],
   ["6", scenarioVault],
   ["7", scenarioAgentgateway],

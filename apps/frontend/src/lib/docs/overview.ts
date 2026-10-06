@@ -57,7 +57,7 @@ export const overview: LocalizedDocsPage = {
       {
         heading: "Functional verification scenarios",
         body: [
-          "Scenario 1 verifies the demo app with the test tools. Scenarios 2 to 8 each switch on one of the dashed integrations above and check that it works. The order follows the sidebar.",
+          "Scenario 1 verifies the demo app with the test tools. Scenario 2 checks the API's JWT authentication, which every later scenario relies on. Scenarios 3 to 8 each switch on one of the dashed integrations above and check that it works. The order follows the sidebar.",
         ],
         subsections: [
           {
@@ -68,24 +68,24 @@ export const overview: LocalizedDocsPage = {
             ],
           },
           {
-            heading: "Scenario 2: Switch to Kong",
+            heading: "Scenario 2: Verify JWT authentication",
+            href: "/docs/scenario-auth",
+            body: [
+              "Checks the API's JWT authentication by hand and with the tests: read a token, verify it against the published JWKS, see which routes need a token (all but login, health and the JWKS), try tokens that must be refused, watch one expire, and run the tests that keep it true.",
+            ],
+          },
+          {
+            heading: "Scenario 3: Switch to Kong",
             href: "/docs/scenario-kong",
             body: [
               "Routes the frontend through Kong: the gateway proxies /api/* on port 8000 to the real backend. The same gateway service is then repointed at a contract mock (Specmatic's mock) instead of the backend, with no frontend code change.",
             ],
           },
           {
-            heading: "Scenario 3: Switch to Kafka",
+            heading: "Scenario 4: Switch to Kafka",
             href: "/docs/scenario-kafka",
             body: [
               "Places Kafka in front of the write path: kafka-bridge reads events from a topic and forwards each one to the backend through POST /transactions, the same write every other client uses. The same Locust load is sent down two paths - direct REST, which errors under the burst, and through Kafka - and the measured results are compared.",
-            ],
-          },
-          {
-            heading: "Scenario 4: Verify JWT authentication",
-            href: "/docs/scenario-auth",
-            body: [
-              "Checks the API's JWT authentication by hand and with the tests: read a token, verify it against the published JWKS, see which routes need a token (all but login, health and the JWKS), try tokens that must be refused, watch one expire, and run the tests that keep it true.",
             ],
           },
           {
@@ -167,7 +167,7 @@ export const overview: LocalizedDocsPage = {
       {
         heading: "機能確認シナリオ",
         body: [
-          "シナリオ1は、テストツールでデモアプリの動作を検証します。シナリオ2〜8は、それぞれ上の図の破線の連携を1つずつオンにして、その機能を確認します。順番はサイドバーのとおりです。",
+          "シナリオ1は、テストツールでデモアプリの動作を検証します。シナリオ2は、以降のシナリオが前提にするAPIのJWT認証を確認します。シナリオ3〜8は、それぞれ上の図の破線の連携を1つずつオンにして、その機能を確認します。順番はサイドバーのとおりです。",
         ],
         subsections: [
           {
@@ -178,24 +178,24 @@ export const overview: LocalizedDocsPage = {
             ],
           },
           {
-            heading: "シナリオ2: Kong経由への切り替え",
+            heading: "シナリオ2: JWT認証の検証",
+            href: "/docs/scenario-auth",
+            body: [
+              "APIのJWT認証を、手作業とテストで確かめます。トークンを読み、公開されたJWKSで検証し、トークンが必要なルート(ログイン・ヘルスチェック・JWKS以外のすべて)を確認し、拒否されるべきトークンを試し、期限切れになる様子を見て、それを保証するテストを実行します。",
+            ],
+          },
+          {
+            heading: "シナリオ3: Kong経由への切り替え",
             href: "/docs/scenario-kong",
             body: [
               "frontendをKong経由にします。ゲートウェイがポート8000の/api/*を実際のbackendへプロキシします。続いて、同じゲートウェイのサービスの向き先を、backendではなく、Specファイルから作ったモック(Specmaticのモック)に切り替えます。frontendのコードは変更しません。",
             ],
           },
           {
-            heading: "シナリオ3: Kafka経由への切り替え",
+            heading: "シナリオ4: Kafka経由への切り替え",
             href: "/docs/scenario-kafka",
             body: [
               "書き込み経路の手前にKafkaを置きます。kafka-bridgeがトピックからイベントを読み、1件ずつPOST /transactionsでbackendへ転送します(他のすべてのクライアントと同じ書き込みです)。同じLocustの負荷を、バーストでエラーになるREST直接の経路と、Kafka経由の経路の2つに流し、測定結果を比較します。",
-            ],
-          },
-          {
-            heading: "シナリオ4: JWT認証の検証",
-            href: "/docs/scenario-auth",
-            body: [
-              "APIのJWT認証を、手作業とテストで確かめます。トークンを読み、公開されたJWKSで検証し、トークンが必要なルート(ログイン・ヘルスチェック・JWKS以外のすべて)を確認し、拒否されるべきトークンを試し、期限切れになる様子を見て、それを保証するテストを実行します。",
             ],
           },
           {
