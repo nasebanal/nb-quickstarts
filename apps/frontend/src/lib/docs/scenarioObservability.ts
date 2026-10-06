@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioObservability: LocalizedDocsPage = {
   en: {
-    title: "Scenario 7: Observability",
+    title: "Scenario 8: Observability",
     description:
       "The backend can export OpenTelemetry traces (FastAPI requests + SQLAlchemy queries), HTTP " +
       "server metrics and application logs over OTLP - off by default, so apps:up behaves exactly as " +
@@ -228,7 +228,8 @@ export const scenarioObservability: LocalizedDocsPage = {
             code:
               "make kong:reset            # re-import the config with the opentelemetry plugin\n" +
               "make agentgateway:up       # (docker restart nb-agentgateway after editing config.yaml)\n" +
-              "curl localhost:8000/api/accounts   # through Kong\n" +
+              "TOKEN=$(curl -s localhost:8000/api/auth/login -H 'content-type: application/json' -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')\n" +
+              "curl -H \"Authorization: Bearer $TOKEN\" localhost:8000/api/accounts   # through Kong\n" +
               "make agentgateway:tools                     # MCP initialize + tools/list",
           },
         ],
@@ -303,7 +304,7 @@ export const scenarioObservability: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ7: オブザーバビリティ",
+    title: "シナリオ8: オブザーバビリティ",
     description:
       "backendはOpenTelemetryのトレース(FastAPIのリクエスト + SQLAlchemyのクエリ)・HTTPサーバー" +
       "メトリクス・アプリケーションログをOTLPで送信できます — デフォルトはオフなので、明示的に有効化" +
@@ -527,7 +528,8 @@ export const scenarioObservability: LocalizedDocsPage = {
             code:
               "make kong:reset            # opentelemetryプラグイン入りの設定を再インポート\n" +
               "make agentgateway:up       # (config.yamlを編集した後はdocker restart nb-agentgateway)\n" +
-              "curl localhost:8000/api/accounts   # Kong経由\n" +
+              "TOKEN=$(curl -s localhost:8000/api/auth/login -H 'content-type: application/json' -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')\n" +
+              "curl -H \"Authorization: Bearer $TOKEN\" localhost:8000/api/accounts   # Kong経由\n" +
               "make agentgateway:tools                     # MCPのinitialize + tools/list",
           },
         ],

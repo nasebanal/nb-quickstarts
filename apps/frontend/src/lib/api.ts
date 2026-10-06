@@ -161,12 +161,12 @@ export function updateProfile(token: string, input: ProfileInput): Promise<Profi
   });
 }
 
-export function listTransactions(): Promise<Transaction[]> {
-  return request("/transactions");
+export function listTransactions(token: string): Promise<Transaction[]> {
+  return request("/transactions", { headers: { Authorization: `Bearer ${token}` } });
 }
 
-export function listAccounts(): Promise<AccountBalance[]> {
-  return request("/accounts");
+export function listAccounts(token: string): Promise<AccountBalance[]> {
+  return request("/accounts", { headers: { Authorization: `Bearer ${token}` } });
 }
 
 export function createTransaction(token: string, input: TransactionInput): Promise<Transaction> {

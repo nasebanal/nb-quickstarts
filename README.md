@@ -34,13 +34,15 @@ Supported OSS, one module per technology:
 
 ### Endpoints
 
+**Authentication**: every route needs an access token (an RS256 JWT from `POST /auth/login`, or a Keycloak one), except `/health`, `/auth/login`, `/.well-known/jwks.json` (the public key that verifies the tokens) and the MCP login's OAuth plumbing. `/graphql` and `/mcp` need one too. The contract (`shared/openapi/openapi.yaml`) says so with a global `security` and a `401` on every protected operation.
+
 Every module prints its own "Endpoints once started" block from `make <module>:up` (or plain `make <module>`) - this is the same information gathered in one place, across every module, for reference without starting anything. The "Host-published" column is reachable from your host machine (browser, `curl`, etc.); the "Container network hostname" column is the Docker Compose **service name** - only resolvable from *inside* `apps-network` (i.e. from another container joined to it, e.g. Kong's `apps_backend` service, or one test tool container calling another) - not from your host machine, and often a different port than the host-published one. A module needs to actually be up (`make <module>:up`) for its own row to answer either way.
 
 | Module | Endpoint | Host-published | Container network hostname | Notes |
 |---|---|---|---|---|
 | apps | Frontend | http://localhost:5173 | `frontend:5173` | Next.js |
 | apps | API docs (Scalar) | http://localhost:5173/api-specs | `frontend:5173/api-specs` | Reads the contract straight from `shared/openapi/openapi.yaml` (no backend needed) |
-| apps | Docs | http://localhost:5173/docs | `frontend:5173/docs` | Overview (purpose, structure, scenarios), Getting Started and seven scenarios starting with verification of the demo app - same Header/Footer as `/`, opens in a new tab from the header's "Docs" link |
+| apps | Docs | http://localhost:5173/docs | `frontend:5173/docs` | Overview (purpose, structure, scenarios), Getting Started and eight scenarios starting with verification of the demo app - same Header/Footer as `/`, opens in a new tab from the header's "Docs" link |
 | apps | Backend REST | http://localhost:8080 | `backend:8080` | FastAPI |
 | apps | Backend GraphQL | http://localhost:8080/graphql | `backend:8080/graphql` | Strawberry |
 | apps | MCP server | http://localhost:8080/mcp | `backend:8080/mcp` | Streamable HTTP |
@@ -203,7 +205,7 @@ claude mcp list
 
 `claude mcp list` shows `Connected` once the server is reachable, but a Claude Code session that was already running doesn't load its tools yet - restart Claude Code, or reconnect with `/mcp`, before asking for anything. Without a scope option the server is added to the current project only; add `-s user` to use it from any directory.
 
-`/mcp` is behind a login (`get_me`, `update_profile` and `create_transaction` need a token, and this is how an MCP client gets one), so after restarting: open `/mcp`, pick `apps-backend` (it says *needs authentication*) and **Authenticate**. The browser opens the app's own login at `http://localhost:5173/mcp-authorize` - **Demo login** (`demo` / `demo`) or, with `KEYCLOAK_ISSUER` set and `make keycloak:up` running, **Keycloak** (`keycloak-demo` / `nasebanal-demo`) - press **Allow**, and Claude Code shows *Authentication successful*; close the tab and ask for `get_me`. Claude Code keeps the token, so the browser should open again only after `claude mcp remove` or when `TOKEN_SECRET` changes. `APPS_MCP_AUTH_REQUIRED=false` in `.env` (+ `make apps:restart`) leaves `/mcp` open instead; MCP Inspector and agentgateway are covered below.
+`/mcp` is behind a login (every tool but the health check, login and JWKS ones needs a token, and this is how an MCP client gets one), so after restarting: open `/mcp`, pick `apps-backend` (it says *needs authentication*) and **Authenticate**. The browser opens the app's own login at `http://localhost:5173/mcp-authorize` - **Demo login** (`demo` / `demo`) or, with `KEYCLOAK_ISSUER` set and `make keycloak:up` running, **Keycloak** (`keycloak-demo` / `nasebanal-demo`) - press **Allow**, and Claude Code shows *Authentication successful*; close the tab and ask for `get_me`. Claude Code keeps the token, so the browser should open again only after `claude mcp remove` or when `TOKEN_SECRET` changes. `APPS_MCP_AUTH_REQUIRED=false` in `.env` (+ `make apps:restart`) leaves `/mcp` open instead; MCP Inspector and agentgateway are covered below.
 
 **Claude Desktop** (`claude_desktop_config.json`):
 
@@ -236,7 +238,7 @@ make specmatic:mock-up       # mock server built from the same contract (localho
 make vitest:contract-test    # Consumer: apps/frontend's real api.ts calls against the mock, not a mocked fetch or the real backend
 ```
 
-`shared/openapi/examples/` holds 15 checked-in externalized examples (shared by both `specmatic:test` and `specmatic:mock-up`) — a bearer token (the demo token is deterministic: it's an HMAC of `demo` with `TOKEN_SECRET`'s default, so the file stays valid as long as that default isn't overridden), an id that actually exists, and deliberately-invalid requests covering every documented non-2xx response — so Specmatic's own coverage report reaches 100%. They are plain files: edit them by hand next to the contract. See `AGENTS.md`'s Specmatic section for the full story, including a dead end (Specmatic's own security-token config parses correctly but has no effect on generated requests) and why `SPECMATIC_GENERATIVE_TESTS` was tried and rejected in favor of explicit negative examples.
+`shared/openapi/examples/` holds 20 checked-in externalized examples (shared by both `specmatic:test` and `specmatic:mock-up`) — a bearer token (the demo token is deterministic: an RS256 JWT for `demo` with a fixed issue and expiry time, signed with the checked-in demo key, so the files stay valid as long as that key and `JWT_ISSUER` aren't overridden - `apps/backend`'s tests fail if they drift), an id that actually exists, and deliberately-invalid requests covering every documented non-2xx response — so Specmatic's own coverage report reaches 100%. They are plain files: edit them by hand next to the contract. See `AGENTS.md`'s Specmatic section for the full story, including a dead end (Specmatic's own security-token config parses correctly but has no effect on generated requests) and why `SPECMATIC_GENERATIVE_TESTS` was tried and rejected in favor of explicit negative examples.
 
 ### Kong: routing to the real backend, or to a contract mock instead
 
@@ -258,8 +260,9 @@ make apps:restart   # frontend needs recreating - Next.js dev mode bakes NEXT_PU
    | Real backend (default) | `backend` | `8080` | *(empty)* |
    | Specmatic's mock (`make specmatic:mock-up` first) | `specmatic-mock` | `9091` | *(empty)* |
 
-3. `curl http://localhost:8000/api/accounts` (or reload `apps/frontend`, if it's routed through Kong) to confirm - allow a couple of seconds for the change to propagate to Kong's own worker processes.
-4. To go back to the real backend: edit `apps_backend` again, Host `backend` / Port `8080` / Path empty, **Save**.
+3. Pointing at the mock? Also switch on the `mock-demo-token` plugin: every API route needs a bearer token now, and the mock answers only the one token its contract examples carry (the fixed demo token), not the token a login hands out. `kong/conf/declarative.yml` ships a `request-transformer` plugin on `apps_backend` with that name, switched off, that swaps the demo token in: `curl -X PATCH http://localhost:8001/plugins/mock-demo-token -d enabled=true` (or the toggle under **Plugins** in Kong Manager).
+4. `curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/accounts` (a token from `POST /api/auth/login`; or reload `apps/frontend`, if it's routed through Kong) to confirm - allow a couple of seconds for the change to propagate to Kong's own worker processes.
+5. To go back to the real backend: edit `apps_backend` again, Host `backend` / Port `8080` / Path empty, **Save**, and switch the `mock-demo-token` plugin off again.
 
 Verified this way, not just described: every request during a real `make playwright:test` run against a Kong-routed frontend showed up in Kong's own access log going to `/api/*`, and pointing `apps_backend` at Specmatic's mock returned exactly the example values from `openapi.yaml`, confirmed via `curl` and Specmatic's own request log.
 
@@ -309,9 +312,23 @@ Two matching Locust scenarios make the case for putting Kafka in front of a writ
 
 Kafka stays flat because `kafka-bridge` drains the topic at its own steady, sequential pace and never forwards a burst to the backend. That also means the topic keeps draining into the backend long after step 4 ends (right after a 300 / 100 run, the bridge's consumer lag was still ~1.6M events - check with `docker exec nb-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka:29092 --describe --all-groups`); `make kafka:reset` clears the backlog before a fresh comparison.
 
+### JWT authentication: every route needs a token
+
+`POST /auth/login` hands out an RS256 JWT (valid a day, `APPS_JWT_TTL_SECONDS`), and every route but `/health`, `/auth/login` and `/.well-known/jwks.json` - REST, GraphQL and MCP - checks it. The public key is published as a JWKS, so a gateway or another service can verify a token without sharing a secret. The walkthrough with real outputs is the docs' *Scenario 4* (http://localhost:5173/docs/scenario-auth); the short version:
+
+```bash
+TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \
+  -d '{"username":"demo","password":"demo"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+curl -s localhost:8080/.well-known/jwks.json                    # the public key (kid matches the token's header)
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/accounts   # 401: no token
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOKEN" localhost:8080/accounts   # 200
+```
+
+A tampered, expired or unsigned (`alg: none`) token gets the same `401 {"detail":"invalid or missing token"}`. The automated checks: `make pytest:test` (`test_auth_required.py` walks every registered route and asserts the protected ones answer 401 without a token; `test_jwt_auth.py` covers the claims, expiry, tampering, a foreign key, issuer/audience, `alg: none`, HS256 key confusion and the JWKS), `make specmatic:test` (the contract's 401 examples against the real backend) and `make zap:api-scan` (ZAP logs in first and sends the token with every request).
+
 ### Keycloak: a real login, and a real token the backend verifies
 
-`apps/backend`'s `POST /transactions` is protected by `app/auth.py`'s `get_current_username` — until now, only satisfiable with a mock token from `POST /auth/login` (a username, no password). Keycloak adds a real OIDC login: the login page gets a **Demo login / Keycloak** toggle (with **Sign up**), you authenticate at Keycloak like you would with "Sign in with Google", and the backend accepts the JWT Keycloak issued on the exact same route. One variable turns on both the backend and the login page:
+`apps/backend`'s `POST /transactions` is protected by `app/auth.py`'s `get_current_username` — until now, only satisfiable with the token from `POST /auth/login` (the demo user's password). Keycloak adds a real OIDC login: the login page gets a **Demo login / Keycloak** toggle (with **Sign up**), you authenticate at Keycloak like you would with "Sign in with Google", and the backend accepts the JWT Keycloak issued on the exact same route. One variable turns on both the backend and the login page:
 
 Starting Keycloak is not enough: the login page offers it (and the backend accepts its tokens) only when **`KEYCLOAK_ISSUER` is set in `.env`** - that one variable is how the apps learn Keycloak exists. Without it the login dialog shows only the demo login, even with Keycloak running. Three steps:
 
@@ -374,15 +391,15 @@ Switch `agentgateway` on, open **Tools**, pick `list_accounts_accounts_get` and 
 
 (The backend's native `/mcp` also exposes its two GraphQL routes as tools, so its tool list is longer than the eight agentgateway builds from the OpenAPI contract.)
 
-Verified end-to-end: `agentgateway:tools` lists eight tools - `health_health_get`, `login_auth_login_post`, `get_me_me_get`, `update_profile_me_profile_put`, `list_transactions_transactions_get`, `create_transaction_transactions_post`, `get_transaction_transactions__transaction_id__get`, `list_accounts_accounts_get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_accounts_accounts_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
+Verified end-to-end: `agentgateway:tools` lists nine tools - `health_health_get`, `login_auth_login_post`, `get_me_me_get`, `update_profile_me_profile_put`, `get_jwks_well_known_jwks_json_get`, `list_transactions_transactions_get`, `create_transaction_transactions_post`, `get_transaction_transactions__transaction_id__get`, `list_accounts_accounts_get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_accounts_accounts_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
 
-**Register it in Claude Code, with a token** (needs `make agentgateway:up` and `make apps:up`). `get_me`, `update_profile` and `create_transaction` need a bearer token, like the REST routes behind them, and the tool arguments have no `Authorization` header - without a token they answer `invalid or missing token`. So the token goes on the connection itself: agentgateway passes the connection's `Authorization` header through to the backend (checked with a demo token and with a Keycloak one). In this order:
+**Register it in Claude Code, with a token** (needs `make agentgateway:up` and `make apps:up`). Every tool except `health`, `login` and the JWKS needs a bearer token, like the REST routes behind them, and the tool arguments have no `Authorization` header - without a token they answer `invalid or missing token`. So the token goes on the connection itself: agentgateway passes the connection's `Authorization` header through to the backend (checked with a demo token and with a Keycloak one). In this order:
 
 ```bash
-# 1. get a token (the demo token never expires)
+# 1. get a token (a login lasts a day)
 TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \
   -d '{"username":"demo","password":"demo"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
-echo "token: ${TOKEN:0:12}..."   # nb1~ZGVtbw~... means it worked
+echo "token: ${TOKEN:0:12}..."   # eyJ... (a JWT) means it worked
 
 # 2. register agentgateway with it (drop the first line if it was never registered)
 claude mcp remove agentgateway
@@ -392,11 +409,11 @@ claude mcp add --transport http agentgateway http://localhost:8010/mcp --header 
 claude mcp list
 ```
 
-`get_me` returning the demo user's profile means the token went through; `invalid or missing token` means the header was not registered - `claude mcp get` does not list headers (its `Connected` says nothing about them), `~/.claude.json` does. A Keycloak access token lasts minutes, the demo token never expires. Claude Desktop works the same way through the `mcp-remote` bridge (see [MCP](#mcp-trying-the-backends-mcp-server)) with its `--header` option - not tried here.
+`get_me` returning the demo user's profile means the token went through; `invalid or missing token` means the header was not registered - `claude mcp get` does not list headers (its `Connected` says nothing about them), `~/.claude.json` does. A Keycloak access token lasts minutes, a login token a day (`JWT_TTL_SECONDS`). Claude Desktop works the same way through the `mcp-remote` bridge (see [MCP](#mcp-trying-the-backends-mcp-server)) with its `--header` option - not tried here.
 
 Point an MCP client (Claude Desktop, [mcp-inspector](https://github.com/modelcontextprotocol/inspector), ...) at `http://localhost:8010/mcp` to use it interactively. `create_transaction_transactions_post` needs a real bearer token, same as `POST /transactions` itself does everywhere else - call `login_auth_login_post` first and pass its token back as an `Authorization` header, or the tool call 401s the same way an unauthenticated `curl` would.
 
-**Why not the browser login (Authenticate)?** agentgateway has no login of its own here, and `APPS_MCP_AUTH_REQUIRED` does not reach it - it builds its tools from the OpenAPI contract and calls the REST routes, never the backend's `/mcp`. So in Claude Code's `/mcp` the server shows *not authenticated* and **Authenticate** fails (`Dynamic Client Registration rejected (HTTP 406)`: every path other than `/mcp` is answered by agentgateway's MCP handler, so there is no OAuth endpoint to register with); pick **Reconnect** instead - it connects fine, and the header carries the token. A browser login through agentgateway itself would need `policies.mcpAuthentication`, which only validates JWTs - the demo token is not one - so it waits for the backend to issue JWTs. `provider: keycloak` is no way around it: agentgateway issue [#3668](https://github.com/agentgateway/agentgateway/issues/3668) makes Claude Code reject that login (RFC 9207 issuer mismatch).
+**Why not the browser login (Authenticate)?** agentgateway has no login of its own here, and `APPS_MCP_AUTH_REQUIRED` does not reach it - it builds its tools from the OpenAPI contract and calls the REST routes, never the backend's `/mcp`. So in Claude Code's `/mcp` the server shows *not authenticated* and **Authenticate** fails (`Dynamic Client Registration rejected (HTTP 406)`: every path other than `/mcp` is answered by agentgateway's MCP handler, so there is no OAuth endpoint to register with); pick **Reconnect** instead - it connects fine, and the header carries the token. A browser login through agentgateway itself would need `policies.mcpAuthentication`, which only validates JWTs - and the backend's tokens now are JWTs, published at `/.well-known/jwks.json`, so pointing it there is the natural next step. `provider: keycloak` is no way around it: agentgateway issue [#3668](https://github.com/agentgateway/agentgateway/issues/3668) makes Claude Code reject that login (RFC 9207 issuer mismatch).
 
 agentgateway also ships a real dashboard UI (a React SPA, built into the image by default - `Dockerfile`'s `CARGO_FEATURES=agentgateway-app/ui`), served off its **admin** port, separate from the MCP port above:
 
@@ -427,7 +444,7 @@ The dashboard shows request rate per path, 5xx ratio, p50/p95/p99 latency, activ
 
 The instrumentation is standard OTel SDK code (`apps/backend/app/telemetry.py`) that honors the usual `OTEL_*` env vars, so pointing `APPS_OTEL_EXPORTER_OTLP_ENDPOINT` (plus `OTEL_EXPORTER_OTLP_HEADERS`) at another OTLP backend such as NewRelic - which the real NASEBANAL apps use - works without code changes. Only the Collector's config (`observability/otel-collector.yaml`) is specific to the local stack.
 
-Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't export to Destinations, and Cloudflare can't reach a `localhost` collector), and Kafka metrics, and Kong's/agentgateway's metrics (each has its own Prometheus/OTel integration that could be added to `observability/prometheus.yml` / their own config). Kong and agentgateway do export **traces** to the same Collector (`opentelemetry` plugin on Kong's `apps_backend` service; `config.tracing` in `agentgateway/config.yaml`), and the trace context is passed on, so a request through either gateway is one trace with the backend's spans under the gateway's - see Scenario 7. The Grafana dashboard's bottom panel, "Gateway traces", lists them.
+Not covered here: the real Cloudflare Workers apps (`wrangler dev` doesn't export to Destinations, and Cloudflare can't reach a `localhost` collector), and Kafka metrics, and Kong's/agentgateway's metrics (each has its own Prometheus/OTel integration that could be added to `observability/prometheus.yml` / their own config). Kong and agentgateway do export **traces** to the same Collector (`opentelemetry` plugin on Kong's `apps_backend` service; `config.tracing` in `agentgateway/config.yaml`), and the trace context is passed on, so a request through either gateway is one trace with the backend's spans under the gateway's - see Scenario 8. The Grafana dashboard's bottom panel, "Gateway traces", lists them.
 
 ### Locust load testing scenarios
 
@@ -514,7 +531,7 @@ make zap:full-scan   # ⚠️  active scan of apps/frontend - sends real attack 
                       #    Can pin apps/frontend's CPU into a runaway loop - see the warning below before running this.
 ```
 
-Verified end-to-end against this repo's own `apps`: `baseline` found 12 WARN-level findings (missing security headers like CSP/`X-Content-Type-Options`, mostly - `apps/frontend` is a dev-mode Next.js server, not hardened for production) and 0 FAIL; `api-scan` ran every active rule (SQLi, XXE, command injection, SSTI, ...) against every `apps/backend` route from the OpenAPI schema and came back 116 PASS, 2 WARN (the same missing-header class), 0 FAIL. Both are cheap to run: measured directly, `baseline` took ~78s and `api-scan` ~45s, with `apps/frontend`/`apps/backend` staying at negligible CPU/memory throughout either one - that's why both are safe to bundle into `zap:scan`.
+Verified end-to-end against this repo's own `apps`: `baseline` found 12 WARN-level findings (missing security headers like CSP/`X-Content-Type-Options`, mostly - `apps/frontend` is a dev-mode Next.js server, not hardened for production) and 0 FAIL; `api-scan` ran every active rule (SQLi, XXE, command injection, SSTI, ...) against every `apps/backend` route from the OpenAPI schema - logged in as the demo user, since every route needs a token (`zap/hooks/bearer_token.py` adds the `Authorization` header to each request) - and came back 112 PASS, 1 WARN (the same missing-header class), 0 FAIL. Being logged in is what let it find a real bug: a `POST /transactions` name longer than its column used to be a 500, and is a 422 now. Both are cheap to run: measured directly, `baseline` took ~78s and `api-scan` ~45s, with `apps/frontend`/`apps/backend` staying at negligible CPU/memory throughout either one - that's why both are safe to bundle into `zap:scan`.
 
 Same pass/fail convention as `pytest`/`specmatic`: a real (non-INFO) alert exits non-zero, so `zap:baseline` etc. can gate a pipeline the same way; see `zap/report/<scan>-report.html` for what was actually found.
 
@@ -557,6 +574,7 @@ A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KA
 | `APPS_API_BASE` | `http://localhost:8080` | Where `apps/frontend` calls the backend - direct, or `http://localhost:8000/api` to route through Kong instead (needs `kong:up` + `apps:restart`) |
 | `APPS_KAFKA_BRIDGE_HEALTH_URL` | `http://localhost:8090` | Where the frontend checks kafka-bridge's health - see [Kafka bridge](#kafka-bridge-comparing-rest-vs-kafka-buffered-ingestion) |
 | `APPS_MCP_AUTH_REQUIRED` | `true` | `/mcp` is behind a login: an MCP client such as Claude Code gets a 401, opens the browser on the frontend's `/mcp-authorize` page (the app's usual demo / Keycloak login) and carries the resulting token into every tool call. `false` leaves `/mcp` open (needs `apps:restart`) |
+| `APPS_JWT_TTL_SECONDS` | `86400` | How long a login token stays valid (seconds). Tokens are RS256 JWTs signed with a checked-in demo key (`apps/backend/app/dev_jwt_key.pem`, not a secret); the public key is at `/.well-known/jwks.json` |
 | `APPS_PUBLIC_BASE_URL` / `APPS_MCP_AUTHORIZE_URL` | `http://localhost:8080` / `http://localhost:5173/mcp-authorize` | The addresses the MCP client and browser use for the MCP login (host-published, not in-network) - change only when the backend / frontend are reached elsewhere |
 | `KEYCLOAK_ISSUER` | *(unset = off)* | Turns on Keycloak for `apps/backend` and the login page: `http://localhost:8180/realms/nasebanal` - see [Keycloak](#keycloak) |
 | `VAULT_ADDR` / `VAULT_TOKEN` | *(both unset = off)* | Where `apps/backend` asks for a Vault-issued MySQL credential - see [Vault](#vault) |

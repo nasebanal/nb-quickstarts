@@ -4,8 +4,10 @@ app/routers/accounts.py) - same split as REST's own /transactions
 (the event log) vs /accounts (the balances derived from it)."""
 
 import strawberry
+from fastapi import Depends
 from strawberry.fastapi import GraphQLRouter
 
+from app.auth import get_current_username
 from app.db import SessionLocal
 from app.schemas import TransactionCreate
 from app.services import account_service
@@ -63,4 +65,5 @@ class Mutation:
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)
-graphql_router = GraphQLRouter(schema)
+# Like the REST routes, GraphQL needs a valid access token (so the GraphiQL page in a browser answers 401 too).
+graphql_router = GraphQLRouter(schema, dependencies=[Depends(get_current_username)])

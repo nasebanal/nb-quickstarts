@@ -4,7 +4,7 @@ import type { LocalizedDocsPage } from "./types";
 // (the paragraphs read the diagrams, which app/docs/page.tsx renders into the "architecture" slot),
 // the demo app's own event-sourced data model (its own diagram, the "eventSourcing" slot), and the
 // functional-verification scenarios, one short description each. Scenario 1 verifies the demo app
-// with the test tools; scenarios 2-7 each switch on one of the dashed integrations. Headings
+// with the test tools; scenarios 2-8 each switch on one of the dashed integrations. Headings
 // and links follow the scenario pages' own titles and the sidebar order (overview.test.ts checks it).
 // Register: neutral and factual - no second-person address or chatty phrasing.
 export const overview: LocalizedDocsPage = {
@@ -57,7 +57,7 @@ export const overview: LocalizedDocsPage = {
       {
         heading: "Functional verification scenarios",
         body: [
-          "Scenario 1 verifies the demo app with the test tools. Scenarios 2 to 7 each switch on one of the dashed integrations above and check that it works. The order follows the sidebar.",
+          "Scenario 1 verifies the demo app with the test tools. Scenarios 2 to 8 each switch on one of the dashed integrations above and check that it works. The order follows the sidebar.",
         ],
         subsections: [
           {
@@ -82,28 +82,35 @@ export const overview: LocalizedDocsPage = {
             ],
           },
           {
-            heading: "Scenario 4: Use Keycloak",
+            heading: "Scenario 4: Verify JWT authentication",
+            href: "/docs/scenario-auth",
+            body: [
+              "Checks the API's JWT authentication by hand and with the tests: read a token, verify it against the published JWKS, see which routes need a token (all but login, health and the JWKS), try tokens that must be refused, watch one expire, and run the tests that keep it true.",
+            ],
+          },
+          {
+            heading: "Scenario 5: Use Keycloak",
             href: "/docs/scenario-keycloak",
             body: [
               "Replaces the mock login with a real one: the login page gains a Keycloak option (with sign-up), the user authenticates at Keycloak, and the backend accepts the token Keycloak issued on the same POST /transactions route. The scenario then confirms that the backend performs the check.",
             ],
           },
           {
-            heading: "Scenario 5: Use Vault",
+            heading: "Scenario 6: Use Vault",
             href: "/docs/scenario-vault",
             body: [
               "Removes the database password from the backend's configuration: the backend requests a credential from Vault at startup, and Vault creates a short-lived MySQL user for it on demand. The scenario shows the backend failing without Vault and working with it, then inspects the users Vault created.",
             ],
           },
           {
-            heading: "Scenario 6: MCP access via agentgateway",
+            heading: "Scenario 7: MCP access via agentgateway",
             href: "/docs/scenario-agentgateway",
             body: [
               "Provides a second route to the backend as MCP tools. Besides the backend's own /mcp, agentgateway builds MCP tools solely from the OpenAPI contract (openapi.yaml). A tool is called through the gateway and from a real MCP client, and the gateway's dashboard is reviewed.",
             ],
           },
           {
-            heading: "Scenario 7: Observability",
+            heading: "Scenario 8: Observability",
             href: "/docs/scenario-observability",
             body: [
               "Enables the backend's OpenTelemetry export (traces, metrics and logs; off by default) and runs an HTTP overload while it is observed live in Grafana. The same run triggers alert rules that Alertmanager routes as notifications, a log line in Loki links to the trace of the request behind it, and Kong and agentgateway export telemetry as well.",
@@ -160,7 +167,7 @@ export const overview: LocalizedDocsPage = {
       {
         heading: "機能確認シナリオ",
         body: [
-          "シナリオ1は、テストツールでデモアプリの動作を検証します。シナリオ2〜7は、それぞれ上の図の破線の連携を1つずつオンにして、その機能を確認します。順番はサイドバーのとおりです。",
+          "シナリオ1は、テストツールでデモアプリの動作を検証します。シナリオ2〜8は、それぞれ上の図の破線の連携を1つずつオンにして、その機能を確認します。順番はサイドバーのとおりです。",
         ],
         subsections: [
           {
@@ -185,28 +192,35 @@ export const overview: LocalizedDocsPage = {
             ],
           },
           {
-            heading: "シナリオ4: Keycloakの利用",
+            heading: "シナリオ4: JWT認証の検証",
+            href: "/docs/scenario-auth",
+            body: [
+              "APIのJWT認証を、手作業とテストで確かめます。トークンを読み、公開されたJWKSで検証し、トークンが必要なルート(ログイン・ヘルスチェック・JWKS以外のすべて)を確認し、拒否されるべきトークンを試し、期限切れになる様子を見て、それを保証するテストを実行します。",
+            ],
+          },
+          {
+            heading: "シナリオ5: Keycloakの利用",
             href: "/docs/scenario-keycloak",
             body: [
               "モックのログインを本物に置き換えます。ログイン画面にKeycloakの選択肢(サインアップ付き)が加わり、Keycloakで認証すると、backendは同じPOST /transactionsでKeycloakが発行したトークンを受け付けます。そのうえで、backendが実際にトークンを検証していることを確認します。",
             ],
           },
           {
-            heading: "シナリオ5: Vaultの利用",
+            heading: "シナリオ6: Vaultの利用",
             href: "/docs/scenario-vault",
             body: [
               "backendの設定からデータベースのパスワードを取り除きます。backendは起動時にVaultへ認証情報を要求し、Vaultがその場で短命なMySQLユーザーを作成します。Vaultなしではbackendが失敗し、Vaultありでは動作することを確認し、最後にVaultが作成したユーザーを確認します。",
             ],
           },
           {
-            heading: "シナリオ6: agentgateway経由でのMCPアクセス",
+            heading: "シナリオ7: agentgateway経由でのMCPアクセス",
             href: "/docs/scenario-agentgateway",
             body: [
               "backendへMCPツールとして到達する、もう1つの経路です。backend自身の/mcpとは別に、agentgatewayはMCPツールをOpenAPIのSpecファイル(openapi.yaml)だけから作成します。ゲートウェイ経由と実際のMCPクライアントからツールを呼び出し、ゲートウェイのダッシュボードを確認します。",
             ],
           },
           {
-            heading: "シナリオ7: オブザーバビリティ",
+            heading: "シナリオ8: オブザーバビリティ",
             href: "/docs/scenario-observability",
             body: [
               "backendのOpenTelemetryエクスポート(トレース・メトリクス・ログ。既定ではオフ)を有効にし、HTTPの過負荷を実行して、その様子をGrafanaでライブに観察します。同じ実行でアラートルールが発火してAlertmanagerが通知に振り分け、Lokiのログ行からそのリクエストのトレースへ遷移でき、Kongとagentgatewayもテレメトリーを送信します。",

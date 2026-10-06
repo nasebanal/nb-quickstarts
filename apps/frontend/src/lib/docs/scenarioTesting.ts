@@ -24,7 +24,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             "(the frontend's calls are made against a mock built from the same file, with no real backend). " +
             "Kong can route the frontend to that mock without a " +
             "frontend change ([Scenario 2](/docs/scenario-kong)); agentgateway builds its MCP tools from the same " +
-            "file ([Scenario 6](/docs/scenario-agentgateway)).",
+            "file ([Scenario 7](/docs/scenario-agentgateway)).",
           "Every test command leaves an HTML report (git-ignored, regenerated on each run). Open the file " +
             "directly in a browser, or serve its folder with python3 -m http.server.",
         ],
@@ -163,7 +163,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             heading: "Evaluation",
             body: [
               "All 20 scenarios pass, and 100% of paths, methods and response codes are covered. The scenarios are " +
-                "the requests built from the contract plus 15 examples checked in next to it (shared/openapi/examples), " +
+                "the requests built from the contract plus 20 examples checked in next to it (shared/openapi/examples), " +
                 "so the error cases and the authenticated calls are exercised as well.",
             ],
           },
@@ -183,7 +183,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             body: [
               "Locust runs against the running apps stack (make apps:up first) and reports response times and failures per endpoint. The available scenarios are HTTP, GraphQL " +
                 "and MySQL, an overload scenario, and the same overload sent through Kafka; [Scenario 3](/docs/scenario-kafka) " +
-                "and [Scenario 7](/docs/scenario-observability) use it to show the effect of an overload and how " +
+                "and [Scenario 8](/docs/scenario-observability) use it to show the effect of an overload and how " +
                 "Kafka and observability each respond. The report is locust/logs/<timestamp>/report.html. " +
                 "make locust:load is a separate command from the test targets (and is not run by make all:test), since it puts sustained load on the stack.",
             ],
@@ -266,7 +266,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             "応答するか)を検証し、コンシューマー側にはmockを提供します(frontendの呼び出しを、同じファイルから" +
             "作ったモックに対して行い、実際のbackendは使いません)。" +
             "Kongはfrontendを変更せずに、そのモックへ経路を切り替えられます([シナリオ2](/docs/scenario-kong))。" +
-            "agentgatewayも、同じファイルからMCPツールを作ります([シナリオ6](/docs/scenario-agentgateway))。",
+            "agentgatewayも、同じファイルからMCPツールを作ります([シナリオ7](/docs/scenario-agentgateway))。",
           "どのテストコマンドも、HTMLレポートを出力します(gitignore対象で、実行のたびに再生成されます)。" +
             "ファイルをブラウザで直接開くか、フォルダをpython3 -m http.serverで配信して参照します。",
         ],
@@ -406,7 +406,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             heading: "評価結果",
             body: [
               "20シナリオすべてが成功し、パス・メソッド・レスポンスコードの100%をカバーしました。シナリオは、" +
-                "コントラクトから作ったリクエストと、同じ場所(shared/openapi/examples)にチェックインした15個のexampleで構成されるため、" +
+                "コントラクトから作ったリクエストと、同じ場所(shared/openapi/examples)にチェックインした20個のexampleで構成されるため、" +
                 "エラーケースと認証つきの呼び出しも実行されます。",
             ],
           },
@@ -424,7 +424,7 @@ export const scenarioTesting: LocalizedDocsPage = {
             body: [
               "Locustは、稼働中のappsスタック(先にmake apps:up)に対して実行し、エンドポイントごとの応答時間と失敗を報告します。用意されているシナリオは、HTTP・GraphQL・MySQL、" +
                 "overloadシナリオ、同じ負荷をKafka経由にしたものです。[シナリオ3](/docs/scenario-kafka)と" +
-                "[シナリオ7](/docs/scenario-observability)は、これを使って、過負荷が何を起こし、Kafkaとオブザーバビリティが" +
+                "[シナリオ8](/docs/scenario-observability)は、これを使って、過負荷が何を起こし、Kafkaとオブザーバビリティが" +
                 "それぞれどう応えるかを示します。レポートは locust/logs/<タイムスタンプ>/report.html です。" +
                 "make locust:load はtest系のターゲットとは別のコマンドで(make all:testでは実行されません)、スタックに持続的な負荷をかけるためです。",
             ],

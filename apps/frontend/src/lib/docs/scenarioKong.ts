@@ -81,6 +81,11 @@ export const scenarioKong: LocalizedDocsPage = {
             "nor anything hitting /api/* needs to change at all. Host/Port here are Docker Compose " +
             "service names on apps-network, not localhost - only resolvable from inside that network, " +
             "which is why Kong itself joins it.",
+          "Every API route needs a bearer token now, and the mock answers only the one token its contract " +
+            "examples carry (the fixed demo token), not the token a login hands out. So kong/conf/declarative.yml " +
+            "ships a request-transformer plugin on apps_backend, named mock-demo-token and switched off, that " +
+            "swaps the demo token in for whatever the client sent. You switch it on together with the target " +
+            "in step 4; against the real backend it stays off.",
         ],
         table: {
           headers: ["Target", "Host", "Port", "Path"],
@@ -103,11 +108,15 @@ export const scenarioKong: LocalizedDocsPage = {
         bullets: [
           "make kong:open (or open http://localhost:8002) → Gateway Services → apps_backend → Edit.",
           "Set Host / Port / Path to one of the targets above, then Save.",
-          "curl http://localhost:8000/api/accounts, or reload the frontend's account page (the checkboxes are " +
+          "Pointing at the mock? Also switch on the mock-demo-token plugin: apps_backend → Plugins → " +
+            "request-transformer (mock-demo-token) → enable, or curl -X PATCH http://localhost:8001/plugins/mock-demo-token " +
+            "-d enabled=true.",
+          "curl -H \"Authorization: Bearer $TOKEN\" http://localhost:8000/api/accounts (a token from POST " +
+            "/api/auth/login - see step 5), or reload the frontend's account page (the checkboxes are " +
             "checked once when the page loads, so a reload is needed), to confirm - allow a couple of seconds " +
             "for the change to propagate.",
           "To go back to the real backend: edit apps_backend again, Host backend / Port 8080 / Path " +
-            "empty, Save.",
+            "empty, Save - and switch the mock-demo-token plugin off again.",
         ],
       },
       {
@@ -122,7 +131,11 @@ export const scenarioKong: LocalizedDocsPage = {
         terminal: {
           lines: [
             {
-              text: "$ curl -s http://localhost:8000/api/accounts",
+              text: "$ TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login -H 'content-type: application/json' -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')",
+              tone: "muted",
+            },
+            {
+              text: "$ curl -s -H \"Authorization: Bearer $TOKEN\" http://localhost:8000/api/accounts",
               tone: "muted",
             },
             {
@@ -134,9 +147,14 @@ export const scenarioKong: LocalizedDocsPage = {
               tone: "muted",
             },
             { text: "host: specmatic-mock port: 9091", tone: "info" },
+            {
+              text: "$ curl -s -X PATCH http://localhost:8001/plugins/mock-demo-token -d enabled=true",
+              tone: "muted",
+            },
+            { text: "enabled: true", tone: "info" },
             { text: "" },
             {
-              text: "$ curl -s http://localhost:8000/api/accounts",
+              text: "$ curl -s -H \"Authorization: Bearer $TOKEN\" http://localhost:8000/api/accounts",
               tone: "muted",
             },
             {
@@ -267,6 +285,11 @@ export const scenarioKong: LocalizedDocsPage = {
             "代わりに同じ契約由来のモックを指すよう変更するだけで、frontend側も/api/*を叩く側も一切変更" +
             "不要です。ここでのHost/PortはDocker Composeのサービス名であり、apps-network内からしか解決" +
             "できません(localhostではない)。Kong自身がこのネットワークに参加しているのはこのためです。",
+          "APIはすべてbearerトークンが必要になり、モックが答えるのは契約のexampleに書かれた1つのトークン" +
+            "(固定のデモトークン)だけで、ログインで得たトークンには答えません。そのためkong/conf/declarative.ymlには、" +
+            "apps_backendに付けたrequest-transformerプラグイン(名前はmock-demo-token、初期は無効)があり、" +
+            "クライアントが送ったトークンをデモトークンに差し替えます。手順4で向き先と一緒にオンにします。" +
+            "実backendに向けているときはオフのままです。",
         ],
         table: {
           headers: ["向き先", "Host", "Port", "Path"],
@@ -289,10 +312,14 @@ export const scenarioKong: LocalizedDocsPage = {
         bullets: [
           "make kong:open(またはhttp://localhost:8002を開く)→ Gateway Services → apps_backend → Edit。",
           "Host / Port / Pathを上の表いずれかに設定してSave。",
-          "curl http://localhost:8000/api/accounts、またはfrontendの勘定科目ページのリロード(チェックボックスは" +
+          "モックに向けるときは、mock-demo-tokenプラグインもオンにします: apps_backend → Plugins → " +
+            "request-transformer(mock-demo-token)→ 有効化、またはcurl -X PATCH http://localhost:8001/plugins/mock-demo-token " +
+            "-d enabled=true。",
+          "curl -H \"Authorization: Bearer $TOKEN\" http://localhost:8000/api/accounts(トークンはPOST " +
+            "/api/auth/loginで取得 — 手順5を参照)、またはfrontendの勘定科目ページのリロード(チェックボックスは" +
             "ページを開いたときに一度だけ判定されるため、リロードが必要です)で確認します " +
             "— 反映まで数秒かかることがあります。",
-          "実backendに戻すには: apps_backendを再度編集し、Host backend / Port 8080 / Pathは空でSave。",
+          "実backendに戻すには: apps_backendを再度編集し、Host backend / Port 8080 / Pathは空でSaveし、mock-demo-tokenプラグインもオフに戻します。",
         ],
       },
       {
@@ -306,7 +333,11 @@ export const scenarioKong: LocalizedDocsPage = {
         terminal: {
           lines: [
             {
-              text: "$ curl -s http://localhost:8000/api/accounts",
+              text: "$ TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login -H 'content-type: application/json' -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')",
+              tone: "muted",
+            },
+            {
+              text: "$ curl -s -H \"Authorization: Bearer $TOKEN\" http://localhost:8000/api/accounts",
               tone: "muted",
             },
             {
@@ -318,9 +349,14 @@ export const scenarioKong: LocalizedDocsPage = {
               tone: "muted",
             },
             { text: "host: specmatic-mock port: 9091", tone: "info" },
+            {
+              text: "$ curl -s -X PATCH http://localhost:8001/plugins/mock-demo-token -d enabled=true",
+              tone: "muted",
+            },
+            { text: "enabled: true", tone: "info" },
             { text: "" },
             {
-              text: "$ curl -s http://localhost:8000/api/accounts",
+              text: "$ curl -s -H \"Authorization: Bearer $TOKEN\" http://localhost:8000/api/accounts",
               tone: "muted",
             },
             {

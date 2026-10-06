@@ -11,6 +11,10 @@ services:
       # dir with no flag to redirect elsewhere - mount that straight onto
       # the host instead, same pattern as specmatic/docker-compose.yml.
       - ./report:/zap/wrk:rw
+      # Hook scripts for the scan scripts (--hook): zap:api-scan adds a bearer token to every request.
+      - ./hooks:/zap/hooks:ro
+    environment:
+      ZAP_BEARER_TOKEN: ${ZAP_BEARER_TOKEN:-}
     networks:
       - apps-network
 

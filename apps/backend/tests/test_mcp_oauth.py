@@ -11,7 +11,7 @@ import time
 from urllib.parse import parse_qs, urlparse
 
 from app import mcp_oauth
-from app.auth import issue_token
+from app.jwt_tokens import decode_token, issue_token
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
@@ -70,7 +70,7 @@ def test_unauthenticated_request_points_the_client_at_the_metadata(oauth_client)
 
 
 def test_invalid_token_is_rejected_with_the_same_challenge(oauth_client):
-    response = oauth_client.get("/protected", headers={"Authorization": "Bearer nb1~bogus~bogus"})
+    response = oauth_client.get("/protected", headers={"Authorization": "Bearer not-a-jwt"})
     assert response.status_code == 401
     assert "resource_metadata" in response.headers["www-authenticate"]
 
@@ -121,7 +121,7 @@ def test_token_is_issued_to_whoever_signed_in(oauth_client):
             "code_verifier": verifier,
         },
     ).json()["access_token"]
-    assert access_token == issue_token("alice")
+    assert decode_token(access_token)["sub"] == "alice"
 
 
 def test_wrong_pkce_verifier_is_rejected(oauth_client):

@@ -20,7 +20,7 @@ describe("api client against the Specmatic contract mock", () => {
   it("login returns a token and username", async () => {
     const result = await login("demo", "demo");
     expect(result).toEqual({
-      token: "nb1~ZGVtbw~o8ULBzbbQm6Lrym32BZVUdAXhtlQYQJL1emk2ZCkMqY",
+      token: "eyJhbGciOiJSUzI1NiIsImtpZCI6Im1YZmJOUEFmS0M0TUN1ZDAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJzdWIiOiJkZW1vIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGVtbyIsImF1ZCI6Im5iLXF1aWNrc3RhcnRzLWFwaSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.egX-L8FA_KK2GhL7Gsg2mYtsWDhmxDxCz6P1h7jUMSAu5xU2oTb5fbib4vBVpay-ExfdBbOvyJ2qDx3M2t2XdrqsdkyWo-GVZFgXCBLVjPY_8s8-CGaVSnhOJMJ2bZOsGHnMTd9ay5LrKw5hHTVAFK1V0Gf9Sk3eqQNIkk987IhEi6b7g2pWE8AS9BrVt9RbRSANo8I_iWVPHpQCF-KsTizgHciTuHvDS0viGa-w_4N8o3nXSMIeTxhuzVgOAJKfccDYhMpUZXc6m0Sco0sxNkGY-J-5p1FEAmEaZ5r_mqWvPKm3xXJ1cr1L5WiJrUY9GyFs2uN0P6T-Jn4ynBpA5Q",
       username: "demo",
     });
   });
@@ -30,18 +30,26 @@ describe("api client against the Specmatic contract mock", () => {
   });
 
   it("listTransactions returns an array of Transactions", async () => {
-    expect(await listTransactions()).toEqual([
+    const { token } = await login("demo", "demo");
+    expect(await listTransactions(token)).toEqual([
       { id: 1, name: "Cash", quantity: 100000, source: "seed", createdAt: "2024-01-01T00:00:00Z" },
       { id: 2, name: "Rent Expense", quantity: 30000, source: "seed", createdAt: "2024-01-01T00:00:00Z" },
     ]);
   });
 
   it("listAccounts returns an array of AccountBalance", async () => {
-    expect(await listAccounts()).toEqual([
+    const { token } = await login("demo", "demo");
+    expect(await listAccounts(token)).toEqual([
       { name: "Cash", balance: 120000, eventCount: 3 },
       { name: "Rent Expense", balance: 30000, eventCount: 1 },
       { name: "Sales Revenue", balance: 50000, eventCount: 1 },
     ]);
+  });
+
+  it("listTransactions and listAccounts with an invalid token throw UnauthorizedError", async () => {
+    // The mock answers 401 for the token written into the contract's 401 examples.
+    await expectUnauthorized(listTransactions("invalid-token"), "invalid or missing token");
+    await expectUnauthorized(listAccounts("invalid-token"), "invalid or missing token");
   });
 
   it("createTransaction with a valid token returns the created Transaction", async () => {
@@ -56,7 +64,7 @@ describe("api client against the Specmatic contract mock", () => {
     });
   });
 
-  it.each(["invalid-token", "unrecognised-token", "nb1~ZGVtbw~invalid-signature"])(
+  it.each(["invalid-token", "unrecognised-token", "a.b.invalid-signature"])(
     "createTransaction with token %s throws UnauthorizedError",
     async (token) => {
       // Use the successful example's body to check token matching independently.

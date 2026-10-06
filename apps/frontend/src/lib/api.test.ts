@@ -31,16 +31,26 @@ describe("api client", () => {
 
   it("listTransactions returns the parsed transaction list", async () => {
     mockFetchOnce([{ id: 1, name: "A", quantity: 1, source: "seed", createdAt: "now" }]);
-    const transactions = await listTransactions();
+    const transactions = await listTransactions("token123");
     expect(transactions).toHaveLength(1);
     expect(transactions[0].name).toBe("A");
   });
 
   it("listAccounts returns the summed-per-name balances", async () => {
     mockFetchOnce([{ name: "A", balance: 12, eventCount: 3 }]);
-    const balances = await listAccounts();
+    const balances = await listAccounts("token123");
     expect(balances).toHaveLength(1);
     expect(balances[0]).toEqual({ name: "A", balance: 12, eventCount: 3 });
+  });
+
+  it("listTransactions and listAccounts send the bearer token", async () => {
+    mockFetchOnce([]);
+    await listTransactions("token123");
+    mockFetchOnce([]);
+    await listAccounts("token123");
+    for (const [, options] of vi.mocked(fetch).mock.calls) {
+      expect(((options as RequestInit).headers as Record<string, string>).Authorization).toBe("Bearer token123");
+    }
   });
 
   it("createTransaction sends a bearer auth header", async () => {

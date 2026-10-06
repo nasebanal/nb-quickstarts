@@ -103,9 +103,13 @@ zap-stop:
 zap-api-scan: apps-network-ensure
 	@echo "⚠️  Running ZAP API scan (active) against apps/backend's live OpenAPI schema..."
 	@mkdir -p zap/report
-	@bin/run_test.sh zap:api-scan zap:report -- \
-		docker compose -p zap -f zap/docker-compose.yml run --rm --name nb-zap-$$(openssl rand -hex 3) zap \
-		zap-api-scan.py -t http://backend:8080/openapi.json -f openapi -z "-silent" \
+	@# The whole API needs a token: log in as the demo user and have ZAP send it with every request (zap/hooks/bearer_token.py).
+	@export ZAP_BEARER_TOKEN=$$(curl -s -X POST http://localhost:8080/auth/login -H 'content-type: application/json' \
+		-d '{"username":"demo","password":"demo"}' | sed -n 's/.*"token":"\([^"]*\)".*/\1/p'); \
+	test -n "$$ZAP_BEARER_TOKEN" || { echo "Could not log in to apps/backend - is make apps:up running?"; exit 70; }; \
+	bin/run_test.sh zap:api-scan zap:report -- \
+		docker compose -p zap -f zap/docker-compose.yml run --rm -e ZAP_BEARER_TOKEN --name nb-zap-$$(openssl rand -hex 3) zap \
+		zap-api-scan.py -t http://backend:8080/openapi.json -f openapi -z "-silent" --hook /zap/hooks/bearer_token.py \
 		-r api-scan-report.html -J api-scan-report.json -I
 	@echo "Report: zap/report/api-scan-report.html"
 
