@@ -137,6 +137,9 @@ consumers:
     jwt_secrets:
       - key: http://localhost:8080
         algorithm: RS256
+        # The HMAC shared secret does not apply to RS256 (only the public key below verifies). Without this
+        # line Kong generates a random one on every import and shows it in Kong Manager.
+        secret: null
         rsa_public_key: |
           -----BEGIN PUBLIC KEY-----
           MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvG017uolFi2/VSJwcxfr

@@ -733,6 +733,13 @@ body:has(> .nb-header) {
   margin-bottom: 20px;
 }
 
+/* A long unbroken string (a path, a header name) in a table's last, descriptive column wraps instead of pushing
+   the table past the page. The other columns hold short names and keep their normal line breaking. */
+.nb-docs-section table th:last-child,
+.nb-docs-section table td:last-child {
+  overflow-wrap: anywhere;
+}
+
 /* Comparison tables (first header empty): the first column only labels the rows, so it gets
    real room - the labels ("date-time型(RFC 3339)の準拠性", "テストシナリオ") stay on one line
    at the usual width instead of wrapping in a narrow column. */
