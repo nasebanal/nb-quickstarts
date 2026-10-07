@@ -100,3 +100,18 @@ test("a damaged cookie means signed out, and the server clears it", async ({ pag
   await page.waitForURL((url) => !url.pathname.startsWith("/accounts"));
   expect(await sessionCookie(context)).toBeUndefined();
 });
+
+test("the landing page sends a signed-in viewer straight to /accounts, in any tab", async ({ page, context }) => {
+  await login(page);
+
+  const other = await context.newPage();
+  await other.goto("/ja");
+  await other.waitForURL("**/ja/accounts");
+  await expect(other.getByTestId("balance-table")).toBeVisible();
+
+  // Signed out, the landing page stays where it is and offers the login.
+  await other.getByTestId("user-menu-button").click();
+  await other.getByTestId("logout-link").click();
+  await other.waitForURL((url) => !url.pathname.startsWith("/ja/accounts"));
+  await expect(other.getByTestId("login-open")).toBeVisible();
+});

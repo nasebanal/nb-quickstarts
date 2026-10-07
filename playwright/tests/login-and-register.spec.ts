@@ -84,7 +84,7 @@ test("header login/logout link", async ({ page }) => {
   await expect(page.getByTestId("header-login-link")).toBeVisible();
 });
 
-test("logo click from /accounts navigates home and keeps the session", async ({ page }) => {
+test("logo click from /accounts goes home, and a signed-in viewer is sent straight back to /accounts", async ({ page }) => {
   await page.goto("/");
   await page.getByTestId("login-open").click();
   await page.getByTestId("username-input").fill("demo");
@@ -99,7 +99,8 @@ test("logo click from /accounts navigates home and keeps the session", async ({ 
   // rather than bouncing them back to a logged-out state.
   await page.getByRole("button", { name: "NASEBANAL Tools" }).click();
 
-  await expect(page).toHaveURL(/\/(en|ja)$/);
+  // The landing page only offers a login, so a signed-in viewer goes straight on to the app.
+  await expect(page).toHaveURL(/\/accounts$/);
   await page.getByTestId("user-menu-button").click();
   await expect(page.getByTestId("user-menu-name")).toHaveText("Demo User");
   await expect(page.getByTestId("logout-link")).toBeVisible();
