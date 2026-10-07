@@ -10,6 +10,36 @@ const TOP = 96;
 const HEADER_Y = 10;
 const HEADER_H = 50;
 const MARK = "seq-arrow";
+const NOTE_FONT = 12;
+const NOTE_PAD = 12;
+const NOTE_LINE = 16;
+const NOTE_MAX_TEXT_W = 340;
+
+// SVG cannot size a box to its text, so the width is estimated from the characters: full-width (CJK) ones are
+// about one em wide, the rest about 0.55 em.
+const textWidth = (text: string) => [...text].reduce((sum, ch) => sum + (ch.charCodeAt(0) > 255 ? NOTE_FONT : NOTE_FONT * 0.55), 0);
+
+// Breaks a note into lines no wider than `max` (at a space when there is one, else between characters).
+function wrapNote(text: string, max: number): string[] {
+  const lines: string[] = [];
+  let line = "";
+  for (const ch of text) {
+    if (line && textWidth(line + ch) > max) {
+      const space = line.lastIndexOf(" ");
+      if (ch !== " " && space > 0) {
+        lines.push(line.slice(0, space));
+        line = line.slice(space + 1) + ch;
+      } else {
+        lines.push(line);
+        line = ch === " " ? "" : ch;
+      }
+    } else {
+      line += ch;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
 
 export function SequenceDiagram({ sequence }: { sequence: DocsSequence }) {
   const { participants, steps, frames = [], summary } = sequence;
@@ -66,12 +96,21 @@ export function SequenceDiagram({ sequence }: { sequence: DocsSequence }) {
           const top = rowTop(i);
           if (step.kind === "note") {
             const cx = x(step.at);
-            const noteW = 260;
+            const lines = wrapNote(step.text, NOTE_MAX_TEXT_W);
+            const noteW = Math.max(...lines.map(textWidth)) + NOTE_PAD * 2;
+            const noteH = lines.length * NOTE_LINE + NOTE_PAD;
+            // Centered on its column, but kept inside the diagram.
+            const left = Math.min(Math.max(cx - noteW / 2, 8), W - 8 - noteW);
+            const boxTop = top + (ROW - noteH) / 2;
             return (
               <g key={i}>
-                <rect x={cx - noteW / 2} y={top + 12} width={noteW} height={ROW - 24} rx={4} className="nb-seq-note" />
-                <text x={cx} y={top + ROW / 2} textAnchor="middle" dominantBaseline="central" className="nb-seq-note-text">
-                  {step.text}
+                <rect x={left} y={boxTop} width={noteW} height={noteH} rx={4} className="nb-seq-note" />
+                <text x={left + noteW / 2} y={boxTop + noteH / 2} textAnchor="middle" dominantBaseline="central" className="nb-seq-note-text">
+                  {lines.map((line, lineIndex) => (
+                    <tspan key={lineIndex} x={left + noteW / 2} dy={lineIndex === 0 ? -((lines.length - 1) * NOTE_LINE) / 2 : NOTE_LINE}>
+                      {line}
+                    </tspan>
+                  ))}
                 </text>
               </g>
             );

@@ -105,7 +105,7 @@ export const gettingStarted: LocalizedDocsPage = {
             "make apps:sql opens phpMyAdmin already logged in to " +
             "demo (no password prompt - it connects as root for this local demo), with the two tables, " +
             "transactions and users, in the left-hand list. It also lets you click through the rows, and " +
-            "shows mysql.user, where the users Vault creates in Scenario 6 appear.",
+            "shows mysql.user, where the users Vault creates in Scenario 5 appear.",
           "In the transactions table the new row is at the bottom - Cash, 1000, source api (recorded through " +
             "the REST API; the first five rows are seed data). From the terminal, make apps:mysql opens a mysql " +
             "shell, or runs one statement:",
@@ -145,7 +145,7 @@ export const gettingStarted: LocalizedDocsPage = {
         closing: [
           "Real output. Try it in step with the app: record a transaction and a new transactions row appears; " +
           "save a new display name on the Profile page and the users row changes; log in through Keycloak " +
-          "once (Scenario 5) and a keycloak row is created for you. A balance is the SUM of an account's " +
+          "once (Scenario 4) and a keycloak row is created for you. A balance is the SUM of an account's " +
           "rows: SELECT name, SUM(quantity) FROM transactions GROUP BY name. The Overview page's ER diagram " +
           "shows every column.",
         ],
@@ -181,7 +181,7 @@ export const gettingStarted: LocalizedDocsPage = {
         body: [
           "The backend serves MCP natively at /mcp, and MCP Inspector (started with apps:up) is the quickest " +
             "way to try it. Its server list is fixed to two endpoints: apps-backend (this one) and agentgateway " +
-            "(Scenario 7, which only connects while make agentgateway:up is running).",
+            "(Scenario 6, which only connects while make agentgateway:up is running).",
         ],
         bullets: [
           "Flip the switch on the apps-backend card to connect - it turns green and shows Connected.",
@@ -224,7 +224,7 @@ export const gettingStarted: LocalizedDocsPage = {
         heading: "Checking with MCP clients other than Inspector",
         body: [
           "MCP Inspector is only one client - any MCP client that speaks Streamable HTTP can use the same " +
-            "endpoint (agentgateway's own is registered in Scenario 7). Here is how the two Claude clients differ:",
+            "endpoint (agentgateway's own is registered in Scenario 6). Here is how the two Claude clients differ:",
         ],
         subsections: [
           {
@@ -259,7 +259,7 @@ export const gettingStarted: LocalizedDocsPage = {
               "/mcp is behind a login (every tool except health, login and the JWKS needs a token, and this is how an MCP " +
                 "client gets one), so after restarting: open /mcp, pick apps-backend (it says needs authentication) and Authenticate.",
               "The browser opens the frontend's /mcp-authorize page - the app's own login: sign in with the Demo login " +
-                "(demo / demo). Logging in with Keycloak instead is covered in [Scenario 5](/docs/scenario-keycloak).",
+                "(demo / demo). Logging in with Keycloak instead is covered in [Scenario 4](/docs/scenario-keycloak).",
               "Press Allow (Deny tells the client access_denied). The browser lands on Claude Code's own " +
                 "\"Authentication successful\" page - close the tab, then ask for get_me.",
               "Claude Code keeps the token, so the browser should open again only after claude mcp remove or when " +
@@ -335,13 +335,13 @@ export const gettingStarted: LocalizedDocsPage = {
             bullets: [
               "The backend is the authorization server (app/mcp_oauth.py): protected-resource and " +
                 "authorization-server metadata, dynamic client registration, authorization code + PKCE (S256). The " +
-                "login itself is the frontend's, so a Keycloak login works with no extra code too (Scenario 5) - and the access " +
+                "login itself is the frontend's, so a Keycloak login works with no extra code too (Scenario 4) - and the access " +
                 "token that comes out is the ordinary demo token.",
               "client_id and the code are signed and self-contained (no store, any backend instance verifies " +
                 "them); the code lives 60 seconds. Registration accepts only loopback http:// redirect URIs and " +
                 "claude.ai / claude.com callbacks. The OAuth routes are tagged mcp-oauth and left out of the tool list.",
               "MCP Inspector is let in by the demo token in its config; any other client without a token gets 401. " +
-                "agentgateway is unaffected (it calls the REST routes, never /mcp - see Scenario 7).",
+                "agentgateway is unaffected (it calls the REST routes, never /mcp - see Scenario 6).",
               "Editing backend code while an MCP client is connected makes uvicorn's reload hang on the open " +
                 "GET /mcp stream - use docker restart nb-backend. Turn the login off with " +
                 "APPS_MCP_AUTH_REQUIRED=false in .env and make apps:restart.",
@@ -481,7 +481,7 @@ export const gettingStarted: LocalizedDocsPage = {
         body: [
           "いま記帳したエントリは、MySQLの1行になっています。いちばん手軽に見る方法はSQLクライアントです: make apps:sqlでphpMyAdminが、demoにログイン済みの状態で" +
             "開きます(パスワード入力は不要 — このローカルデモではrootで接続します)。左の一覧に2つのテーブル、" +
-            "transactionsとusersが並び、行をクリックして辿れます。シナリオ6でVaultが作るユーザーが現れる" +
+            "transactionsとusersが並び、行をクリックして辿れます。シナリオ5でVaultが作るユーザーが現れる" +
             "mysql.userも見られます。",
           "transactionsテーブルでは、新しい行が末尾に入っています — Cash、1000、sourceはapi(REST API経由で記帳したため。" +
             "最初の5行はシードデータです)。ターミナルからは、make apps:mysqlでmysqlシェルを開くか、SQLを1文だけ実行できます:",
@@ -520,7 +520,7 @@ export const gettingStarted: LocalizedDocsPage = {
         },
         closing: [
           "実際の出力です。アプリの操作と並べて試してみてください: 取引を記帳するとtransactionsに新しい行が増え、" +
-          "プロフィール画面で表示名を保存するとusersの行が変わり、Keycloakで一度ログインすれば(シナリオ5)" +
+          "プロフィール画面で表示名を保存するとusersの行が変わり、Keycloakで一度ログインすれば(シナリオ4)" +
           "keycloakの行が自動で作られます。残高は科目の行のSUMです: SELECT name, SUM(quantity) FROM transactions " +
           "GROUP BY name。すべてのカラムは概要ページのER図にあります。",
         ],
@@ -556,7 +556,7 @@ export const gettingStarted: LocalizedDocsPage = {
         body: [
           "backendは/mcpでMCPをネイティブに提供しており、試すにはapps:upと一緒に起動するMCP Inspectorが手軽です。" +
             "サーバー一覧は2つのエンドポイントに固定されています: apps-backend(こちら)と、agentgateway" +
-            "(シナリオ7。make agentgateway:upが動いている間だけ接続できます)。",
+            "(シナリオ6。make agentgateway:upが動いている間だけ接続できます)。",
         ],
         bullets: [
           "apps-backendカードのスイッチをオンにして接続します。緑になりConnectedと表示されます。",
@@ -599,7 +599,7 @@ export const gettingStarted: LocalizedDocsPage = {
         heading: "Inspector以外のMCPクライアントでの確認手順",
         body: [
           "MCP Inspectorは数あるクライアントの1つで、Streamable HTTPを話せるMCPクライアントなら同じ" +
-            "エンドポイントを使えます(agentgatewayのエンドポイントはシナリオ7で登録します)。2つのClaudeクライアントの違いは次のとおりです:",
+            "エンドポイントを使えます(agentgatewayのエンドポイントはシナリオ6で登録します)。2つのClaudeクライアントの違いは次のとおりです:",
         ],
         subsections: [
           {
@@ -633,7 +633,7 @@ export const gettingStarted: LocalizedDocsPage = {
               "/mcpはログインが必要です(health・login・JWKS以外のツールにはトークンが必要で、MCPクライアントはこの方法で入手します)。" +
                 "再起動後、/mcpでapps-backend(needs authenticationと表示されます)を選んでAuthenticateします。",
               "ブラウザでfrontendの/mcp-authorizeが開きます。アプリ自身のログインで、デモログイン(demo / demo)で" +
-                "サインインします。Keycloakでログインする場合は[シナリオ5](/docs/scenario-keycloak)を参照してください。",
+                "サインインします。Keycloakでログインする場合は[シナリオ4](/docs/scenario-keycloak)を参照してください。",
               "Allowを押します(Denyならクライアントにaccess_deniedが返ります)。ブラウザはClaude Code自身の" +
                 "「Authentication successful」ページに移るので、タブを閉じてget_meを頼んでください。",
               "Claude Codeはトークンを保持するので、ブラウザが再び開くのはclaude mcp removeした後か、トークンの期限(1日)が切れた後、backendの署名鍵を変えた後だけです。" +
@@ -708,12 +708,12 @@ export const gettingStarted: LocalizedDocsPage = {
             bullets: [
               "backend(app/mcp_oauth.py)が認可サーバーです。protected-resourceと認可サーバーのメタデータ、" +
                 "動的クライアント登録、認可コード+PKCE(S256)を提供します。ログイン自体はfrontendのものなので、" +
-                "Keycloakのログインも追加コードなしで使え(シナリオ5)、出てくるアクセストークンは通常のデモトークンです。",
+                "Keycloakのログインも追加コードなしで使え(シナリオ4)、出てくるアクセストークンは通常のデモトークンです。",
               "client_idとcodeは署名つきで自己完結しています(保存先なし、どのbackendインスタンスでも検証できます)。" +
                 "codeの有効期間は60秒です。登録できるリダイレクトURIはループバックのhttp://と、claude.ai / " +
                 "claude.comのコールバックだけです。OAuthのルートはmcp-oauthタグを付けて、ツール一覧から外しています。",
               "MCP Inspectorは設定内のデモトークンで通ります。トークンを持たないほかのクライアントは401になります。" +
-                "agentgatewayは影響を受けません(REST経路を呼び、/mcpは使いません — シナリオ7を参照)。",
+                "agentgatewayは影響を受けません(REST経路を呼び、/mcpは使いません — シナリオ6を参照)。",
               "MCPクライアントを接続したままbackendのコードを編集すると、開いたままのGET /mcpストリームに" +
                 "uvicornの再読み込みが阻まれて固まります。docker restart nb-backendを使ってください。" +
                 "ログインを止めるには、.envでAPPS_MCP_AUTH_REQUIRED=falseにしてmake apps:restartします。",

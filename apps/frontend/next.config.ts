@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/docs/testing", destination: "/docs/scenario-testing", permanent: true },
+      // Scenario 2 (JWT authentication) was folded into the Overview's "Authentication with JWT" section.
+      { source: "/docs/scenario-auth", destination: "/docs", permanent: true },
+      { source: `/:lang(${LOCALE_PATTERN})/docs/scenario-auth`, destination: "/:lang/docs", permanent: true },
       {
         source: `/:lang(${LOCALE_PATTERN})/docs/testing`,
         destination: "/:lang/docs/scenario-testing",

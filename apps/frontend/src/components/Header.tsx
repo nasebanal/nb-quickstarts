@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { stripLocalePrefix } from "@/lib/i18n";
 import { useAuth } from "./AuthProvider";
 import { ExternalLinkIcon, GitHubIcon } from "./icons";
@@ -24,9 +24,23 @@ export function Header() {
   const { token } = useAuth();
   const pathname = usePathname();
   const [modalOpen, setModalOpen] = useState(false);
+  // Phones: the links and icons collapse behind a hamburger (same idea as nb-recorder's navbar). On wider
+  // screens .nb-header-actions is always shown and this state does nothing.
+  const [menuOpen, setMenuOpen] = useState(false);
   // stripLocalePrefix first - a locale-prefixed visit (/ja/docs/...) would
   // otherwise never match this check.
   const inDocs = stripLocalePrefix(pathname).startsWith("/docs");
+
+  // A page change closes the menu; so does Escape.
+  useEffect(() => setMenuOpen(false), [pathname]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   return (
     <header className="nb-header">
@@ -57,12 +71,34 @@ export function Header() {
             }
           }}
         >
-          <Image src="/logo.png" alt="NASEBANAL" width={40} height={40} priority />
+          <Image
+            src="/logo.png"
+            alt="NASEBANAL"
+            width={40}
+            height={40}
+            priority
+          />
           <span className="nb-header-title">
             NASEBANAL <span className="nb-nav-brand-demo">Tools</span>
           </span>
         </button>
-        <div className="nb-header-actions">
+        <button
+          type="button"
+          className={`nb-header-hamburger${menuOpen ? " nb-header-hamburger-open" : ""}`}
+          aria-label="Menu"
+          aria-expanded={menuOpen}
+          aria-controls="nb-header-actions"
+          data-testid="header-hamburger"
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+        <div
+          id="nb-header-actions"
+          className={`nb-header-actions${menuOpen ? " nb-header-actions-open" : ""}`}
+        >
           <LocaleLink
             href={localePath("/api-specs")}
             target="_blank"
@@ -103,31 +139,33 @@ export function Header() {
               pattern worth reusing as-is in any other NASEBANAL OSS app's
               header, unlike the rest of this one (built around this app's
               own routes/copy). */}
-          <a
-            href={GITHUB_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nb-icon-button"
-            data-testid="source-code-link"
-            aria-label={t.hero.sourceCodeLabel}
-            title={`${t.hero.sourceCodeLabel} (${t.hero.opensInNewWindow})`}
-          >
-            <GitHubIcon />
-          </a>
-          <LanguageToggle />
-          <ThemeToggle />
-          {token ? (
-            <UserMenu />
-          ) : (
-            <button
-              type="button"
-              className="nb-header-login-link"
-              onClick={() => setModalOpen(true)}
-              data-testid="header-login-link"
+          <div className="nb-header-icons">
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nb-icon-button"
+              data-testid="source-code-link"
+              aria-label={t.hero.sourceCodeLabel}
+              title={`${t.hero.sourceCodeLabel} (${t.hero.opensInNewWindow})`}
             >
-              {t.hero.loginButton}
-            </button>
-          )}
+              <GitHubIcon />
+            </a>
+            <LanguageToggle />
+            <ThemeToggle />
+            {token ? (
+              <UserMenu />
+            ) : (
+              <button
+                type="button"
+                className="nb-header-login-link"
+                onClick={() => setModalOpen(true)}
+                data-testid="header-login-link"
+              >
+                {t.hero.loginButton}
+              </button>
+            )}
+          </div>
         </div>
       </div>
       {modalOpen && <LoginModal onClose={() => setModalOpen(false)} />}

@@ -34,10 +34,51 @@ services:
   - name: apps_backend
     url: http://backend:8080
     routes:
+      # Routes the backend itself leaves open (health, login, the JWKS, the API docs and the MCP
+      # login's OAuth plumbing). They skip the JWT gate below - the frontend's "via Kong" check
+      # (/health) and the login have no token yet. The path is a regex (Kong's router has no
+      # lookahead), so these take priority over the plain /api prefix route below. It keeps the whole
+      # /api/... path (strip_path: false) and request-transformer rebuilds the upstream path from the
+      # captured part: /api/health reaches the backend as /health.
+      - name: apps_backend_public_route
+        paths:
+          - '~/api/(?<rest>(?:health|openapi\.json|docs|redoc|auth/login|\.well-known|oauth)(?:/.*)?)$'
+        strip_path: false
+        plugins:
+          - name: request-transformer
+            config:
+              replace:
+                uri: /$(uri_captures.rest)
+      # Everything else needs a valid backend-issued JWT (Kong's gate; the backend still verifies the
+      # token itself). `jwt` checks the RS256 signature + exp against the consumer's public key below
+      # (matched by the token's `iss`), `acl` then only lets that consumer's group through.
       - name: apps_backend_route
         paths:
           - /api
         strip_path: true
+        plugins:
+          # CORS, answered here: the frontend calls Kong from another origin, so (1) a preflight (OPTIONS,
+          # sent without an Authorization header) must be answered before the jwt gate rejects it, and (2) the
+          # gate's own 401 must carry CORS headers too - without them the browser reports "Failed to fetch"
+          # and the frontend cannot see the 401 it reacts to (an expired token). This plugin runs before jwt
+          # and acl, and sets (replaces) the headers, so the backend's own CORSMiddleware is not doubled up.
+          - name: cors
+            config:
+              origins:
+                - "*"
+              methods: [GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS]
+              headers: [Authorization, Content-Type, Accept]
+              exposed_headers: [Via, X-Specmatic-Result]
+              max_age: 600
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              run_on_preflight: false
+          - name: acl
+            config:
+              allow:
+                - backend-users
     plugins:
       # apps/frontend's "Via Kong" indicator (see api.ts's checkViaKong())
       # detects Kong by reading the `Via` response header Kong itself
@@ -71,7 +112,7 @@ services:
         config:
           replace:
             headers:
-              - "Authorization:Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6Im1YZmJOUEFmS0M0TUN1ZDAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJzdWIiOiJkZW1vIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGVtbyIsImF1ZCI6Im5iLXF1aWNrc3RhcnRzLWFwaSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.egX-L8FA_KK2GhL7Gsg2mYtsWDhmxDxCz6P1h7jUMSAu5xU2oTb5fbib4vBVpay-ExfdBbOvyJ2qDx3M2t2XdrqsdkyWo-GVZFgXCBLVjPY_8s8-CGaVSnhOJMJ2bZOsGHnMTd9ay5LrKw5hHTVAFK1V0Gf9Sk3eqQNIkk987IhEi6b7g2pWE8AS9BrVt9RbRSANo8I_iWVPHpQCF-KsTizgHciTuHvDS0viGa-w_4N8o3nXSMIeTxhuzVgOAJKfccDYhMpUZXc6m0Sco0sxNkGY-J-5p1FEAmEaZ5r_mqWvPKm3xXJ1cr1L5WiJrUY9GyFs2uN0P6T-Jn4ynBpA5Q"
+              - "Authorization:Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6Im1YZmJOUEFmS0M0TUN1ZDAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJzdWIiOiJkZW1vIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGVtbyIsImF1ZCI6Im5iLXF1aWNrc3RhcnRzLWFwaSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjoyNTMzNzA3NjQ4MDB9.UyiPk2jO5eUHGQT3cx3dauWURkwn72UAqnObzYigkNtado0WUhAOiCfdPwZUeL4wOLLLTVMd7Tw3nEROLWB4Y0QFpXNgrjO_160-yhXafwUIyIrL0oBy56RI0wdFtRQ2Q6H3FFgv3BzRVdgPFezHXc6edRJ65i4dInaunGwpfx1xFKlSwlTCEUFNZOddTZsGOazT4xQqUxJylgFiIWssoXeNgxK3GiVvWo0RYwCmzYGQQ94dX25EabUHDyd-NkOh4A-wXmwxgWa-KqSivNf21lyBMXN3yqiittK_UV5QHj3pfxuclLnK6fAjXqSBIVHtnKPpfR8EsQO4lHQigZ6gOg"
       # Sends a trace of each request through the gateway to the OTel
       # Collector (`make observability:up`; it shares apps-network with Kong).
       # The plugin also needs KONG_TRACING_INSTRUMENTATIONS=request in
@@ -82,6 +123,30 @@ services:
           endpoint: http://otel-collector:4318/v1/traces
           resource_attributes:
             service.name: nb-kong
+
+# The backend's own tokens: RS256, signed with apps/backend/app/dev_jwt_key.pem (a checked-in demo
+# key, same one the Specmatic examples and the mock-demo-token below depend on). Kong's OSS `jwt`
+# plugin cannot fetch a JWKS, so the public key is pasted here - regenerate it with
+#   openssl pkey -in apps/backend/app/dev_jwt_key.pem -pubout
+# if the key (or JWT_ISSUER, which is the credential's `key`) is ever changed.
+# Keycloak tokens are not accepted through Kong (a different issuer and a rotating key).
+consumers:
+  - username: backend-users
+    acls:
+      - group: backend-users
+    jwt_secrets:
+      - key: http://localhost:8080
+        algorithm: RS256
+        rsa_public_key: |
+          -----BEGIN PUBLIC KEY-----
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvG017uolFi2/VSJwcxfr
+          oKDhll4i/x31yScBe6nhL7l+L86Za6jGTkhrsNm4yv3O0RPGrA/eiFxM7OimL0c0
+          vckCtP57fusQrnhcoAoqAFcRwtjHabee+G+mP3C5G46nj+1SudRpXFkEBYmjI3CN
+          Aad3MzQUFQ6kMtj8XkcK1KRJx0PRMdDLmZKpUhMIS5JnpMKnlNOQcL/dfQxHWjJr
+          q8OKo2kYBrOl3JTKBWUTLPUWP22wAJUm/EODZ6GT1sUh82YRAsYSNaA9fKdm7qKe
+          N7M7t2D8IEcG3QiG6iH0fvjMRrOjKeFzUWXwLk+AqtuJ6rRiVWDb/89A9Nl0Lhb1
+          JwIDAQAB
+          -----END PUBLIC KEY-----
 
 # You can add more services, routes, plugins here
 # Example:

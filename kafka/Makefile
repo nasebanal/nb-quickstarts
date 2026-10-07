@@ -17,7 +17,7 @@ kafka:
 	@echo "  kafka:down        - Stop and remove Kafka containers, including kafka-bridge if running (topic data preserved)"
 	@echo "  kafka:status      - Check Kafka container status"
 	@echo "  kafka:restart     - Restart Kafka containers (topic data preserved)"
-	@echo "  kafka:reset       - Restart AND wipe topic data (Docker volume: kafka_kafka-data)"
+	@echo "  kafka:reset       - Stop AND wipe topic data (Docker volume: kafka_kafka-data); nothing is started - run kafka:up for a fresh one"
 	@echo ""
 	@echo "Kafka <-> REST Bridge (separate from kafka:up - opt in explicitly):"
 	@echo "  kafka:bridge-up   - Build (if needed) and start kafka-bridge, forwarding topic events to a REST backend"
@@ -98,7 +98,7 @@ kafka-wipe:
 
 kafka-reset:
 	@$(MAKE) kafka-wipe
-	@$(MAKE) kafka-up
+	@echo "Kafka stopped and its topic data wiped. Nothing is started - run 'make kafka:up' for a fresh broker."
 
 kafka-add-topics:
 	@echo "Creating Kafka topic: $${KAFKA_TOPIC_NAME:-quickstart-events}..."

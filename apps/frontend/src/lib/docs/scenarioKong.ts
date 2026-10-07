@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioKong: LocalizedDocsPage = {
   en: {
-    title: "Scenario 3: Switch to Kong",
+    title: "Scenario 2: Switch to Kong",
     description:
       "Kong's apps_backend gateway service proxies http://localhost:8000/api/* to the real backend's " +
       "own root (strip_path: true, so /api/transactions reaches backend:8080/transactions). This scenario " +
@@ -12,10 +12,10 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "Why Kong and Specmatic",
         body: [
-          "Kafka's path (Scenario 4) does not go through Kong: by default the bridge posts to the backend directly. Kong is where the REST clients - the browser, the load tests - are routed, and where a contract mock can be swapped in.",
+          "Kafka's path (Scenario 3) does not go through Kong: by default the bridge posts to the backend directly. Kong is where the REST clients - the browser, the load tests - are routed, and where a contract mock can be swapped in.",
         ],
         bullets: [
-          "Kong: put auth, rate limiting and routing in one gateway in front of the backend, and change where traffic goes at runtime - no application code change.",
+          "Kong: put auth (here, the JWT check at the gate), rate limiting and routing in one gateway in front of the backend, and change where traffic goes at runtime - no application code change.",
           "Specmatic: a mock server generated straight from the OpenAPI contract, and the same contract can verify the real backend, so mock and implementation can't quietly drift apart.",
         ],
       },
@@ -49,13 +49,14 @@ export const scenarioKong: LocalizedDocsPage = {
             "frontend is using and three checkboxes. They are read-only indicators, and each is checked from a real " +
             "response header, not from configuration - Via Kong when the answer carries Kong's Via header. The same " +
             "balances appear either way; only the route changed.",
+          "Kong also checks the login token at the gate. kong/conf/declarative.yml puts the jwt and acl plugins on the /api route, and the only key it trusts is the backend's public key: a request with no token, or a tampered, expired or unsigned (alg none) one, gets 401 from Kong and never reaches the backend. The routes the backend itself leaves open - /health, /auth/login, /openapi.json, /docs, /.well-known/* and /oauth/* - skip the gate, and the cors plugin answers the browser's preflight and puts CORS headers on Kong's own 401, so the frontend can read it. The backend still verifies the token itself. Keycloak tokens (Scenario 4) are not accepted through Kong: they come from another issuer with a rotating key. make kong:test-jwt checks all of this with real requests.",
         ],
         noteTitle: "Kong: DB mode and declarative configuration",
         noteHref: "https://docs.konghq.com/gateway/latest/production/deployment-topologies/db-less-and-declarative-config/",
         note:
           "kong/conf/declarative.yml describes Kong's services, routes and plugins as declarative configuration. In " +
           "DB-less mode (KONG_DB=off) Kong reads only that file and its Admin API is read-only. This repo defaults " +
-          "to DB mode: the file is imported into Postgres on the first start (or by make kong:reset), after which " +
+          "to DB mode: the file is imported into Postgres on the first start (or by make kong:up after make kong:reset, which empties the database), after which " +
           "the same entities can be edited in Kong Manager.",
       },
       {
@@ -84,7 +85,7 @@ export const scenarioKong: LocalizedDocsPage = {
           "Every API route needs a bearer token now, and the mock answers only the one token its contract " +
             "examples carry (the fixed demo token), not the token a login hands out. So kong/conf/declarative.yml " +
             "ships a request-transformer plugin on apps_backend, named mock-demo-token and switched off, that " +
-            "swaps the demo token in for whatever the client sent. You switch it on together with the target " +
+            "swaps the demo token in for whatever the client sent (after the JWT gate has checked the client's own token). You switch it on together with the target " +
             "in step 4; against the real backend it stays off.",
         ],
         table: {
@@ -208,7 +209,7 @@ export const scenarioKong: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ3: Kong経由への切り替え",
+    title: "シナリオ2: Kong経由への切り替え",
     description:
       "Kongのapps_backendというGateway Serviceは、http://localhost:8000/api/*を実際のbackendのルートへ" +
       "そのままプロキシします(strip_path: trueなので、/api/transactionsはbackend:8080/transactionsに届きます)。" +
@@ -218,10 +219,10 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "Kong・Specmaticを使うメリット",
         body: [
-          "Kafkaの経路(シナリオ4)はKongを通りません: ブリッジはデフォルトでbackendへ直接POSTします。Kongは、RESTのクライアント — ブラウザや負荷テスト — をルーティングし、契約モックへ差し替えられる場所です。",
+          "Kafkaの経路(シナリオ3)はKongを通りません: ブリッジはデフォルトでbackendへ直接POSTします。Kongは、RESTのクライアント — ブラウザや負荷テスト — をルーティングし、契約モックへ差し替えられる場所です。",
         ],
         bullets: [
-          "Kong: 認証・レート制限・ルーティングをbackendの前段のゲートウェイに集約でき、向き先の変更もアプリのコードを触らず実行時に行えます。",
+          "Kong: 認証(ここではJWTの検証)・レート制限・ルーティングをbackendの前段のゲートウェイに集約でき、向き先の変更もアプリのコードを触らず実行時に行えます。",
           "Specmatic: OpenAPIの契約からそのままモックサーバーを生成でき、同じ契約で実backendも検証できるため、モックと実装が知らないうちにずれることを防げます。",
         ],
       },
@@ -255,12 +256,13 @@ export const scenarioKong: LocalizedDocsPage = {
             "3つのチェックボックスが表示されています。これらは読み取り専用の表示で、設定からの推測ではなく実際の" +
             "レスポンスヘッダーで判定しています — 応答にKongのViaヘッダーが付いていればVia Kongにチェックが入ります。" +
             "どちらの経路でも同じ残高が表示され、変わったのは経路だけです。",
+          "Kongは、ログインのトークンもゲートで検証します。kong/conf/declarative.ymlは、/apiのルートにjwtプラグインとaclプラグインを付けており、信頼する鍵はbackendの公開鍵だけです。トークンがない、または改ざんされた・期限切れ・署名のない(alg none)トークンのリクエストは、Kongが401を返し、backendには届きません。backend自身が開放しているルート — /health、/auth/login、/openapi.json、/docs、/.well-known/*、/oauth/* — はゲートを通らず、corsプラグインが、ブラウザのプリフライトに答え、Kong自身の401にもCORSヘッダーを付けるので、frontendがその401を読めます。backendも、引き続きトークンを自分で検証します。Keycloakのトークン(シナリオ4)は、発行者が別で鍵も入れ替わるため、Kong経由では受け付けません。make kong:test-jwtが、実際のリクエストで、これらをまとめて確認します。",
         ],
         noteTitle: "Kong: DBモードと宣言的設定",
         noteHref: "https://docs.konghq.com/gateway/latest/production/deployment-topologies/db-less-and-declarative-config/",
         note:
           "kong/conf/declarative.ymlは、Kongのservice・route・pluginを宣言的設定として記述したファイルです。DB-lessモード(KONG_DB=off)ではKongはこのファイルだけを読み、Admin " +
-          "APIは読み取り専用になります。このリポジトリは既定でDBモードで、初回起動時(またはmake kong:reset)にこのファイルがPostgresへ取り込まれ、以後は同じエンティティをKong " +
+          "APIは読み取り専用になります。このリポジトリは既定でDBモードで、初回起動時(またはmake kong:reset でDBを空にしたあとのmake kong:up)にこのファイルがPostgresへ取り込まれ、以後は同じエンティティをKong " +
           "Managerで編集できます。",
       },
       {
@@ -286,9 +288,9 @@ export const scenarioKong: LocalizedDocsPage = {
             "不要です。ここでのHost/PortはDocker Composeのサービス名であり、apps-network内からしか解決" +
             "できません(localhostではない)。Kong自身がこのネットワークに参加しているのはこのためです。",
           "APIはすべてbearerトークンが必要になり、モックが答えるのは契約のexampleに書かれた1つのトークン" +
-            "(固定のデモトークン)だけで、ログインで得たトークンには答えません。そのためkong/conf/declarative.ymlには、" +
+            "(固定デモトークン)だけで、ログインで得たトークンには答えません。そのためkong/conf/declarative.ymlには、" +
             "apps_backendに付けたrequest-transformerプラグイン(名前はmock-demo-token、初期は無効)があり、" +
-            "クライアントが送ったトークンをデモトークンに差し替えます。手順4で向き先と一緒にオンにします。" +
+            "クライアントが送ったトークンを(JWTのゲートがそのトークンを検証したあとで)デモトークンに差し替えます。手順4で向き先と一緒にオンにします。" +
             "実backendに向けているときはオフのままです。",
         ],
         table: {

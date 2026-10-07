@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { scenarioAgentgateway } from "./scenarioAgentgateway";
-import { scenarioAuth } from "./scenarioAuth";
 import { scenarioKafka } from "./scenarioKafka";
 import { scenarioKeycloak } from "./scenarioKeycloak";
 import { scenarioKong } from "./scenarioKong";
@@ -10,16 +9,15 @@ import { scenarioTesting } from "./scenarioTesting";
 import { DOCS_NAV } from "./nav";
 import nextConfig from "../../../next.config";
 
-// Scenario 1 is the Testing page (its URL predates the numbering), then the seven module scenarios.
+// Scenario 1 is the Testing page (its URL predates the numbering), then the six module scenarios.
 const SCENARIOS = [
   ["1", scenarioTesting],
-  ["2", scenarioAuth],
-  ["3", scenarioKong],
-  ["4", scenarioKafka],
-  ["5", scenarioKeycloak],
-  ["6", scenarioVault],
-  ["7", scenarioAgentgateway],
-  ["8", scenarioObservability],
+  ["2", scenarioKong],
+  ["3", scenarioKafka],
+  ["4", scenarioKeycloak],
+  ["5", scenarioVault],
+  ["6", scenarioAgentgateway],
+  ["7", scenarioObservability],
 ] as const;
 
 describe("scenario pages", () => {
