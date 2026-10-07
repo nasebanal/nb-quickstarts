@@ -39,7 +39,7 @@ export default function McpAuthorizePage() {
       .catch(() => undefined); // The name is only for display.
   }, []);
 
-  // Not signed in (and the sessionStorage restore has finished): open the login.
+  // Not signed in (and the session has been asked for): open the login.
   useEffect(() => {
     if (!initializing && request && !token) setLoginOpen(true);
   }, [initializing, request, token]);

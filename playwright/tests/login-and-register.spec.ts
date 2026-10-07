@@ -94,7 +94,7 @@ test("logo click from /accounts navigates home and keeps the session", async ({ 
 
   // The logo now navigates to the locale home ("/", which the root
   // middleware redirects to /en or /ja) instead of reloading in place —
-  // see Header.tsx. AuthProvider persists the token to sessionStorage
+  // see Header.tsx. The session lives in an HttpOnly cookie the server reads
   // (see AuthProvider.tsx), so that navigation keeps the viewer logged in
   // rather than bouncing them back to a logged-out state.
   await page.getByRole("button", { name: "NASEBANAL Tools" }).click();

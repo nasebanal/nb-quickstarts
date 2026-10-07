@@ -49,7 +49,7 @@ export function LoginModal({ onClose, onLoggedIn }: { onClose: () => void; onLog
     setError("");
     try {
       const result = await login(usernameInput, passwordInput);
-      setAuth(result.token, result.username);
+      await setAuth(result.token, result.username);
       onClose();
       if (onLoggedIn) onLoggedIn();
       else navigate("/accounts");

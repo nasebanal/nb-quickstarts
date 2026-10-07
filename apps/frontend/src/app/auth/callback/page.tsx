@@ -22,8 +22,9 @@ export default function AuthCallbackPage() {
     if (started.current) return;
     started.current = true;
     completeKeycloakLogin(new URLSearchParams(window.location.search))
-      .then((session) => {
-        setAuth(session.token, session.username, { provider: "keycloak", idToken: session.idToken });
+      .then(async (session) => {
+        // The cookie is set before the page moves on: the next page asks the server for the session at once.
+        await setAuth(session.token, session.username, { provider: "keycloak", idToken: session.idToken });
         // A login that an MCP client started goes back to its consent page
         // instead of /accounts (see app/mcp-authorize).
         router.replace(takePendingMcpAuthorize() ?? "/accounts");

@@ -3,11 +3,12 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { getMe, type Profile } from "@/lib/api";
 import { keycloakLogoutUrl } from "@/lib/oidc";
+import { type AuthProviderKind, type StoredSession } from "@/lib/session";
 import { useLocale } from "./LocaleProvider";
 
-// "mock" = the demo POST /auth/login (a username, no password);
+// "mock" = the demo POST /auth/login (a username and a password);
 // "keycloak" = a real OIDC login (lib/oidc.ts).
-export type AuthProviderKind = "mock" | "keycloak";
+export type { AuthProviderKind };
 
 interface AuthContextValue {
   token: string | null;
@@ -17,25 +18,34 @@ interface AuthContextValue {
   // once there is a token, and updated by the profile page after a save.
   profile: Profile | null;
   setProfile: (profile: Profile) => void;
-  // True until the sessionStorage restore below has run once. Consumers
+  // True until the session has been asked for once (GET /api/session). Consumers
   // (e.g. the /accounts guard) must not redirect on a missing token while this
   // is true, or a plain page reload would bounce a logged-in viewer home
-  // before the restore has a chance to run.
+  // before the session has a chance to come back.
   initializing: boolean;
-  setAuth: (token: string, username: string, extra?: { provider?: AuthProviderKind; idToken?: string }) => void;
-  logout: () => void;
+  // Both finish only once the server has set / cleared the cookie, so a caller that goes on to navigate (a full page
+  // load, which asks the server for the session at once) is never ahead of the cookie.
+  setAuth: (token: string, username: string, extra?: { provider?: AuthProviderKind; idToken?: string }) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const STORAGE_KEY = "nb-quickstarts-auth";
+// The session lives in an HttpOnly cookie that only the Next.js server reads (app/api/session/route.ts), the same
+// idea as nb-*'s shared session cookie: it survives a reload, is shared by every tab of the browser, and is not in
+// sessionStorage or anywhere else the page's JavaScript could read it from. The page asks the server for it
+// (GET /api/session) when it loads and whenever another tab says it changed. It used to be kept in sessionStorage,
+// which is per tab - a login in one tab meant a login in every other, and the MCP login page (opened in a new tab by
+// the client) always asked for the password again.
+const CHANNEL = "nb-quickstarts-auth";
 
-// Persisted to sessionStorage (cleared when the tab/browser closes, unlike
-// localStorage) rather than kept in-memory-only, so a full page reload -
-// e.g. clicking the logo, which reloads whatever page you're already on -
-// doesn't log the viewer out. Read back inside an effect (not during the
-// initial render) since the server has no sessionStorage and an initial
-// mismatch would break hydration.
+async function fetchSession(): Promise<StoredSession | null> {
+  const response = await fetch("/api/session", { cache: "no-store" });
+  if (!response.ok) return null;
+  const { session } = (await response.json()) as { session: StoredSession | null };
+  return session;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
@@ -50,26 +60,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // does not survive the full reloads a locale-prefixed URL involves - see
   // LocaleProvider.tsx's own comment on the bug that caused).
   const fetchedFor = useRef<string | null>(null);
+  const channel = useRef<BroadcastChannel | null>(null);
+  // Counts the sign-ins and sign-outs this tab has done itself. An answer from the server that was asked for
+  // before one of them is stale - e.g. the question the page asks when it loads can come back after the Keycloak
+  // callback has already signed the user in, and would sign them out again - so it is dropped.
+  const localChanges = useRef(0);
+
+  const apply = (session: StoredSession | null) => {
+    setToken(session?.token ?? null);
+    setUsername(session?.username ?? null);
+    setProvider(session?.provider ?? null);
+    setIdToken(session?.idToken ?? null);
+  };
 
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const restored = JSON.parse(raw) as {
-          token: string;
-          username: string;
-          provider?: AuthProviderKind;
-          idToken?: string;
-        };
-        setToken(restored.token);
-        setUsername(restored.username);
-        setProvider(restored.provider ?? "mock");
-        setIdToken(restored.idToken ?? null);
-      }
-    } catch {
-      // Private browsing / storage disabled — fall back to in-memory only.
+    // Ask the server who is signed in, now and whenever another tab signs in or out.
+    const refresh = () => {
+      const askedAt = localChanges.current;
+      return fetchSession()
+        .then((session) => {
+          if (localChanges.current === askedAt) apply(session);
+        })
+        .catch(() => {
+          // The server cannot be reached - keep what the page has.
+        });
+    };
+    let live = true;
+    refresh().finally(() => {
+      if (live) setInitializing(false);
+    });
+    if (typeof BroadcastChannel !== "undefined") {
+      channel.current = new BroadcastChannel(CHANNEL);
+      channel.current.onmessage = () => void refresh();
     }
-    setInitializing(false);
+    return () => {
+      live = false;
+      channel.current?.close();
+      channel.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -114,38 +142,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- applyProfileLocale/consumeManualLocaleChoice are stable enough; re-run only when the token changes
   }, [token]);
 
-  const setAuth = (
+  const setAuth = async (
     nextToken: string,
     nextUsername: string,
     extra: { provider?: AuthProviderKind; idToken?: string } = {},
   ) => {
-    const nextProvider = extra.provider ?? "mock";
-    setToken(nextToken);
-    setUsername(nextUsername);
-    setProvider(nextProvider);
-    setIdToken(extra.idToken ?? null);
+    localChanges.current += 1;
+    // The page knows at once...
+    apply({ token: nextToken, username: nextUsername, provider: extra.provider ?? "mock", idToken: extra.idToken ?? null });
+    // ...and the server keeps it: it asks the backend who the token belongs to and sets the cookie.
     try {
-      sessionStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ token: nextToken, username: nextUsername, provider: nextProvider, idToken: extra.idToken }),
-      );
+      const response = await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: nextToken, idToken: extra.idToken }),
+      });
+      if (response.ok) channel.current?.postMessage("changed");
     } catch {
-      // Ignore — the session just won't survive a reload.
+      // Without the cookie the session lasts until the page is closed.
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     const leavingKeycloak = provider === "keycloak" && idToken;
-    setToken(null);
-    setUsername(null);
-    setProvider(null);
-    setIdToken(null);
-    setProfile(null);
+    localChanges.current += 1;
+    // The cookie goes first: a page that loads next must not find the old session again.
     try {
-      sessionStorage.removeItem(STORAGE_KEY);
+      await fetch("/api/session", { method: "DELETE" });
     } catch {
-      // Ignore.
+      // Ignore - the page is signed out either way.
     }
+    apply(null);
+    setProfile(null);
+    channel.current?.postMessage("changed");
     // A Keycloak login also has a session at Keycloak itself - end it too,
     // or "Log in with Keycloak" would sign the same user straight back in.
     if (leavingKeycloak) window.location.assign(keycloakLogoutUrl(idToken));

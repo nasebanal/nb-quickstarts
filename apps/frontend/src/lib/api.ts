@@ -35,7 +35,7 @@ export interface AccountBalance {
 
 // Thrown specifically for a 401, so callers can tell "your session is no
 // longer valid" (e.g. the backend restarted and its in-memory token store
-// - see auth.py - was wiped, but sessionStorage still has the old token)
+// - see auth.py - was wiped, but the session cookie still holds the old token)
 // apart from any other failure, and react to it (log out, prompt a fresh
 // login) instead of just surfacing the raw response as a generic error.
 export class UnauthorizedError extends Error {}
