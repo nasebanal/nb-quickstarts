@@ -215,9 +215,12 @@ export const scenarioTesting: LocalizedDocsPage = {
             body: [
               "Both scans need the apps stack running (make apps:up first). make zap:baseline runs a passive scan of the frontend. make zap:api-scan runs an OpenAPI-driven scan " +
                 "that sends real attack payloads to every backend route, so it only ever targets the apps stack. " +
-                "Each scan writes zap/report/<scan>-report.html.",
+                "Each scan writes zap/report/<scan>-report.html. " +
+                "Note that zap:api-scan (and zap:full-scan) actually register their attack payloads as data: the scan logs in and posts to POST /transactions, so the Balances table fills with junk account names " +
+                "(SQL injection strings, script snippets and the like). This is expected - run make apps:reset and make apps:up afterwards to get back to a clean demo state. " +
+                "zap:baseline only observes and writes nothing.",
             ],
-            code: [{ code: "make apps:up\nmake zap:baseline\nmake zap:api-scan" }],
+            code: [{ code: "make apps:up\nmake zap:baseline\nmake zap:api-scan\n\n# the scan leaves attack payloads in the database - wipe them afterwards\nmake apps:reset\nmake apps:up" }],
             images: [
               {
                 src: "/docs/screenshots/report-zap.png",
@@ -459,9 +462,12 @@ export const scenarioTesting: LocalizedDocsPage = {
             body: [
               "どちらのスキャンも、稼働中のappsスタックが必要です(先にmake apps:up)。make zap:baselineは、frontendのパッシブスキャンを実行します。make zap:api-scanは、OpenAPI駆動の" +
                 "スキャンで、backendの全ルートへ実際の攻撃ペイロードを送るため、対象は常にappsスタックだけです。" +
-                "どちらのスキャンも zap/report/<スキャン名>-report.html を出力します。",
+                "どちらのスキャンも zap/report/<スキャン名>-report.html を出力します。" +
+                "なお、zap:api-scan(およびzap:full-scan)は攻撃ペイロードを実際にデータとして登録します。スキャンはログインしてPOST /transactionsへ送信するため、" +
+                "勘定科目残高にSQLインジェクション文字列やスクリプト片などの不審な勘定科目名が並びます。これは想定された動作です。スキャン後は make apps:reset と make apps:up を実行して、デモの状態を初期化してください。" +
+                "zap:baselineは観察のみで、データは登録されません。",
             ],
-            code: [{ code: "make apps:up\nmake zap:baseline\nmake zap:api-scan" }],
+            code: [{ code: "make apps:up\nmake zap:baseline\nmake zap:api-scan\n\n# スキャンで攻撃ペイロードがDBに残るため、終わったら初期化する\nmake apps:reset\nmake apps:up" }],
             images: [
               {
                 src: "/docs/screenshots/report-zap.png",
