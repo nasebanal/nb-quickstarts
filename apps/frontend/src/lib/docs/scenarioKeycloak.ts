@@ -2,42 +2,44 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioKeycloak: LocalizedDocsPage = {
   en: {
-    title: "Scenario 5: Use Keycloak",
+    title: "Scenario 4: Use Keycloak",
     description:
       "POST /transactions is protected by app/auth.py's get_current_username - until now, only " +
       "satisfiable with the token from POST /auth/login. This scenario turns on a real login: the " +
       "login page gains a Keycloak option (with sign-up), you authenticate at Keycloak like you would " +
-      "with \"Sign in with Google\", and the backend accepts the token Keycloak issued on that exact " +
+      "with \"Sign in with Google\", and the resource server (the Backend) accepts the token Keycloak issued on that exact " +
       "same route.",
     sections: [
       {
         heading: "Why Keycloak",
         body: [
-          "The Kafka bridge (Scenario 4) logs in to the backend with the demo password like any other client; the backend accepts that token or a Keycloak one on the same protected routes.",
+          "The Kafka bridge (Scenario 3) logs in to the Backend with the demo password like any other client (by default the Backend is its own authentication server); the resource server accepts that token or a Keycloak one on the same protected routes.",
         ],
         bullets: [
-          "Standard OIDC/OAuth 2.0: login, token issuing and SSO are handled by a proven identity provider instead of hand-rolled auth code.",
-          "The backend only verifies signed JWTs against Keycloak's public keys - it never sees or stores passwords.",
+          "Standard OIDC/OAuth 2.0: login, token issuing and SSO are handled by a proven authentication server (an identity provider) instead of hand-rolled auth code.",
+          "The resource server (the Backend) only verifies signed JWTs against Keycloak's public keys - it never sees or stores passwords.",
           "Users, roles and social/enterprise login federation are managed in one place, and the same IdP can serve every app.",
         ],
       },
       {
         heading: "How it works: from login to a validated request",
         body: [
-          "It is the same idea as \"Sign in with Google\": the user proves who they are to the identity " +
-            "provider (Keycloak), not to this app, and the app gets a signed token it can trust. The " +
+          "It is the same idea as \"Sign in with Google\": the user proves who they are to the authentication " +
+            "server (Keycloak, an identity provider), not to this app, and the app gets a signed token it can trust. The " +
             "Frontend sends the user to Keycloak (Authorization Code flow with PKCE), receives the " +
-            "token, and then calls the Backend's REST API with it as a Bearer token. The Backend checks " +
+            "token, and then calls the resource server's REST API (the Backend) with it as a Bearer token. The resource server checks " +
             "the signature itself against Keycloak's public keys - it never sees the password and does " +
             "not call Keycloak for each request.",
+          "In terms of the roles around a JWT (see the Overview's \"Authentication with JWT\"), Keycloak is the authentication server: it logs the user in and creates (signs) the JWT. The Backend is the resource server: it verifies that JWT with the public key from Keycloak's JWKS and decides from it whether the request is authenticated - the same check on the same protected routes. By default the Backend is its own authentication server; the JWTs it issued itself are still accepted, so both kinds of token work side by side. (The Keycloak token's audience is not checked in this demo.)",
         ],
+        slot: "keycloakRoles",
         sequence: {
           summary:
-            "Sequence diagram: the Frontend redirects the user to Keycloak to log in, exchanges the returned code for a JWT, calls the Backend's REST API with it, and the Backend verifies it against Keycloak's public keys",
+            "Sequence diagram: the Frontend redirects the user to Keycloak to log in, exchanges the returned code for a JWT, calls the resource server's REST API (the Backend) with it, and the resource server verifies it against Keycloak's public keys",
           participants: [
             { id: "fe", label: "Frontend", sub: "browser" },
-            { id: "kc", label: "Keycloak", sub: "identity provider" },
-            { id: "app", label: "Backend", sub: "REST API" },
+            { id: "kc", label: "Keycloak", sub: "authentication server" },
+            { id: "app", label: "Resource server", sub: "Backend (REST API)" },
           ],
           steps: [
             {
@@ -237,7 +239,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           participants: [
             { id: "cc", label: "Claude Code", sub: "MCP client" },
             { id: "fe", label: "Frontend", sub: "browser" },
-            { id: "kc", label: "Keycloak", sub: "identity provider" },
+            { id: "kc", label: "Keycloak", sub: "authentication server" },
             { id: "be", label: "Backend", sub: "/mcp + /oauth" },
           ],
           steps: [
@@ -271,40 +273,42 @@ export const scenarioKeycloak: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ5: Keycloakの利用",
+    title: "シナリオ4: Keycloakの利用",
     description:
       "POST /transactionsは、app/auth.pyのget_current_usernameによって保護されています — これまでは" +
       "POST /auth/loginが発行するトークンでしか満たせませんでした。このシナリオでは本物のログインを" +
       "有効にします: ログイン画面にKeycloakの選択肢(サインアップ付き)が加わり、「Googleでログイン」と同じ" +
-      "ように、Keycloak側で認証し、まさにこのルートでKeycloakが発行したトークンをbackendが受け入れます。",
+      "ように、Keycloak側で認証し、まさにこのルートでKeycloakが発行したトークンをリソースサーバー(Backend)が受け入れます。",
     sections: [
       {
         heading: "Keycloakを使うメリット",
         body: [
-          "Kafkaブリッジ(シナリオ4)は、他のクライアントと同じようにデモのパスワードでbackendへログインします。backendは、同じ保護されたルートで、そのトークンもKeycloakのトークンも受け付けます。",
+          "Kafkaブリッジ(シナリオ3)は、他のクライアントと同じようにデモのパスワードでBackendへログインします(既定ではBackendが認証サーバーを兼ねます)。リソースサーバーは、同じ保護されたルートで、そのトークンもKeycloakのトークンも受け付けます。",
         ],
         bullets: [
-          "標準のOIDC/OAuth 2.0: ログイン・トークン発行・SSOを実績あるIDプロバイダーに任せられ、認証コードを自前で書く必要がありません。",
-          "backendはKeycloakの公開鍵で署名付きJWTを検証するだけで、パスワードを扱ったり保存したりすることが一切ありません。",
+          "標準のOIDC/OAuth 2.0: ログイン・トークン発行・SSOを実績ある認証サーバー(IDプロバイダー)に任せられ、認証コードを自前で書く必要がありません。",
+          "リソースサーバー(Backend)はKeycloakの公開鍵で署名付きJWTを検証するだけで、パスワードを扱ったり保存したりすることが一切ありません。",
           "ユーザー・ロール・外部/企業IDとの連携を1か所で管理でき、同じIdPを複数のアプリで共用できます。",
         ],
       },
       {
         heading: "仕組み: ログインからリクエスト検証まで",
         body: [
-          "「Googleでログイン」と同じ考え方です: ユーザーは、このアプリではなくIDプロバイダー(Keycloak)に対して" +
+          "「Googleでログイン」と同じ考え方です: ユーザーは、このアプリではなく認証サーバー(IDプロバイダーのKeycloak)に対して" +
             "自分が誰かを証明し、アプリは信頼できる署名付きトークンを受け取ります。Frontendがユーザーを" +
             "Keycloakへ送り(PKCE付きの認可コードフロー)、トークンを受け取り、それをBearerトークンとして" +
-            "BackendのREST APIを呼びます。Backendは署名をKeycloakの公開鍵で自分で検証するだけで、" +
+            "リソースサーバー(BackendのREST API)を呼びます。リソースサーバーは署名をKeycloakの公開鍵で自分で検証するだけで、" +
             "パスワードを目にすることはなく、リクエストごとにKeycloakへ問い合わせることもありません。",
+          "JWTにまつわる役割で言うと(概要の「JWTによる認証」を参照)、Keycloakは認証サーバーです。ユーザーをログインさせ、JWTを作成(署名)します。Backendはリソースサーバーで、そのJWTを、KeycloakのJWKSの公開鍵で検証し、リクエストが認証済みかどうかを判定します。保護されたルートも、検査も、これまでと同じです。既定ではBackend自身が認証サーバーを兼ねており、自分で発行したJWTも引き続き受け付けるため、2種類のトークンが並んで使えます。(デモでは、Keycloakのトークンのaud(対象API)は検証しません。)",
         ],
+        slot: "keycloakRoles",
         sequence: {
           summary:
-            "シーケンス図: FrontendがユーザーをログインのためにKeycloakへリダイレクトし、戻ってきたコードをJWTに交換して、それを付けてBackendのREST APIを呼び、BackendがKeycloakの公開鍵で検証する流れ",
+            "シーケンス図: FrontendがユーザーをログインのためにKeycloakへリダイレクトし、戻ってきたコードをJWTに交換して、それを付けてリソースサーバー(BackendのREST API)を呼び、リソースサーバーがKeycloakの公開鍵で検証する流れ",
           participants: [
             { id: "fe", label: "Frontend", sub: "ブラウザ" },
-            { id: "kc", label: "Keycloak", sub: "IDプロバイダー" },
-            { id: "app", label: "Backend", sub: "REST API" },
+            { id: "kc", label: "Keycloak", sub: "認証サーバー(IDプロバイダー)" },
+            { id: "app", label: "リソースサーバー", sub: "Backend(REST API)" },
           ],
           steps: [
             {
@@ -503,7 +507,7 @@ export const scenarioKeycloak: LocalizedDocsPage = {
           participants: [
             { id: "cc", label: "Claude Code", sub: "MCP client" },
             { id: "fe", label: "Frontend", sub: "browser" },
-            { id: "kc", label: "Keycloak", sub: "IdP" },
+            { id: "kc", label: "Keycloak", sub: "認証サーバー(IdP)" },
             { id: "be", label: "Backend", sub: "/mcp + /oauth" },
           ],
           steps: [

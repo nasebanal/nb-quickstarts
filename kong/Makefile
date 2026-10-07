@@ -17,7 +17,7 @@ kong:
 	@echo "  kong:down            - Stop and remove Kong containers (config preserved)"
 	@echo "  kong:status          - Check Kong container status"
 	@echo "  kong:restart         - Restart Kong containers (config preserved)"
-	@echo "  kong:reset           - Wipe config and re-import kong/conf/declarative.yml"
+	@echo "  kong:reset           - Stop Kong and wipe its database (nothing is started - run kong:up to import kong/conf/declarative.yml again)"
 	@echo "  kong:open            - Open Kong Manager in browser"
 	@echo ""
 	@echo "Verification:"
@@ -78,7 +78,7 @@ kong-up: apps-network-ensure
 		else \
 			echo ""; \
 			echo "Existing database found. Skipping configuration import."; \
-			echo "To re-import configuration, run: make kong:reset"; \
+			echo "To re-import configuration, run: make kong:reset, then make kong:up"; \
 		fi; \
 	else \
 		echo "Starting Kong in DB-less mode..."; \
@@ -98,7 +98,7 @@ kong-up: apps-network-ensure
 kong-down:
 	@echo "Stopping Kong containers..."
 	@docker-compose -f kong/docker-compose.yml --profile database down
-	@echo "Kong containers stopped and removed. (In KONG_DB=postgres mode, config is preserved in the kong_kong-db-data Docker volume — use 'make kong:reset' to clear it and re-import kong/conf/declarative.yml.)"
+	@echo "Kong containers stopped and removed. (In KONG_DB=postgres mode, config is preserved in the kong_kong-db-data Docker volume — use 'make kong:reset' to clear it, then 'make kong:up' to re-import kong/conf/declarative.yml.)"
 
 kong-status:
 	@echo "Checking Kong container status..."
@@ -117,8 +117,18 @@ kong-wipe:
 	@echo "Wiping Kong (Postgres config - Docker volume: kong_kong-db-data)..."
 	@docker-compose -f kong/docker-compose.yml --profile database down --volumes
 
+# DB mode: stop Kong and empty the database (the whole kong_kong-db-data volume, so consumers, credentials and
+# anything added by hand in Kong Manager go too). Nothing is started afterwards - kong:up then finds no volume,
+# bootstraps a new database and imports kong/conf/declarative.yml. DB-less mode has nothing stored: it just
+# reloads the file.
 kong-reset:
-	@./kong/bin/reset_config.sh
+	@if [ "$${KONG_DB:-postgres}" = "postgres" ]; then \
+		$(MAKE) kong-wipe; \
+		echo "Kong stopped and its database wiped. Nothing is started - run 'make kong:up' for a fresh one imported from kong/conf/declarative.yml."; \
+	else \
+		echo "Reloading Kong's declarative configuration (DB-less mode)..."; \
+		docker exec nb-kong kong reload; \
+	fi
 
 kong-list:
 	@cd kong && ./bin/list_services.sh

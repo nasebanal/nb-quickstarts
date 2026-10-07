@@ -1,15 +1,23 @@
 {
   "http-request": {
-    "method": "GET",
-    "path": "/transactions/999999",
+    "method": "POST",
+    "path": "/transactions",
     "headers": {
       "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6Im1YZmJOUEFmS0M0TUN1ZDAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJzdWIiOiJkZW1vIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGVtbyIsImF1ZCI6Im5iLXF1aWNrc3RhcnRzLWFwaSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjoyNTMzNzA3NjQ4MDB9.UyiPk2jO5eUHGQT3cx3dauWURkwn72UAqnObzYigkNtado0WUhAOiCfdPwZUeL4wOLLLTVMd7Tw3nEROLWB4Y0QFpXNgrjO_160-yhXafwUIyIrL0oBy56RI0wdFtRQ2Q6H3FFgv3BzRVdgPFezHXc6edRJ65i4dInaunGwpfx1xFKlSwlTCEUFNZOddTZsGOazT4xQqUxJylgFiIWssoXeNgxK3GiVvWo0RYwCmzYGQQ94dX25EabUHDyd-NkOh4A-wXmwxgWa-KqSivNf21lyBMXN3yqiittK_UV5QHj3pfxuclLnK6fAjXqSBIVHtnKPpfR8EsQO4lHQigZ6gOg"
+    },
+    "body": {
+      "name": "(string)",
+      "quantity": "(number)"
     }
   },
   "http-response": {
-    "status": 404,
+    "status": 201,
     "body": {
-      "detail": "transaction not found"
+      "id": 2,
+      "name": "Recorded on the mock",
+      "quantity": 1,
+      "source": "api",
+      "createdAt": "2024-01-01T00:00:00Z"
     }
   }
 }

@@ -23,7 +23,7 @@ const JA_CHART_LABELS = {
 
 export const scenarioKafka: LocalizedDocsPage = {
   en: {
-    title: "Scenario 4: Switch to Kafka",
+    title: "Scenario 3: Switch to Kafka",
     description:
       "kafka-bridge is a small standalone consumer that reads events off a Kafka topic and forwards " +
       "each one to the real backend via POST /transactions - the same write every other client uses. This " +
@@ -156,14 +156,14 @@ export const scenarioKafka: LocalizedDocsPage = {
           ],
         },
         closing: [
-          "Scenario 8 (Observability) shows this same overload run live in Grafana - 5xx ratio, p95 " +
+          "Scenario 7 (Observability) shows this same overload run live in Grafana - 5xx ratio, p95 " +
           "latency and DB connections in use spike during the direct-REST step and stay flat during the " +
           "Kafka one.",
         ],
       },
       {
         heading: "7. Clear the backlog before a fresh comparison",
-        code: [{ code: "make kafka:reset" }],
+        code: [{ code: "make kafka:reset   # stops Kafka and wipes its data - nothing is started\nmake kafka:up" }],
         body: [
           "Confirmed directly: after this, the same consumer-groups --describe command above shows a " +
             "fresh, empty topic - LAG back to 0, ready for another run without last time's backlog still " +
@@ -177,7 +177,7 @@ export const scenarioKafka: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ4: Kafka経由への切り替え",
+    title: "シナリオ3: Kafka経由への切り替え",
     description:
       "kafka-bridgeは、Kafkaトピックからイベントを読み取り、1件ずつ実際のbackendへPOST /transactionsとして" +
       "転送する、小さな独立したconsumerです — 他のどのクライアントとも同じ書き込みです。このシナリオでは、" +
@@ -309,14 +309,14 @@ export const scenarioKafka: LocalizedDocsPage = {
           ],
         },
         closing: [
-          "シナリオ8(オブザーバビリティ)では、この同じoverload実行をGrafana上でライブに見ます — " +
+          "シナリオ7(オブザーバビリティ)では、この同じoverload実行をGrafana上でライブに見ます — " +
           "REST直叩きのステップでは5xx比率・p95レイテンシ・使用中のDB接続数が跳ね上がり、Kafka経由の" +
           "ステップでは平坦なままになります。",
         ],
       },
       {
         heading: "7. 新しく比較する前に溜まった分をクリアする",
-        code: [{ code: "make kafka:reset" }],
+        code: [{ code: "make kafka:reset   # Kafkaを停止してデータを消します(起動はしません)\nmake kafka:up" }],
         body: [
           "実際に確認済み: この後、同じconsumer-groups --describeコマンドを実行すると、トピックが" +
             "まっさらな状態(LAGが0)に戻っていることがわかります — 前回の分がバックグラウンドで" +

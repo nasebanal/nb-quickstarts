@@ -42,6 +42,14 @@ function inlineLinks(text: string): ReactNode {
   });
 }
 
+// A note's text: `code` chips and `[label](href)` links together (a callout can point at a second reference
+// besides the one its title links to).
+function inlineMarkup(text: string): ReactNode {
+  return text.split(/(\[[^\]]+\]\([^)\s]+\))/g).map((part, i) => (
+    <Fragment key={i}>{/^\[[^\]]+\]\([^)\s]+\)$/.test(part) ? inlineLinks(part) : inlineCode(part)}</Fragment>
+  ));
+}
+
 // One renderer for every /docs page (Overview + Getting Started + all six
 // scenarios) - each page component only supplies its own DocsPageContent
 // (see lib/docs/*.ts), so heading levels, spacing and code-block styling
@@ -75,7 +83,7 @@ function NoteAside({ note }: { note: DocsNote }) {
           )}
         </p>
       )}
-      <p>{inlineCode(note.note)}</p>
+      <p>{inlineMarkup(note.note)}</p>
     </aside>
   );
 }

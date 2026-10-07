@@ -733,6 +733,13 @@ body:has(> .nb-header) {
   margin-bottom: 20px;
 }
 
+/* A long unbroken string (a path, a header name) in a table's last, descriptive column wraps instead of pushing
+   the table past the page. The other columns hold short names and keep their normal line breaking. */
+.nb-docs-section table th:last-child,
+.nb-docs-section table td:last-child {
+  overflow-wrap: anywhere;
+}
+
 /* Comparison tables (first header empty): the first column only labels the rows, so it gets
    real room - the labels ("date-time型(RFC 3339)の準拠性", "テストシナリオ") stay on one line
    at the usual width instead of wrapping in a narrow column. */
@@ -2086,5 +2093,172 @@ body:has(> .nb-header) {
   .nb-docs-content h2,
   .nb-docs-content h3 {
     break-after: avoid;
+  }
+}
+
+/* Phones: the header's links and icons collapse behind a hamburger (like nb-recorder's navbar) instead of
+   wrapping/overflowing. .nb-header-icons groups GitHub, language, theme and the user menu; on wider screens
+   it is transparent to layout (display: contents), so nothing changes there. */
+.nb-header-icons {
+  display: contents;
+}
+
+.nb-header-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  padding: 0 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.nb-header-hamburger span {
+  display: block;
+  height: 3px;
+  background: var(--nb-fg);
+  border-radius: 2px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.nb-header-hamburger:hover {
+  background: none;
+}
+
+.nb-header-hamburger-open span:nth-child(1) {
+  transform: translateY(8px) rotate(45deg);
+}
+
+.nb-header-hamburger-open span:nth-child(2) {
+  opacity: 0;
+}
+
+.nb-header-hamburger-open span:nth-child(3) {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
+@media (max-width: 768px) {
+  .nb-header {
+    padding: 0.5rem 0;
+  }
+
+  body:has(> .nb-header) {
+    padding-top: 60px;
+  }
+
+  .nb-header-title {
+    font-size: 1.1rem;
+  }
+
+  .nb-header-hamburger {
+    display: flex;
+  }
+
+  .nb-header-actions {
+    display: none;
+  }
+
+  .nb-header-actions.nb-header-actions-open {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding: 4px 20px 16px;
+    background: var(--nb-header-solid);
+    border-top: 1px solid var(--nb-border-soft);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .nb-header-actions .nb-header-nav-link {
+    padding: 14px 0;
+    font-size: 1rem;
+    border-bottom: 1px solid var(--nb-border-soft);
+  }
+
+  .nb-header-icons {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+  }
+}
+
+/* Phones, page content: nothing may push the page wider than the screen. */
+@media (max-width: 768px) {
+  /* In the stacked docs layout `align-items: flex-start` would size the content column to its widest child
+     (a code line, a table, a video) instead of the screen. */
+  .nb-docs-panel {
+    align-items: stretch;
+  }
+
+  .nb-docs-main {
+    width: 100%;
+  }
+
+  .nb-docs-content pre,
+  .nb-docs-content table {
+    max-width: 100%;
+  }
+
+  /* A table wider than the screen scrolls sideways inside the content instead of widening the page. */
+  .nb-docs-content table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .nb-docs-content pre {
+    overflow-x: auto;
+  }
+
+  /* Long inline identifiers (file paths, config keys) wrap instead of widening the paragraph. */
+  .nb-docs-content p,
+  .nb-docs-content li,
+  .nb-docs-content :not(pre) > code {
+    overflow-wrap: anywhere;
+  }
+
+  .nb-docs-content img,
+  .nb-docs-content iframe,
+  .nb-docs-content video {
+    max-width: 100%;
+  }
+
+  /* /accounts: the API address field and the Kong/Mock/Kafka toggles wrap onto their own lines. */
+  .nb-api-base {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .nb-api-base input {
+    flex: 1 1 100%;
+    max-width: none;
+    min-width: 0;
+  }
+}
+
+/* JwtRolesDiagram.tsx: three stacked diagrams, each with its own caption. */
+.nb-docs-jwt-roles {
+  margin: 0 0 20px;
+}
+
+.nb-docs-jwt-roles:last-child {
+  margin-bottom: 0;
+}
+
+.nb-docs-jwt-roles figcaption {
+  margin-bottom: 6px;
+}
+
+/* Phones: keep the JWT role diagrams readable - they scroll sideways inside their card instead of shrinking. */
+@media (max-width: 768px) {
+  .nb-docs-jwt-roles svg {
+    min-width: 720px;
   }
 }

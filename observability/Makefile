@@ -19,7 +19,7 @@ observability:
 	@echo "  observability:down    - Stop and remove them (metrics/traces/logs/dashboard state preserved)"
 	@echo "  observability:status  - Check container status"
 	@echo "  observability:restart - Restart them (state preserved)"
-	@echo "  observability:reset   - Restart AND wipe stored metrics/traces/logs (Docker volumes: observability_prometheus-data, observability_tempo-data, observability_loki-data, observability_alertmanager-data, observability_grafana-data)"
+	@echo "  observability:reset   - Stop AND wipe stored metrics/traces/logs (Docker volumes: observability_prometheus-data, observability_tempo-data, observability_loki-data, observability_alertmanager-data, observability_grafana-data); nothing is started - run observability:up for a fresh one"
 	@echo "  observability:open    - Open Grafana in the browser"
 	@echo ""
 	@echo "Verification:"
@@ -84,7 +84,7 @@ observability-wipe:
 
 observability-reset:
 	@$(MAKE) observability-wipe
-	@$(MAKE) observability-up
+	@echo "Observability stopped and its stored state wiped. Nothing is started - run 'make observability:up' for a fresh one."
 
 observability-open:
 	@bin/open_browser.sh http://localhost:$${OBSERVABILITY_GRAFANA_PORT:-3030}

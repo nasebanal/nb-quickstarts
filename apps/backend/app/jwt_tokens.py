@@ -33,7 +33,7 @@ MCP_TTL_SECONDS = TTL_SECONDS
 
 # A fixed issue time and a far-off expiry, so the same token can be written into files and checked again.
 FIXTURE_ISSUED_AT = 1767225600  # 2026-01-01T00:00:00Z
-FIXTURE_EXPIRES_AT = 4102444800  # 2100-01-01T00:00:00Z
+FIXTURE_EXPIRES_AT = 253370764800  # 9999-01-01T00:00:00Z
 
 _KEY_PATH = Path(os.getenv("JWT_PRIVATE_KEY_PATH") or Path(__file__).with_name("dev_jwt_key.pem"))
 _private_key = serialization.load_pem_private_key(_KEY_PATH.read_bytes(), password=None)

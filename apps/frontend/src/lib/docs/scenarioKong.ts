@@ -2,7 +2,7 @@ import type { LocalizedDocsPage } from "./types";
 
 export const scenarioKong: LocalizedDocsPage = {
   en: {
-    title: "Scenario 3: Switch to Kong",
+    title: "Scenario 2: Switch to Kong",
     description:
       "Kong's apps_backend gateway service proxies http://localhost:8000/api/* to the real backend's " +
       "own root (strip_path: true, so /api/transactions reaches backend:8080/transactions). This scenario " +
@@ -12,11 +12,21 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "Why Kong and Specmatic",
         body: [
-          "Kafka's path (Scenario 4) does not go through Kong: by default the bridge posts to the backend directly. Kong is where the REST clients - the browser, the load tests - are routed, and where a contract mock can be swapped in.",
+          "Kafka's path (Scenario 3) does not go through Kong: by default the bridge posts to the backend directly. Kong is where the REST clients - the browser, the load tests - are routed, and where a contract mock can be swapped in.",
         ],
         bullets: [
           "Kong: put auth, rate limiting and routing in one gateway in front of the backend, and change where traffic goes at runtime - no application code change.",
           "Specmatic: a mock server generated straight from the OpenAPI contract, and the same contract can verify the real backend, so mock and implementation can't quietly drift apart.",
+        ],
+      },
+      {
+        heading: "Plugins used in this scenario",
+        body: [
+          "Kong's behavior here comes from a handful of plugins, all declared in kong/conf/declarative.yml.",
+        ],
+        table: {"headers": ["Plugin", "Applied to", "What it does"], "rows": [["[mock-demo-token](https://developer.konghq.com/plugins/request-transformer/)", "Service apps_backend (off by default)", "A request-transformer instance. When apps_backend points at Specmatic's mock, it swaps the client's token for the fixed demo token that the mock accepts."], ["[response-transformer](https://developer.konghq.com/plugins/response-transformer/)", "Service apps_backend", "Adds Access-Control-Expose-Headers: Via,X-Specmatic-Result, so the browser can read the headers the frontend uses to show \"Via Kong\" and \"Via Mock\"."], ["[opentelemetry](https://developer.konghq.com/plugins/opentelemetry/)", "Service apps_backend", "Sends a trace of each request to the OpenTelemetry Collector (Scenario 7, Observability)."], ["[rate-limiting](https://developer.konghq.com/plugins/rate-limiting/)", "Service example_service (/mock, /echo)", "Limits the demo routes to 5 requests per minute. It is not applied to /api."]], "nowrapColumns": [0]},
+        closing: [
+          "The same list is in Kong Manager (Plugins), or with curl http://localhost:8001/plugins.",
         ],
       },
       {
@@ -55,7 +65,7 @@ export const scenarioKong: LocalizedDocsPage = {
         note:
           "kong/conf/declarative.yml describes Kong's services, routes and plugins as declarative configuration. In " +
           "DB-less mode (KONG_DB=off) Kong reads only that file and its Admin API is read-only. This repo defaults " +
-          "to DB mode: the file is imported into Postgres on the first start (or by make kong:reset), after which " +
+          "to DB mode: the file is imported into Postgres on the first start (or by make kong:up after make kong:reset, which empties the database), after which " +
           "the same entities can be edited in Kong Manager.",
       },
       {
@@ -208,7 +218,7 @@ export const scenarioKong: LocalizedDocsPage = {
     ],
   },
   ja: {
-    title: "シナリオ3: Kong経由への切り替え",
+    title: "シナリオ2: Kong経由への切り替え",
     description:
       "Kongのapps_backendというGateway Serviceは、http://localhost:8000/api/*を実際のbackendのルートへ" +
       "そのままプロキシします(strip_path: trueなので、/api/transactionsはbackend:8080/transactionsに届きます)。" +
@@ -218,11 +228,21 @@ export const scenarioKong: LocalizedDocsPage = {
       {
         heading: "Kong・Specmaticを使うメリット",
         body: [
-          "Kafkaの経路(シナリオ4)はKongを通りません: ブリッジはデフォルトでbackendへ直接POSTします。Kongは、RESTのクライアント — ブラウザや負荷テスト — をルーティングし、契約モックへ差し替えられる場所です。",
+          "Kafkaの経路(シナリオ3)はKongを通りません: ブリッジはデフォルトでbackendへ直接POSTします。Kongは、RESTのクライアント — ブラウザや負荷テスト — をルーティングし、契約モックへ差し替えられる場所です。",
         ],
         bullets: [
           "Kong: 認証・レート制限・ルーティングをbackendの前段のゲートウェイに集約でき、向き先の変更もアプリのコードを触らず実行時に行えます。",
           "Specmatic: OpenAPIの契約からそのままモックサーバーを生成でき、同じ契約で実backendも検証できるため、モックと実装が知らないうちにずれることを防げます。",
+        ],
+      },
+      {
+        heading: "このシナリオで使っているプラグイン",
+        body: [
+          "このシナリオのKongの動作は、いくつかのプラグインで実現していて、すべてkong/conf/declarative.ymlに宣言されています。",
+        ],
+        table: {"headers": ["プラグイン", "付けている場所", "用途"], "rows": [["[mock-demo-token](https://developer.konghq.com/plugins/request-transformer/)", "サービス apps_backend(初期は無効)", "request-transformerのインスタンスです。apps_backendをSpecmaticのモックに向けたとき、クライアントのトークンを、モックが受け付ける固定デモトークンに差し替えます。"], ["[response-transformer](https://developer.konghq.com/plugins/response-transformer/)", "サービス apps_backend", "Access-Control-Expose-Headers: Via,X-Specmatic-Result を足します。frontendが「Kong経由」「モック経由」の表示に使うヘッダーを、ブラウザが読めるようにするためです。"], ["[opentelemetry](https://developer.konghq.com/plugins/opentelemetry/)", "サービス apps_backend", "各リクエストのトレースを、OpenTelemetry Collectorへ送ります(シナリオ7: オブザーバビリティ)。"], ["[rate-limiting](https://developer.konghq.com/plugins/rate-limiting/)", "サービス example_service(/mock、/echo)", "デモ用のルートを、1分5リクエストに制限します。/apiにはかけていません。"]], "nowrapColumns": [0]},
+        closing: [
+          "同じ一覧は、Kong Manager(Plugins)や、curl http://localhost:8001/plugins でも見られます。",
         ],
       },
       {
@@ -260,7 +280,7 @@ export const scenarioKong: LocalizedDocsPage = {
         noteHref: "https://docs.konghq.com/gateway/latest/production/deployment-topologies/db-less-and-declarative-config/",
         note:
           "kong/conf/declarative.ymlは、Kongのservice・route・pluginを宣言的設定として記述したファイルです。DB-lessモード(KONG_DB=off)ではKongはこのファイルだけを読み、Admin " +
-          "APIは読み取り専用になります。このリポジトリは既定でDBモードで、初回起動時(またはmake kong:reset)にこのファイルがPostgresへ取り込まれ、以後は同じエンティティをKong " +
+          "APIは読み取り専用になります。このリポジトリは既定でDBモードで、初回起動時(またはmake kong:reset でDBを空にしたあとのmake kong:up)にこのファイルがPostgresへ取り込まれ、以後は同じエンティティをKong " +
           "Managerで編集できます。",
       },
       {
@@ -286,7 +306,7 @@ export const scenarioKong: LocalizedDocsPage = {
             "不要です。ここでのHost/PortはDocker Composeのサービス名であり、apps-network内からしか解決" +
             "できません(localhostではない)。Kong自身がこのネットワークに参加しているのはこのためです。",
           "APIはすべてbearerトークンが必要になり、モックが答えるのは契約のexampleに書かれた1つのトークン" +
-            "(固定のデモトークン)だけで、ログインで得たトークンには答えません。そのためkong/conf/declarative.ymlには、" +
+            "(固定デモトークン)だけで、ログインで得たトークンには答えません。そのためkong/conf/declarative.ymlには、" +
             "apps_backendに付けたrequest-transformerプラグイン(名前はmock-demo-token、初期は無効)があり、" +
             "クライアントが送ったトークンをデモトークンに差し替えます。手順4で向き先と一緒にオンにします。" +
             "実backendに向けているときはオフのままです。",
