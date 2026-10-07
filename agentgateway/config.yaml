@@ -42,7 +42,18 @@ binds:
 - port: 3000
   listeners:
   - routes:
-    - backends:
+    # /mcp itself, plus what an MCP client's browser login needs: the protected-resource metadata and the
+    # authorization-server metadata / client registration that policies.mcpAuthentication (below) serves.
+    - matches:
+      - path:
+          exact: /mcp
+      - path:
+          exact: /.well-known/oauth-protected-resource/mcp
+      - path:
+          exact: /.well-known/oauth-authorization-server/mcp
+      - path:
+          exact: /.well-known/oauth-authorization-server/mcp/client-registration
+      backends:
       - mcp:
           targets:
           - name: apps-backend
@@ -51,6 +62,30 @@ binds:
                 file: /shared/openapi/openapi.yaml
               host: backend:8080
       policies:
+        # Logging in: a request without a valid token gets 401 + WWW-Authenticate, which is what starts an MCP
+        # client's browser login (Claude Code's Authenticate). The authorization server is the backend's own
+        # OAuth login (apps/backend/app/mcp_oauth.py: /oauth/register, /oauth/authorize, /oauth/token, whose
+        # login page is the frontend's /mcp-authorize), and the tokens it hands out are the backend's RS256 JWTs:
+        # issuer and audience below are the claims of those tokens, and the signing keys are fetched from the
+        # backend's JWKS over apps-network (the browser-facing issuer is localhost:8080, which the container
+        # cannot reach, hence the separate jwks url). resource is the URL a client connects to (host port 8010).
+        mcpAuthentication:
+          mode: strict
+          issuer: http://localhost:8080
+          audiences:
+          - nb-quickstarts-api
+          jwks:
+            url: http://backend:8080/.well-known/jwks.json
+          resourceMetadata:
+            resource: http://localhost:8010/mcp
+            scopesSupported:
+            - mcp
+            bearerMethodsSupported:
+            - header
+        # Once a token has been validated above, agentgateway removes it from the request - so the tools' REST
+        # calls to the backend would arrive without one and get its 401. passthrough sends the validated JWT on.
+        backendAuth:
+          passthrough: {}
         # Only needed for a browser-based MCP client (e.g. an inspector UI)
         # calling this cross-origin - mcp-session-id/mcp-protocol-version
         # are custom headers the MCP Streamable HTTP transport relies on,

@@ -21,7 +21,6 @@ agentgateway:
 	@echo "  agentgateway:open    - Open its dashboard UI in the browser"
 	@echo ""
 	@echo "Verification:"
-	@echo "  agentgateway:tools   - Do the MCP handshake by hand and list the tools it's actually serving"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  AGENTGATEWAY_VERSION=v1.5.0   # cr.agentgateway.dev/agentgateway image tag"
@@ -48,7 +47,6 @@ agentgateway-up: apps-network-ensure
 	@docker compose -p agentgateway -f agentgateway/docker-compose.yml up -d
 	@echo "MCP endpoint: http://localhost:$${AGENTGATEWAY_PORT:-8010}/mcp"
 	@echo "Dashboard UI: http://localhost:$${AGENTGATEWAY_ADMIN_PORT:-15000}"
-	@echo "Verify: make agentgateway:tools"
 
 agentgateway-down:
 	@echo "Stopping agentgateway..."
@@ -66,6 +64,3 @@ agentgateway-restart:
 agentgateway-open:
 	@bin/open_browser.sh http://localhost:$${AGENTGATEWAY_ADMIN_PORT:-15000}
 
-agentgateway-tools:
-	@echo "Calling MCP initialize + tools/list against agentgateway..."
-	@sh agentgateway/bin/list_tools.sh

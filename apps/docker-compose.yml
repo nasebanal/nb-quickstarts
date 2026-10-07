@@ -183,6 +183,26 @@ services:
     networks:
       - apps-network
 
+  # Lets the Inspector log in to an MCP server the way a browser client does (OAuth: discovery, client
+  # registration, the token exchange). Those steps run in the Inspector's own server process, i.e. inside its
+  # container, and the addresses the servers advertise are the ones a browser uses - localhost:8080 (the
+  # backend's login and token endpoints) and localhost:8010 (agentgateway). Inside the container "localhost"
+  # is the container itself, so this sidecar shares its network namespace and forwards those two ports to the
+  # real services. (The OAuth callback needs nothing: the browser reaches localhost:6274 on the host.)
+  mcp-inspector-localhost:
+    image: alpine/socat:${APPS_SOCAT_VERSION:-1.8.0.0}
+    container_name: nb-mcp-inspector-localhost
+    network_mode: "service:mcp-inspector"
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        socat TCP-LISTEN:8080,fork,reuseaddr,bind=127.0.0.1 TCP:backend:8080 &
+        socat TCP-LISTEN:8010,fork,reuseaddr,bind=127.0.0.1 TCP:agentgateway:3000 &
+        wait
+    depends_on:
+      - mcp-inspector
+
 networks:
   # apps-network は compose ではなく `apps-network-ensure` (apps/Makefile) が
   # 冪等に作成する。apps/locust 等どちらが先に起動しても壊れないようにするため。

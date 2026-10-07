@@ -21,49 +21,18 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "1. Start it and verify what it actually serves",
+        heading: "1. Start it",
         code: [
           {
-            code: "make agentgateway:up\nmake agentgateway:tools",
+            code: "make agentgateway:up",
           },
         ],
         body: [
-          "agentgateway:tools does the MCP handshake by hand and lists what's being served - the real " +
-            "verification that it's actually reading openapi.yaml, not a hardcoded example: nine tools, " +
-            "one per operation, named and described straight from the contract.",
-          "agentgateway:up alone is enough for this list: the gateway reads shared/openapi/openapi.yaml " +
-            "directly when it starts (config.yaml's schema.file, mounted read-only), so the tools are known " +
-            "without the backend running. The backend is only needed once a tool is actually called (step 3).",
+          "agentgateway:up starts the gateway. It reads shared/openapi/openapi.yaml directly when it starts " +
+            "(config.yaml's schema.file, mounted read-only), so the tools are known without the backend running: nine " +
+            "of them, one per operation, named and described straight from the contract (step 3 shows them in the " +
+            "Inspector). The backend is only needed once a tool is actually called.",
         ],
-        terminal: {
-          lines: [
-            { text: "$ make agentgateway:tools", tone: "muted" },
-            {
-              text: "Calling MCP initialize + tools/list against agentgateway...",
-            },
-            { text: "  health_health_get - Health", tone: "success" },
-            { text: "  login_auth_login_post - Login", tone: "success" },
-            { text: "  get_me_me_get - Get Me", tone: "success" },
-            { text: "  update_profile_me_profile_put - Changes the display name and/or language; fields left out stay as they are. The email is recorded but not editable here.", tone: "success" },
-            { text: "  get_jwks_well_known_jwks_json_get - The public key that verifies this API's access tokens (RS256 JWTs), as a JSON Web Key Set.", tone: "success" },
-            {
-              text: "  list_transactions_transactions_get - List Transactions",
-              tone: "success",
-            },
-            {
-              text: "  create_transaction_transactions_post - Record a Transaction",
-              tone: "success",
-            },
-            {
-              text: "  get_transaction_transactions__transaction_id__get - Get Transaction",
-              tone: "success",
-            },
-            {
-              text: "  list_accounts_accounts_get - List Accounts",
-              tone: "success",
-            },
-          ],
-        },
         noteTitle: "agentgateway: OpenAPI as MCP tools",
         noteHref: "https://agentgateway.dev/docs/standalone/latest/mcp/connect/openapi/",
         note:
@@ -149,11 +118,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
           },
         ],
         closing: [
-          "Every tool except health, login and the JWKS needs a token, and they all work here: try get_me_me_get the same way. The Inspector's config " +
-          "(apps/mcp-inspector/config.json) sends the demo token as an Authorization header with every request " +
-          "to agentgateway, and the gateway passes it on to the backend, so the call returns the demo user's " +
-          "profile. Without that header the same call answers \"invalid or missing token\" - which is what " +
-          "step 4 below solves for Claude Code.",
+          "agentgateway refuses a connection without a valid token (401), and every tool then runs as the token's user: try get_me_me_get the same way. The Inspector's agentgateway entry (apps/mcp-inspector/config.json) sends the fixed demo token as an Authorization header with every request, and the gateway passes it on to the backend, so the call returns the demo user's profile. The agentgateway (login) entry sends no token at all: connect it and the Inspector runs the login in your browser - see \"Log in from the browser\" below.",
           "The backend's native /mcp also exposes its two GraphQL routes as tools, so its tool list is longer " +
           "than the nine agentgateway builds from the OpenAPI contract. Claude Code can use the " +
           "gateway too - step 4 below registers it, with a token.",
@@ -162,11 +127,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "4. Register it in Claude Code, with a token",
         body: [
-          "Every tool except health, login and the JWKS needs a bearer token, like the REST routes behind them, and the tool " +
-            "arguments have no Authorization header - so without a token they answer \"invalid or missing token\". The " +
-            "token therefore goes on the connection itself: agentgateway passes the connection's Authorization header through to " +
-            "the backend (checked with a demo token and with a Keycloak one). So register it with one, in this order " +
-            "(needs make agentgateway:up and make apps:up):",
+          "The browser login below is the easy way; this is the same thing by hand. The tool arguments have no Authorization header, so the token goes on the connection itself: agentgateway checks it (it must be a backend JWT - a Keycloak token is another issuer's and is refused) and passes it through to the backend. So register it with one, in this order (needs make agentgateway:up and make apps:up):",
         ],
         code: [
           {
@@ -190,21 +151,16 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         closing: [
           "get_me returning the demo user's profile means the token went through; \"invalid or missing token\" means the header was not " +
           "registered - claude mcp get does not list headers (its Connected says nothing about them), ~/.claude.json does. A login " +
-          "token lasts a day (JWT_TTL_SECONDS); a Keycloak access token lasts minutes. Claude Desktop works the same way through the mcp-remote bridge " +
+          "token lasts a day (JWT_TTL_SECONDS). A Keycloak access token is not accepted here: sign in with Keycloak in the browser login instead, and the backend issues an ordinary token. Claude Desktop works the same way through the mcp-remote bridge " +
           "(see Getting Started) with its --header option - not tried here.",
         ],
         subsections: [
           {
-            heading: "Why not the browser login (Authenticate)?",
+            heading: "Log in from the browser (Authenticate)",
             body: [
-              "agentgateway has no login of its own here, and APPS_MCP_AUTH_REQUIRED does not reach it: it builds its tools from " +
-                "the OpenAPI contract and calls the REST routes, never the backend's /mcp. So in Claude Code's /mcp the server " +
-                "shows not authenticated, and Authenticate fails with Dynamic Client Registration rejected (HTTP 406) - every path " +
-                "other than /mcp is answered by agentgateway's MCP handler, so there is no OAuth endpoint to register with. " +
-                "Pick Reconnect instead (it connects fine; the header carries the token).",
-              "A browser login through agentgateway itself would need policies.mcpAuthentication, which only validates JWTs - " +
-                "the backend's tokens are JWTs now, with the public key at /.well-known/jwks.json, so pointing mcpAuthentication there is the natural next step. provider: keycloak is no way around that: " +
-                "agentgateway issue #3668 makes Claude Code reject the login (RFC 9207 issuer mismatch).",
+              "agentgateway asks for a token on every connection (policies.mcpAuthentication, mode strict). A request without a valid one gets 401 with a WWW-Authenticate header, and that is what starts an MCP client's browser login: it points at the backend's own OAuth login (/oauth/register, /oauth/authorize, /oauth/token - the one the backend's /mcp uses), whose login page is the frontend's /mcp-authorize. Signed in already, you only press Allow; otherwise the usual login opens (demo login or Keycloak). What the client gets back is an ordinary backend RS256 JWT.",
+              "agentgateway checks that token against the backend's JWKS (issuer http://localhost:8080, audience nb-quickstarts-api, keys fetched over apps-network from http://backend:8080/.well-known/jwks.json) and, with backendAuth: passthrough, sends it on to the REST calls behind the tools. Without that line agentgateway drops the validated token and every tool answers invalid or missing token.",
+              "In MCP Inspector, connect agentgateway (login) or apps-backend (login) and the Inspector runs the same login in your browser; a small socat sidecar (mcp-inspector-localhost) forwards localhost:8080 and localhost:8010 inside the Inspector's container, because the Inspector does the discovery, registration and token exchange there and the servers advertise those localhost addresses. Tried with the MCP Inspector and a scripted client; Claude Code's own Authenticate was not tried here (agentgateway issue #3668 is about provider: keycloak, which this does not use).",
             ],
           },
         ],
@@ -235,50 +191,18 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         ],
       },
       {
-        heading: "1. 起動し、実際に何を提供しているか確認する",
+        heading: "1. 起動する",
         code: [
           {
-            code: "make agentgateway:up\nmake agentgateway:tools",
+            code: "make agentgateway:up",
           },
         ],
         body: [
-          "agentgateway:toolsは手動でMCPハンドシェイクを行い、提供中のツールを一覧表示します — " +
-            "これが「本当にopenapi.yamlを読んでいる」ことの実際の確認であり、ハードコードされた例では" +
-            "ありません。openapi.yamlの1オペレーションにつき1ツール、名前も説明もそこからそのまま取ら" +
-            "れた、9個のツールです。",
-          "この一覧はagentgateway:upだけで表示できます。ゲートウェイは起動時にshared/openapi/openapi.yamlを" +
-            "直接読み込む(config.yamlのschema.file。読み取り専用でマウント)ため、backendが動いていなくても" +
-            "ツールが分かります。backendが必要になるのは、ツールを実際に呼び出すとき(手順3)からです。",
+          "agentgateway:upでゲートウェイを起動します。起動時にshared/openapi/openapi.yamlを直接読む" +
+            "(config.yamlのschema.file、読み取り専用でマウント)ので、backendが動いていなくてもツールは分かります: " +
+            "オペレーションごとに1つ、計9個で、名前と説明は契約そのままです(手順3でInspectorに表示されます)。" +
+            "backendが必要になるのは、ツールを実際に呼ぶときだけです。",
         ],
-        terminal: {
-          lines: [
-            { text: "$ make agentgateway:tools", tone: "muted" },
-            {
-              text: "Calling MCP initialize + tools/list against agentgateway...",
-            },
-            { text: "  health_health_get - Health", tone: "success" },
-            { text: "  login_auth_login_post - Login", tone: "success" },
-            { text: "  get_me_me_get - Get Me", tone: "success" },
-            { text: "  update_profile_me_profile_put - Changes the display name and/or language; fields left out stay as they are. The email is recorded but not editable here.", tone: "success" },
-            { text: "  get_jwks_well_known_jwks_json_get - The public key that verifies this API's access tokens (RS256 JWTs), as a JSON Web Key Set.", tone: "success" },
-            {
-              text: "  list_transactions_transactions_get - List Transactions",
-              tone: "success",
-            },
-            {
-              text: "  create_transaction_transactions_post - Record a Transaction",
-              tone: "success",
-            },
-            {
-              text: "  get_transaction_transactions__transaction_id__get - Get Transaction",
-              tone: "success",
-            },
-            {
-              text: "  list_accounts_accounts_get - List Accounts",
-              tone: "success",
-            },
-          ],
-        },
         noteTitle: "agentgateway: OpenAPIをMCPツールとして公開",
         noteHref: "https://agentgateway.dev/docs/standalone/latest/mcp/connect/openapi/",
         note:
@@ -363,11 +287,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
           },
         ],
         closing: [
-          "health・login・JWKS以外のツールはどれもトークンが必要で、ここではすべて動きます: 同じ要領でget_me_me_getを呼んでみてください。Inspectorの設定" +
-          "(apps/mcp-inspector/config.json)は、agentgatewayへのすべてのリクエストにデモトークンをAuthorizationヘッダーとして" +
-          "付けて送り、ゲートウェイはそれをそのままbackendへ渡すので、デモユーザーのプロフィールが返ります。" +
-          "このヘッダーがないと同じ呼び出しは「invalid or missing token」になります — これをClaude Code向けに" +
-          "解決するのが下の手順4です。",
+          "agentgatewayは、有効なトークンのない接続を拒否(401)し、どのツールも、トークンのユーザーとして実行されます: 同じ要領でget_me_me_getを呼んでみてください。Inspectorのagentgatewayの項目(apps/mcp-inspector/config.json)は、すべてのリクエストに固定のデモトークンをAuthorizationヘッダーとして付けて送り、ゲートウェイはそれをそのままbackendへ渡すので、デモユーザーのプロフィールが返ります。agentgateway (login)の項目はトークンを付けません: 接続すると、Inspectorがブラウザでログインを行います(下の「ブラウザでログインする」を参照)。",
           "backendのネイティブな/mcpはGraphQLの2つのルートもツールとして公開するため、OpenAPI契約からagentgatewayが作る9個より" +
           "ツール数が多くなります。Claude Codeからもゲートウェイを使えます — " +
           "下の手順4でトークンを付けて登録します。",
@@ -376,10 +296,7 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
       {
         heading: "4. トークンを付けてClaude Codeに登録する",
         body: [
-          "health・login・JWKS以外のツールは、背後のRESTルートと同じくbearerトークンが必要で、ツールの引数に" +
-            "Authorizationヘッダーは無いので、トークンが無いと「invalid or missing token」になります。そのためトークンは" +
-            "接続そのものに付けます: agentgatewayは接続のAuthorizationヘッダーをbackendへそのまま渡します(デモトークンでも" +
-            "Keycloakのトークンでも確認済み)。次の順で、トークンを付けて登録します(make agentgateway:upとmake apps:upが必要です):",
+          "下の「ブラウザでログインする」が簡単な方法で、これは同じことを手で行うものです。ツールの引数にAuthorizationヘッダーは無いので、トークンは接続そのものに付けます: agentgatewayはそれを検証し(backendのJWTであること。Keycloakのトークンは発行者が別のため拒否されます)、backendへそのまま渡します。次の順で、トークンを付けて登録します(make agentgateway:upとmake apps:upが必要です):",
         ],
         code: [
           {
@@ -403,21 +320,16 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
         closing: [
           "get_meがデモユーザーのプロフィールを返せば、トークンは通っています。「invalid or missing token」ならヘッダーが登録されて" +
           "いません — claude mcp getはヘッダーを表示しません(Connectedはヘッダーと無関係です)。確認は~/.claude.jsonで行います。ログイン" +
-          "トークンは1日(JWT_TTL_SECONDS)、Keycloakのアクセストークンは数分です。Claude Desktopもmcp-remoteブリッジ(Getting Startedを参照)の" +
+          "トークンは1日(JWT_TTL_SECONDS)です。Keycloakのアクセストークンはここでは受け付けません: ブラウザログインでKeycloakを選べば、backendが通常のトークンを発行します。Claude Desktopもmcp-remoteブリッジ(Getting Startedを参照)の" +
           "--headerオプションで同じように使えますが、ここでは試していません。",
         ],
         subsections: [
           {
-            heading: "ブラウザログイン(Authenticate)ではない理由",
+            heading: "ブラウザでログインする(Authenticate)",
             body: [
-              "agentgatewayにはここで独自のログインがなく、APPS_MCP_AUTH_REQUIREDも届きません。OpenAPIコントラクトから" +
-                "ツールを作り、RESTルートを呼ぶだけで、backendの/mcpは使わないからです。そのためClaude Codeの/mcpでは" +
-                "not authenticatedと表示され、AuthenticateはDynamic Client Registration rejected (HTTP 406)で失敗します" +
-                " — /mcp以外のパスはすべてagentgatewayのMCPハンドラが応答するので、登録先のOAuthエンドポイントが" +
-                "ありません。代わりにReconnectを選んでください(接続はできて、トークンはヘッダーが運びます)。",
-              "agentgateway自身でブラウザログインするには、JWTだけを検証するpolicies.mcpAuthenticationが要り、backendのトークンは" +
-                "JWTになり、公開鍵は/.well-known/jwks.jsonにあるので、mcpAuthenticationをそこへ向けるのが次の一手です。provider: keycloakも回避策にはなりません: " +
-                "agentgatewayのissue #3668により、Claude Codeがそのログインを拒否します(RFC 9207の発行元の不一致)。",
+              "agentgatewayは、すべての接続でトークンを要求します(policies.mcpAuthentication、modeはstrict)。有効なトークンのないリクエストは、WWW-Authenticateヘッダー付きの401になり、これがMCPクライアントのブラウザログインの合図になります。案内先は、backend自身のOAuthログイン(/oauth/register、/oauth/authorize、/oauth/token — backendの/mcpが使うものと同じ)で、そのログイン画面はfrontendの/mcp-authorizeです。すでにログイン済みなら、Allowを押すだけで、そうでなければいつものログイン(デモログインまたはKeycloak)が開きます。クライアントが受け取るのは、通常のbackendのRS256のJWTです。",
+              "agentgatewayは、そのトークンをbackendのJWKSで検証し(発行者http://localhost:8080、対象nb-quickstarts-api、鍵はapps-network経由でhttp://backend:8080/.well-known/jwks.jsonから取得)、backendAuth: passthroughで、ツールの背後のRESTの呼び出しにそのまま渡します。この1行がないと、agentgatewayは検証したトークンを捨てるので、どのツールも「invalid or missing token」になります。",
+              "MCP Inspectorでは、agentgateway (login)かapps-backend (login)に接続すると、Inspectorがブラウザで同じログインを行います。Inspectorは、発見・登録・トークン交換を自分のコンテナの中で行い、サーバーがlocalhostのアドレスを案内するため、小さなsocatのサイドカー(mcp-inspector-localhost)が、Inspectorのコンテナの中でlocalhost:8080とlocalhost:8010を転送します。MCP Inspectorとスクリプトのクライアントで確認しました。Claude Code自身のAuthenticateは、ここでは試していません(agentgatewayのissue #3668はprovider: keycloakの話で、ここでは使いません)。",
             ],
           },
         ],

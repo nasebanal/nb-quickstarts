@@ -230,8 +230,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "make kong:up               # import the config again, with the opentelemetry plugin\n" +
               "make agentgateway:up       # (docker restart nb-agentgateway after editing config.yaml)\n" +
               "TOKEN=$(curl -s localhost:8000/api/auth/login -H 'content-type: application/json' -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')\n" +
-              "curl -H \"Authorization: Bearer $TOKEN\" localhost:8000/api/accounts   # through Kong\n" +
-              "make agentgateway:tools                     # MCP initialize + tools/list",
+              "curl -H \"Authorization: Bearer $TOKEN\" localhost:8000/api/accounts   # through Kong",
           },
         ],
         images: [
@@ -531,8 +530,7 @@ export const scenarioObservability: LocalizedDocsPage = {
               "make kong:up               # opentelemetryプラグイン入りの設定を再インポート\n" +
               "make agentgateway:up       # (config.yamlを編集した後はdocker restart nb-agentgateway)\n" +
               "TOKEN=$(curl -s localhost:8000/api/auth/login -H 'content-type: application/json' -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')\n" +
-              "curl -H \"Authorization: Bearer $TOKEN\" localhost:8000/api/accounts   # Kong経由\n" +
-              "make agentgateway:tools                     # MCPのinitialize + tools/list",
+              "curl -H \"Authorization: Bearer $TOKEN\" localhost:8000/api/accounts   # Kong経由",
           },
         ],
         images: [

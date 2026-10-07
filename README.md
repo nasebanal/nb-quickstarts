@@ -131,7 +131,6 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 
    # agentgateway (exposes apps/backend as MCP tools - needs apps:up)
    make agentgateway:up
-   make agentgateway:tools
    make agentgateway:open
 
    # Observability (OTel Collector + Prometheus + Tempo + Grafana)
@@ -378,7 +377,6 @@ Vault's dev server is in-memory only — everything written to it is gone on `va
 
 ```bash
 make agentgateway:up
-make agentgateway:tools   # does the MCP handshake by hand, lists what's actually being served
 make apps:up              # needed when calling the listed tools
 make apps:mcp             # opens MCP Inspector - see "MCP: trying the backend's MCP server"
 ```
@@ -391,9 +389,9 @@ Switch `agentgateway` on, open **Tools**, pick `list_accounts_accounts_get` and 
 
 (The backend's native `/mcp` also exposes its two GraphQL routes as tools, so its tool list is longer than the eight agentgateway builds from the OpenAPI contract.)
 
-Verified end-to-end: `agentgateway:tools` lists nine tools - `health_health_get`, `login_auth_login_post`, `get_me_me_get`, `update_profile_me_profile_put`, `get_jwks_well_known_jwks_json_get`, `list_transactions_transactions_get`, `create_transaction_transactions_post`, `get_transaction_transactions__transaction_id__get`, `list_accounts_accounts_get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_accounts_accounts_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
+Verified end-to-end: the gateway lists nine tools (MCP `tools/list`; MCP Inspector shows them) - `health_health_get`, `login_auth_login_post`, `get_me_me_get`, `update_profile_me_profile_put`, `get_jwks_well_known_jwks_json_get`, `list_transactions_transactions_get`, `create_transaction_transactions_post`, `get_transaction_transactions__transaction_id__get`, `list_accounts_accounts_get` - one per `openapi.yaml` operation, with names/descriptions taken straight from it. Calling `list_accounts_accounts_get` through the gateway (`POST /mcp`, `tools/call`) returned the same live balances `GET /accounts` itself does - confirmed against a running `apps/backend` with real transaction data from earlier Locust/Specmatic runs already in it.
 
-**Register it in Claude Code, with a token** (needs `make agentgateway:up` and `make apps:up`). Every tool except `health`, `login` and the JWKS needs a bearer token, like the REST routes behind them, and the tool arguments have no `Authorization` header - without a token they answer `invalid or missing token`. So the token goes on the connection itself: agentgateway passes the connection's `Authorization` header through to the backend (checked with a demo token and with a Keycloak one). In this order:
+**Register it in Claude Code, with a token** (needs `make agentgateway:up` and `make apps:up`). The browser login below is the easy way; this is the same thing by hand. The tool arguments have no `Authorization` header, so the token goes on the connection itself: agentgateway checks it (a backend JWT - a Keycloak token is not accepted here, its issuer is another one) and passes it through to the backend. In this order:
 
 ```bash
 # 1. get a token (a login lasts a day)
@@ -411,9 +409,9 @@ claude mcp list
 
 `get_me` returning the demo user's profile means the token went through; `invalid or missing token` means the header was not registered - `claude mcp get` does not list headers (its `Connected` says nothing about them), `~/.claude.json` does. A Keycloak access token lasts minutes, a login token a day (`JWT_TTL_SECONDS`). Claude Desktop works the same way through the `mcp-remote` bridge (see [MCP](#mcp-trying-the-backends-mcp-server)) with its `--header` option - not tried here.
 
-Point an MCP client (Claude Desktop, [mcp-inspector](https://github.com/modelcontextprotocol/inspector), ...) at `http://localhost:8010/mcp` to use it interactively. `create_transaction_transactions_post` needs a real bearer token, same as `POST /transactions` itself does everywhere else - call `login_auth_login_post` first and pass its token back as an `Authorization` header, or the tool call 401s the same way an unauthenticated `curl` would.
+Point an MCP client (Claude Desktop, [mcp-inspector](https://github.com/modelcontextprotocol/inspector), ...) at `http://localhost:8010/mcp` to use it interactively. Without a token the connection itself is refused (`401`); with one, every tool - `create_transaction_transactions_post` included - runs as that user, like the REST route behind it.
 
-**Why not the browser login (Authenticate)?** agentgateway has no login of its own here, and `APPS_MCP_AUTH_REQUIRED` does not reach it - it builds its tools from the OpenAPI contract and calls the REST routes, never the backend's `/mcp`. So in Claude Code's `/mcp` the server shows *not authenticated* and **Authenticate** fails (`Dynamic Client Registration rejected (HTTP 406)`: every path other than `/mcp` is answered by agentgateway's MCP handler, so there is no OAuth endpoint to register with); pick **Reconnect** instead - it connects fine, and the header carries the token. A browser login through agentgateway itself would need `policies.mcpAuthentication`, which only validates JWTs - and the backend's tokens now are JWTs, published at `/.well-known/jwks.json`, so pointing it there is the natural next step. `provider: keycloak` is no way around it: agentgateway issue [#3668](https://github.com/agentgateway/agentgateway/issues/3668) makes Claude Code reject that login (RFC 9207 issuer mismatch).
+**Log in from the browser (Authenticate).** agentgateway asks for a token on every connection (`policies.mcpAuthentication`, `mode: strict`): a request without a valid one gets `401` with a `WWW-Authenticate` header, which is what starts an MCP client's browser login. It points at the authorization server, the backend's own OAuth login (`/oauth/register`, `/oauth/authorize`, `/oauth/token` - the one the backend's `/mcp` uses), whose login page is the frontend's `/mcp-authorize`: signed in already, you only press **Allow**; otherwise the usual login opens (demo login or Keycloak). What the client gets back is an ordinary backend RS256 JWT. agentgateway checks it against the backend's JWKS (issuer `http://localhost:8080`, audience `nb-quickstarts-api`, keys fetched over `apps-network` from `http://backend:8080/.well-known/jwks.json`) and, with `backendAuth: passthrough`, sends it on to the REST calls behind the tools - without that line agentgateway drops the validated token and every tool answers `invalid or missing token`. **MCP Inspector** has two extra servers, `agentgateway (login)` and `apps-backend (login)`: connect one and the Inspector runs this login in your browser (its `--config` entries `agentgateway` and `apps-backend` still send a fixed demo token instead). The Inspector does the discovery, registration and token exchange in its own container, where the addresses the servers advertise (`localhost:8080`, `localhost:8010`) would be the container itself - so a small `socat` sidecar (`mcp-inspector-localhost`) shares its network and forwards those two ports. Tried with the MCP Inspector (both servers) and a scripted client; Claude Code's own **Authenticate** was not tried here (agentgateway issue [#3668](https://github.com/agentgateway/agentgateway/issues/3668) is about `provider: keycloak`, which this does not use).
 
 agentgateway also ships a real dashboard UI (a React SPA, built into the image by default - `Dockerfile`'s `CARGO_FEATURES=agentgateway-app/ui`), served off its **admin** port, separate from the MCP port above:
 
@@ -569,6 +567,7 @@ A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KA
 | `APPS_MYSQL_DATABASE` / `APPS_MYSQL_ROOT_PASSWORD` | `demo` / `rootpassword` | The database name, and the root password (used by the SQL client and `make apps:mysql`) |
 | `APPS_MYSQL_PORT` / `APPS_MYSQL_VERSION` | `3306` / `8.4` | Host-published MySQL port, and the image version |
 | `APPS_MCP_INSPECTOR_PORT` / `APPS_MCP_INSPECTOR_VERSION` | `6274` / `2.9` | Host-published MCP Inspector UI port, and the image tag (minor-pinned) |
+| `APPS_SOCAT_VERSION` | `1.8.0.0` | `alpine/socat` tag of the `mcp-inspector-localhost` sidecar (forwards `localhost:8080` / `:8010` inside the Inspector's container, for its OAuth login) |
 | `APPS_MCP_INSPECTOR_SANDBOX_PORT` | `6275` | Host-published port of the Inspector's MCP Apps sandbox |
 | `APPS_MCP_INSPECTOR_TOKEN` | `nb-mcp-inspector-token` | The Inspector UI's auth token, pinned (random per start otherwise) and put in the URL by `make apps:mcp`. A fixed public default - local demo only |
 | `APPS_API_BASE` | `http://localhost:8080` | Where `apps/frontend` calls the backend - direct, or `http://localhost:8000/api` to route through Kong instead (needs `kong:up` + `apps:restart`) |
