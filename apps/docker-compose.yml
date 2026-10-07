@@ -157,10 +157,11 @@ services:
 
   # MCP Inspector (official image, v2): a browser UI for calling MCP servers by
   # hand. Its server list is the read-only mcp-inspector/config.json - the
-  # backend's native /mcp and agentgateway's /mcp, both reached over
-  # apps-network by container name (the Inspector's own server process makes
-  # the MCP calls, not your browser). agentgateway shows up there as a server
-  # but only answers once `make agentgateway:up` is running.
+  # backend's native /mcp and agentgateway's /mcp, as the localhost URLs a
+  # browser client uses (see mcp-inspector-localhost below for why). Connecting
+  # one opens the login page in your browser; there is no token in the config.
+  # agentgateway shows up there as a server but only answers once
+  # `make agentgateway:up` is running.
   # MCP_INSPECTOR_API_TOKEN pins the UI's auth token (it is random on every
   # start otherwise); `make apps:mcp` opens the UI with it already in the URL.
   # Local demo only - the token is a fixed, public default.

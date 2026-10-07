@@ -116,10 +116,13 @@ apps-sql:
 
 # MCP Inspector starts with apps:up (already-running is a no-op here). Its
 # server list (apps/mcp-inspector/config.json) has both the backend's own /mcp
-# and agentgateway's /mcp; pick one in the UI and Connect. The token is in the
-# URL, so no copy-paste of the token printed in the container log.
+# and agentgateway's /mcp; pick one in the UI and Connect - the login page opens
+# in the browser and you sign in there. The Inspector's UI token is in the URL,
+# so no copy-paste of the token printed in the container log. The sidecar
+# (mcp-inspector-localhost) is what lets the Inspector's container reach the
+# localhost:8080 / :8010 addresses the login advertises.
 apps-mcp: apps-network-ensure
-	@docker compose -p apps -f apps/docker-compose.yml up -d mcp-inspector
+	@docker compose -p apps -f apps/docker-compose.yml up -d mcp-inspector mcp-inspector-localhost
 	@printf "Waiting for MCP Inspector"
 	@i=0; until curl -fs -o /dev/null "http://localhost:$${APPS_MCP_INSPECTOR_PORT:-6274}/" || [ $$i -ge 30 ]; do printf "."; sleep 1; i=$$((i+1)); done; echo ""
 	@if ! docker ps --format '{{.Names}}' | grep -q '^nb-agentgateway$$'; then echo "Note: agentgateway is not running - its server will fail to connect until 'make agentgateway:up'."; fi

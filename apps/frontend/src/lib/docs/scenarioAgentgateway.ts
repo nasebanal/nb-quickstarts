@@ -118,49 +118,51 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
           },
         ],
         closing: [
-          "agentgateway refuses a connection without a valid token (401), and every tool then runs as the token's user: try get_me_me_get the same way. The Inspector's agentgateway entry (apps/mcp-inspector/config.json) sends the fixed demo token as an Authorization header with every request, and the gateway passes it on to the backend, so the call returns the demo user's profile. The agentgateway (login) entry sends no token at all: connect it and the Inspector runs the login in your browser - see \"Log in from the browser\" below.",
+          "Connect the agentgateway card: agentgateway refuses a connection without a valid token (401), so the Inspector opens the app's login in your browser - sign in, press Allow, and it turns green. Every tool then runs as you: try get_me_me_get the same way (it returns your profile). How the login works is under step 4.",
           "The backend's native /mcp also exposes its two GraphQL routes as tools, so its tool list is longer " +
           "than the nine agentgateway builds from the OpenAPI contract. Claude Code can use the " +
           "gateway too - step 4 below registers it, with a token.",
         ],
       },
       {
-        heading: "4. Register it in Claude Code, with a token",
+        heading: "4. Register it in Claude Code",
         body: [
-          "The browser login below is the easy way; this is the same thing by hand. The tool arguments have no Authorization header, so the token goes on the connection itself: agentgateway checks it (it must be a backend JWT - a Keycloak token is another issuer's and is refused) and passes it through to the backend. So register it with one, in this order (needs make agentgateway:up and make apps:up):",
-        ],
-        code: [
-          {
-            label: "1. Get a token (a login lasts a day)",
-            code:
-              "TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \\\n" +
-              "  -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')\n" +
-              "echo \"token: ${TOKEN:0:12}...\"   # eyJ... (a JWT) means it worked",
-          },
-          {
-            label: "2. Register agentgateway with it (drop the first line if it was never registered)",
-            code:
-              "claude mcp remove agentgateway\n" +
-              "claude mcp add --transport http agentgateway http://localhost:8010/mcp --header \"Authorization: Bearer $TOKEN\"",
-          },
-          {
-            label: "3. Restart Claude Code (a running session does not pick up a newly added server), then ask it to call get_me",
-            code: "claude mcp list",
-          },
-        ],
-        closing: [
-          "get_me returning the demo user's profile means the token went through; \"invalid or missing token\" means the header was not " +
-          "registered - claude mcp get does not list headers (its Connected says nothing about them), ~/.claude.json does. A login " +
-          "token lasts a day (JWT_TTL_SECONDS). A Keycloak access token is not accepted here: sign in with Keycloak in the browser login instead, and the backend issues an ordinary token. Claude Desktop works the same way through the mcp-remote bridge " +
-          "(see Getting Started) with its --header option - not tried here.",
+          "Needs make agentgateway:up and make apps:up. Register agentgateway, then log in from the browser; a token by hand is the alternative at the end.",
         ],
         subsections: [
           {
-            heading: "Log in from the browser (Authenticate)",
+            heading: "Register it and log in",
             body: [
-              "agentgateway asks for a token on every connection (policies.mcpAuthentication, mode strict). A request without a valid one gets 401 with a WWW-Authenticate header, and that is what starts an MCP client's browser login: it points at the backend's own OAuth login (/oauth/register, /oauth/authorize, /oauth/token - the one the backend's /mcp uses), whose login page is the frontend's /mcp-authorize. Signed in already, you only press Allow; otherwise the usual login opens (demo login or Keycloak). What the client gets back is an ordinary backend RS256 JWT.",
+              "Register agentgateway without a token, restart Claude Code (a running session does not pick up a newly added server), open /mcp, pick agentgateway and choose Authenticate. Your browser opens the app's own login: sign in (Demo login, or Keycloak) and press Allow - already signed in, you only press Allow. Claude Code is then connected, and every tool runs as you. If you set a token by hand (the last part of this step), that token is used and no login starts.",
+            ],
+            code: [
+              { label: "1. Register agentgateway (drop the first line if it was never registered)", code: "claude mcp remove agentgateway\nclaude mcp add --transport http agentgateway http://localhost:8010/mcp" },
+              { label: "2. Restart Claude Code, open /mcp, pick agentgateway and choose Authenticate", code: "claude mcp list" },
+            ],
+            closing: [
+              "Claude Code's own Authenticate was not tried here: the login was run with MCP Inspector (step 3) and a scripted MCP client (agentgateway issue #3668 is about provider: keycloak, which this does not use). If it fails in Claude Code, registering with a token (below) works the same way.",
+            ],
+          },
+          {
+            heading: "How the login works",
+            body: [
+              "agentgateway asks for a token on every connection (policies.mcpAuthentication, mode strict). A request without a valid one gets 401 with a WWW-Authenticate header, and that is what starts an MCP client's browser login: it points at the backend's own OAuth login (/oauth/register, /oauth/authorize, /oauth/token - the one the backend's /mcp uses), whose login page is the frontend's /mcp-authorize. What the client gets back is an ordinary backend RS256 JWT.",
               "agentgateway checks that token against the backend's JWKS (issuer http://localhost:8080, audience nb-quickstarts-api, keys fetched over apps-network from http://backend:8080/.well-known/jwks.json) and, with backendAuth: passthrough, sends it on to the REST calls behind the tools. Without that line agentgateway drops the validated token and every tool answers invalid or missing token.",
-              "In MCP Inspector, connect agentgateway (login) or apps-backend (login) and the Inspector runs the same login in your browser; a small socat sidecar (mcp-inspector-localhost) forwards localhost:8080 and localhost:8010 inside the Inspector's container, because the Inspector does the discovery, registration and token exchange there and the servers advertise those localhost addresses. Tried with the MCP Inspector and a scripted client; Claude Code's own Authenticate was not tried here (agentgateway issue #3668 is about provider: keycloak, which this does not use).",
+              "MCP Inspector (step 3) runs the same login. It does the discovery, registration and token exchange inside its own container, and the servers advertise localhost addresses, so a small socat sidecar (mcp-inspector-localhost) forwards localhost:8080 and localhost:8010 there.",
+            ],
+          },
+          {
+            heading: "With a token instead",
+            body: [
+              "The same thing by hand, and a token set this way is used instead of the login. The tool arguments have no Authorization header, so the token goes on the connection itself: agentgateway checks it (it must be a backend JWT - a Keycloak token is another issuer's and is refused) and passes it through to the backend. In this order:",
+            ],
+            code: [
+              { label: "1. Get a token (a login lasts a day)", code: "TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \\\n  -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')\necho \"token: ${TOKEN:0:12}...\"   # eyJ... (a JWT) means it worked" },
+              { label: "2. Register agentgateway with it (drop the first line if it was never registered)", code: "claude mcp remove agentgateway\nclaude mcp add --transport http agentgateway http://localhost:8010/mcp --header \"Authorization: Bearer $TOKEN\"" },
+              { label: "3. Restart Claude Code (a running session does not pick up a newly added server), then ask it to call get_me", code: "claude mcp list" },
+            ],
+            closing: [
+              "get_me returning the demo user's profile means the token went through; \"invalid or missing token\" means the header was not registered - claude mcp get does not list headers (its Connected says nothing about them), ~/.claude.json does. A login token lasts a day (JWT_TTL_SECONDS). A Keycloak access token is not accepted here: sign in with Keycloak in the browser login instead, and the backend issues an ordinary token. Claude Desktop works the same way through the mcp-remote bridge (see Getting Started) with its --header option - not tried here.",
             ],
           },
         ],
@@ -287,49 +289,51 @@ export const scenarioAgentgateway: LocalizedDocsPage = {
           },
         ],
         closing: [
-          "agentgatewayは、有効なトークンのない接続を拒否(401)し、どのツールも、トークンのユーザーとして実行されます: 同じ要領でget_me_me_getを呼んでみてください。Inspectorのagentgatewayの項目(apps/mcp-inspector/config.json)は、すべてのリクエストに固定のデモトークンをAuthorizationヘッダーとして付けて送り、ゲートウェイはそれをそのままbackendへ渡すので、デモユーザーのプロフィールが返ります。agentgateway (login)の項目はトークンを付けません: 接続すると、Inspectorがブラウザでログインを行います(下の「ブラウザでログインする」を参照)。",
+          "agentgatewayのカードに接続します: agentgatewayは有効なトークンのない接続を拒否(401)するので、Inspectorがアプリのログインをブラウザで開きます。ログインしてAllowを押すと、緑になります。どのツールも、あなたとして実行されます: 同じ要領でget_me_me_getを呼んでみてください(あなたのプロフィールが返ります)。ログインの仕組みは、手順4にあります。",
           "backendのネイティブな/mcpはGraphQLの2つのルートもツールとして公開するため、OpenAPI契約からagentgatewayが作る9個より" +
           "ツール数が多くなります。Claude Codeからもゲートウェイを使えます — " +
           "下の手順4でトークンを付けて登録します。",
         ],
       },
       {
-        heading: "4. トークンを付けてClaude Codeに登録する",
+        heading: "4. Claude Codeに登録する",
         body: [
-          "下の「ブラウザでログインする」が簡単な方法で、これは同じことを手で行うものです。ツールの引数にAuthorizationヘッダーは無いので、トークンは接続そのものに付けます: agentgatewayはそれを検証し(backendのJWTであること。Keycloakのトークンは発行者が別のため拒否されます)、backendへそのまま渡します。次の順で、トークンを付けて登録します(make agentgateway:upとmake apps:upが必要です):",
-        ],
-        code: [
-          {
-            label: "1. トークンを取得する(ログインは1日有効)",
-            code:
-              "TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \\\n" +
-              "  -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')\n" +
-              "echo \"token: ${TOKEN:0:12}...\"   # eyJ... (a JWT) means it worked",
-          },
-          {
-            label: "2. そのトークンを付けてagentgatewayを登録する(未登録なら1行目は不要)",
-            code:
-              "claude mcp remove agentgateway\n" +
-              "claude mcp add --transport http agentgateway http://localhost:8010/mcp --header \"Authorization: Bearer $TOKEN\"",
-          },
-          {
-            label: "3. Claude Codeを再起動する(起動中のセッションは追加したサーバーを読み込みません)。そのあとget_meを呼ぶよう頼む",
-            code: "claude mcp list",
-          },
-        ],
-        closing: [
-          "get_meがデモユーザーのプロフィールを返せば、トークンは通っています。「invalid or missing token」ならヘッダーが登録されて" +
-          "いません — claude mcp getはヘッダーを表示しません(Connectedはヘッダーと無関係です)。確認は~/.claude.jsonで行います。ログイン" +
-          "トークンは1日(JWT_TTL_SECONDS)です。Keycloakのアクセストークンはここでは受け付けません: ブラウザログインでKeycloakを選べば、backendが通常のトークンを発行します。Claude Desktopもmcp-remoteブリッジ(Getting Startedを参照)の" +
-          "--headerオプションで同じように使えますが、ここでは試していません。",
+          "make agentgateway:upとmake apps:upが必要です。agentgatewayを登録してから、ブラウザでログインします。トークンを手で渡す方法は、最後に代替手段として載せています。",
         ],
         subsections: [
           {
-            heading: "ブラウザでログインする(Authenticate)",
+            heading: "登録してログインする",
             body: [
-              "agentgatewayは、すべての接続でトークンを要求します(policies.mcpAuthentication、modeはstrict)。有効なトークンのないリクエストは、WWW-Authenticateヘッダー付きの401になり、これがMCPクライアントのブラウザログインの合図になります。案内先は、backend自身のOAuthログイン(/oauth/register、/oauth/authorize、/oauth/token — backendの/mcpが使うものと同じ)で、そのログイン画面はfrontendの/mcp-authorizeです。すでにログイン済みなら、Allowを押すだけで、そうでなければいつものログイン(デモログインまたはKeycloak)が開きます。クライアントが受け取るのは、通常のbackendのRS256のJWTです。",
+              "agentgatewayをトークンなしで登録し、Claude Codeを再起動し(起動中のセッションは追加したサーバーを読み込みません)、/mcpを開いてagentgatewayを選び、Authenticateを選びます。ブラウザでアプリ自身のログインが開くので、ログイン(デモログイン、またはKeycloak)してAllowを押します。すでにログイン済みなら、Allowを押すだけです。これでClaude Codeが接続され、どのツールもあなたとして実行されます。手動でトークンを設定した場合(この手順の最後の部分)は、そのトークンが優先され、ログインは始まりません。",
+            ],
+            code: [
+              { label: "1. agentgatewayを登録する(未登録なら1行目は不要)", code: "claude mcp remove agentgateway\nclaude mcp add --transport http agentgateway http://localhost:8010/mcp" },
+              { label: "2. Claude Codeを再起動し、/mcpでagentgatewayを選んでAuthenticateを選ぶ", code: "claude mcp list" },
+            ],
+            closing: [
+              "Claude Code自身のAuthenticateは、ここでは試していません。ログインは、MCP Inspector(手順3)とスクリプトのMCPクライアントで確認しました(agentgatewayのissue #3668はprovider: keycloakの話で、ここでは使いません)。Claude Codeで失敗する場合は、下のトークンを付けた登録が、同じように使えます。",
+            ],
+          },
+          {
+            heading: "ログインの仕組み",
+            body: [
+              "agentgatewayは、すべての接続でトークンを要求します(policies.mcpAuthentication、modeはstrict)。有効なトークンのないリクエストは、WWW-Authenticateヘッダー付きの401になり、これがMCPクライアントのブラウザログインの合図になります。案内先は、backend自身のOAuthログイン(/oauth/register、/oauth/authorize、/oauth/token — backendの/mcpが使うものと同じ)で、そのログイン画面はfrontendの/mcp-authorizeです。クライアントが受け取るのは、通常のbackendのRS256のJWTです。",
               "agentgatewayは、そのトークンをbackendのJWKSで検証し(発行者http://localhost:8080、対象nb-quickstarts-api、鍵はapps-network経由でhttp://backend:8080/.well-known/jwks.jsonから取得)、backendAuth: passthroughで、ツールの背後のRESTの呼び出しにそのまま渡します。この1行がないと、agentgatewayは検証したトークンを捨てるので、どのツールも「invalid or missing token」になります。",
-              "MCP Inspectorでは、agentgateway (login)かapps-backend (login)に接続すると、Inspectorがブラウザで同じログインを行います。Inspectorは、発見・登録・トークン交換を自分のコンテナの中で行い、サーバーがlocalhostのアドレスを案内するため、小さなsocatのサイドカー(mcp-inspector-localhost)が、Inspectorのコンテナの中でlocalhost:8080とlocalhost:8010を転送します。MCP Inspectorとスクリプトのクライアントで確認しました。Claude Code自身のAuthenticateは、ここでは試していません(agentgatewayのissue #3668はprovider: keycloakの話で、ここでは使いません)。",
+              "MCP Inspector(手順3)も、同じログインを行います。Inspectorは、発見・登録・トークン交換を自分のコンテナの中で行い、サーバーがlocalhostのアドレスを案内するため、小さなsocatのサイドカー(mcp-inspector-localhost)が、そこでlocalhost:8080とlocalhost:8010を転送します。",
+            ],
+          },
+          {
+            heading: "トークンを付けて登録する(代替手段)",
+            body: [
+              "同じことを手で行う方法で、この方法で設定したトークンは、ログインより優先されます。ツールの引数にAuthorizationヘッダーは無いので、トークンは接続そのものに付けます: agentgatewayはそれを検証し(backendのJWTであること。Keycloakのトークンは発行者が別のため拒否されます)、backendへそのまま渡します。次の順で行います:",
+            ],
+            code: [
+              { label: "1. トークンを取得する(ログインは1日有効)", code: "TOKEN=$(curl -s -X POST localhost:8080/auth/login -H 'content-type: application/json' \\\n  -d '{\"username\":\"demo\",\"password\":\"demo\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])')\necho \"token: ${TOKEN:0:12}...\"   # eyJ... (a JWT) means it worked" },
+              { label: "2. そのトークンを付けてagentgatewayを登録する(未登録なら1行目は不要)", code: "claude mcp remove agentgateway\nclaude mcp add --transport http agentgateway http://localhost:8010/mcp --header \"Authorization: Bearer $TOKEN\"" },
+              { label: "3. Claude Codeを再起動する(起動中のセッションは追加したサーバーを読み込みません)。そのあとget_meを呼ぶよう頼む", code: "claude mcp list" },
+            ],
+            closing: [
+              "get_meがデモユーザーのプロフィールを返せば、トークンは通っています。「invalid or missing token」ならヘッダーが登録されていません — claude mcp getはヘッダーを表示しません(Connectedはヘッダーと無関係です)。確認は~/.claude.jsonで行います。ログイントークンは1日(JWT_TTL_SECONDS)です。Keycloakのアクセストークンはここでは受け付けません: ブラウザログインでKeycloakを選べば、backendが通常のトークンを発行します。Claude Desktopもmcp-remoteブリッジ(Getting Startedを参照)の--headerオプションで同じように使えますが、ここでは試していません。",
             ],
           },
         ],
