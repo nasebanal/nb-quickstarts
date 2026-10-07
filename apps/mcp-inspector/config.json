@@ -2,13 +2,11 @@
   "mcpServers": {
     "apps-backend": {
       "type": "http",
-      "url": "http://backend:8080/mcp",
-      "headers": { "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6Im1YZmJOUEFmS0M0TUN1ZDAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJzdWIiOiJkZW1vIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGVtbyIsImF1ZCI6Im5iLXF1aWNrc3RhcnRzLWFwaSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjoyNTMzNzA3NjQ4MDB9.UyiPk2jO5eUHGQT3cx3dauWURkwn72UAqnObzYigkNtado0WUhAOiCfdPwZUeL4wOLLLTVMd7Tw3nEROLWB4Y0QFpXNgrjO_160-yhXafwUIyIrL0oBy56RI0wdFtRQ2Q6H3FFgv3BzRVdgPFezHXc6edRJ65i4dInaunGwpfx1xFKlSwlTCEUFNZOddTZsGOazT4xQqUxJylgFiIWssoXeNgxK3GiVvWo0RYwCmzYGQQ94dX25EabUHDyd-NkOh4A-wXmwxgWa-KqSivNf21lyBMXN3yqiittK_UV5QHj3pfxuclLnK6fAjXqSBIVHtnKPpfR8EsQO4lHQigZ6gOg" }
+      "url": "http://localhost:8080/mcp"
     },
     "agentgateway": {
       "type": "http",
-      "url": "http://agentgateway:3000/mcp",
-      "headers": { "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6Im1YZmJOUEFmS0M0TUN1ZDAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJzdWIiOiJkZW1vIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGVtbyIsImF1ZCI6Im5iLXF1aWNrc3RhcnRzLWFwaSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjoyNTMzNzA3NjQ4MDB9.UyiPk2jO5eUHGQT3cx3dauWURkwn72UAqnObzYigkNtado0WUhAOiCfdPwZUeL4wOLLLTVMd7Tw3nEROLWB4Y0QFpXNgrjO_160-yhXafwUIyIrL0oBy56RI0wdFtRQ2Q6H3FFgv3BzRVdgPFezHXc6edRJ65i4dInaunGwpfx1xFKlSwlTCEUFNZOddTZsGOazT4xQqUxJylgFiIWssoXeNgxK3GiVvWo0RYwCmzYGQQ94dX25EabUHDyd-NkOh4A-wXmwxgWa-KqSivNf21lyBMXN3yqiittK_UV5QHj3pfxuclLnK6fAjXqSBIVHtnKPpfR8EsQO4lHQigZ6gOg" }
+      "url": "http://localhost:8010/mcp"
     }
   }
 }

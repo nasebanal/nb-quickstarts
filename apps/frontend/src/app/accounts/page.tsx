@@ -53,7 +53,7 @@ export default function AccountsPage() {
   }, [balances, accountName]);
 
   // Still no token once AuthProvider has finished trying to restore one
-  // from sessionStorage means either a real logout or navigating here
+  // from the session cookie means either a real logout or navigating here
   // directly — send them back to log in rather than showing an empty/broken
   // page. Skipping this while `initializing` is true avoids bouncing a
   // logged-in viewer home on every plain page reload.
@@ -85,7 +85,7 @@ export default function AccountsPage() {
       if (err instanceof UnauthorizedError) {
         // The token is an expiring JWT (a day by default, see jwt_tokens.py)
         // - or the backend's signing key changed since you logged in -
-        // so sessionStorage can still hold a token the backend no longer
+        // so the session cookie can still hold a token the backend no longer
         // accepts. Explain why, then clear it: the page's own token-guard effect above reacts to that by
         // sending the viewer back home to log in again.
         setAccountError(t.app.sessionExpiredError);

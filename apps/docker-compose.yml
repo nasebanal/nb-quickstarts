@@ -150,6 +150,13 @@ services:
       # Unset (the default) hides the Keycloak option entirely.
       NEXT_PUBLIC_KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
       NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-apps-demo}
+      # The login session cookie (src/app/api/session): an HttpOnly cookie that only this Next.js server reads,
+      # sealed with SESSION_SECRET (at least 32 characters). Empty uses a development value that is in the
+      # repository - fine for this local demo, and the server refuses to start with it when NODE_ENV=production.
+      # SESSION_BACKEND_URL is how this server reaches the backend (to ask who a token belongs to), as opposed
+      # to the address the browser uses.
+      SESSION_SECRET: ${APPS_SESSION_SECRET:-}
+      SESSION_BACKEND_URL: http://backend:8080
     depends_on:
       - backend
     networks:
@@ -157,10 +164,11 @@ services:
 
   # MCP Inspector (official image, v2): a browser UI for calling MCP servers by
   # hand. Its server list is the read-only mcp-inspector/config.json - the
-  # backend's native /mcp and agentgateway's /mcp, both reached over
-  # apps-network by container name (the Inspector's own server process makes
-  # the MCP calls, not your browser). agentgateway shows up there as a server
-  # but only answers once `make agentgateway:up` is running.
+  # backend's native /mcp and agentgateway's /mcp, as the localhost URLs a
+  # browser client uses (see mcp-inspector-localhost below for why). Connecting
+  # one opens the login page in your browser; there is no token in the config.
+  # agentgateway shows up there as a server but only answers once
+  # `make agentgateway:up` is running.
   # MCP_INSPECTOR_API_TOKEN pins the UI's auth token (it is random on every
   # start otherwise); `make apps:mcp` opens the UI with it already in the URL.
   # Local demo only - the token is a fixed, public default.
@@ -182,6 +190,26 @@ services:
       - backend
     networks:
       - apps-network
+
+  # Lets the Inspector log in to an MCP server the way a browser client does (OAuth: discovery, client
+  # registration, the token exchange). Those steps run in the Inspector's own server process, i.e. inside its
+  # container, and the addresses the servers advertise are the ones a browser uses - localhost:8080 (the
+  # backend's login and token endpoints) and localhost:8010 (agentgateway). Inside the container "localhost"
+  # is the container itself, so this sidecar shares its network namespace and forwards those two ports to the
+  # real services. (The OAuth callback needs nothing: the browser reaches localhost:6274 on the host.)
+  mcp-inspector-localhost:
+    image: alpine/socat:${APPS_SOCAT_VERSION:-1.8.0.0}
+    container_name: nb-mcp-inspector-localhost
+    network_mode: "service:mcp-inspector"
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        socat TCP-LISTEN:8080,fork,reuseaddr,bind=127.0.0.1 TCP:backend:8080 &
+        socat TCP-LISTEN:8010,fork,reuseaddr,bind=127.0.0.1 TCP:agentgateway:3000 &
+        wait
+    depends_on:
+      - mcp-inspector
 
 networks:
   # apps-network は compose ではなく `apps-network-ensure` (apps/Makefile) が

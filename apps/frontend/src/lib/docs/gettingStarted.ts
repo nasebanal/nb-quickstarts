@@ -184,9 +184,9 @@ export const gettingStarted: LocalizedDocsPage = {
             "(Scenario 6, which only connects while make agentgateway:up is running).",
         ],
         bullets: [
-          "Flip the switch on the apps-backend card to connect - it turns green and shows Connected.",
+          "Flip the switch on the apps-backend card to connect. The Inspector opens the app's own login page in your browser: sign in there (Demo login, or Keycloak) and press Allow - you are sent back to the Inspector, and the card turns green and shows Connected. If you are already signed in to the app, only Allow is asked.",
           "Open the Tools tab, pick list_accounts_accounts_get (it takes no arguments) and press Execute Tool - the Results panel shows the same data GET /accounts returns.",
-          "Every tool except health, login and the JWKS needs a token, and they all work here: pick get_me_me_get and Execute Tool - it returns the demo user's profile.",
+          "Every tool runs as the user you signed in as: pick get_me_me_get and Execute Tool - it returns that user's profile.",
         ],
         imagesLayout: "stack",
         images: [
@@ -211,14 +211,14 @@ export const gettingStarted: LocalizedDocsPage = {
             caption: "The result of the call - live data from the running backend.",
           },
         ],
-        noteTitle: "Authentication token settings in MCP Inspector",
-        noteHref: "https://modelcontextprotocol.io/docs/2026-07-28/tools/inspector/configuration#catalog-file-format",
+        noteTitle: "Logging in from MCP Inspector",
+        noteHref: "https://modelcontextprotocol.io/docs/2026-07-28/tools/inspector/authorization",
         note:
-          "/mcp requires a login, and there is nothing to sign in to in the Inspector: its server list is the read-only " +
-          "apps/mcp-inspector/config.json (started with --config), and that file gives apps-backend and agentgateway an " +
-          "Authorization header carrying the demo token, which the Inspector sends with every request. Without it /mcp answers " +
-          "401 and the apps-backend card cannot connect, and get_me_me_get answers invalid or missing token. " +
-          "The per-server headers field is the Inspector's own config format - see its documentation.",
+          "/mcp requires a login, and Connect starts it: the Inspector registers itself, opens /mcp-authorize in your browser " +
+          "(the same login the app has), and gets an access token back through its callback (http://localhost:6274/oauth/callback). " +
+          "The Inspector does the discovery and the token exchange inside its own container, and the servers advertise localhost " +
+          "addresses, so apps/mcp-inspector/config.json lists http://localhost:8080/mcp and http://localhost:8010/mcp and a small " +
+          "socat sidecar (mcp-inspector-localhost) forwards those ports there. There is no token in the config; a token you set by hand as an Authorization header (a headers entry for the server) is used instead, and no login starts.",
       },
       {
         heading: "Checking with MCP clients other than Inspector",
@@ -340,7 +340,7 @@ export const gettingStarted: LocalizedDocsPage = {
               "client_id and the code are signed and self-contained (no store, any backend instance verifies " +
                 "them); the code lives 60 seconds. Registration accepts only loopback http:// redirect URIs and " +
                 "claude.ai / claude.com callbacks. The OAuth routes are tagged mcp-oauth and left out of the tool list.",
-              "MCP Inspector is let in by the demo token in its config; any other client without a token gets 401. " +
+              "Any client without a token gets 401 and starts this login - MCP Inspector included. " +
                 "agentgateway is unaffected (it calls the REST routes, never /mcp - see Scenario 6).",
               "Editing backend code while an MCP client is connected makes uvicorn's reload hang on the open " +
                 "GET /mcp stream - use docker restart nb-backend. Turn the login off with " +
@@ -559,9 +559,9 @@ export const gettingStarted: LocalizedDocsPage = {
             "(シナリオ6。make agentgateway:upが動いている間だけ接続できます)。",
         ],
         bullets: [
-          "apps-backendカードのスイッチをオンにして接続します。緑になりConnectedと表示されます。",
+          "apps-backendカードのスイッチをオンにして接続します。Inspectorが、アプリ自身のログイン画面をブラウザで開くので、そこでログイン(デモログイン、またはKeycloak)してAllowを押します。Inspectorに戻り、カードが緑になってConnectedと表示されます。すでにアプリにログイン済みなら、Allowだけを聞かれます。",
           "Toolsタブでlist_accounts_accounts_getを選び(引数はありません)、Execute Toolを押すと、ResultsにGET /accountsと同じデータが表示されます。",
-          "health・login・JWKS以外のツールはどれもトークンが必要で、ここではすべて動きます: get_me_me_getを選んでExecute Toolを押すと、デモユーザーのプロフィールが返ります。",
+          "どのツールも、ログインしたユーザーとして実行されます: get_me_me_getを選んでExecute Toolを押すと、そのユーザーのプロフィールが返ります。",
         ],
         imagesLayout: "stack",
         images: [
@@ -586,14 +586,14 @@ export const gettingStarted: LocalizedDocsPage = {
             caption: "呼び出し結果 — 稼働中のbackendのライブなデータ。",
           },
         ],
-        noteTitle: "MCP Inspectorにおける認証トークン設定",
-        noteHref: "https://modelcontextprotocol.io/docs/2026-07-28/tools/inspector/configuration#catalog-file-format",
+        noteTitle: "MCP Inspectorからのログイン",
+        noteHref: "https://modelcontextprotocol.io/docs/2026-07-28/tools/inspector/authorization",
         note:
-          "/mcpはログインが必要ですが、Inspectorで改めてログインする必要はありません。Inspectorのサーバー一覧は読み取り専用の" +
-          "apps/mcp-inspector/config.json(--configで起動)で、このファイルがapps-backendとagentgatewayに、デモトークンを" +
-          "入れたAuthorizationヘッダーを持たせ、Inspectorがすべてのリクエストでそれを送ります。ヘッダーがないと/mcpは401を返して" +
-          "apps-backendのカードは接続できず、get_me_me_getはinvalid or missing tokenになります。" +
-          "サーバーごとのheadersはInspector自身の設定ファイル形式です — 詳しくは公式ドキュメントを参照してください。",
+          "/mcpはログインが必要で、Connectを押すとそれが始まります: Inspectorが自分を登録し、ブラウザで/mcp-authorize" +
+          "(アプリと同じログイン)を開き、コールバック(http://localhost:6274/oauth/callback)経由でアクセストークンを受け取ります。" +
+          "Inspectorは、発見とトークン交換を自分のコンテナの中で行い、サーバーはlocalhostのアドレスを案内するため、" +
+          "apps/mcp-inspector/config.jsonにはhttp://localhost:8080/mcpとhttp://localhost:8010/mcpを書き、小さなsocatのサイドカー" +
+          "(mcp-inspector-localhost)がそのポートを転送します。設定ファイルにトークンはありません。手動でAuthorizationヘッダー(サーバーのheaders)にトークンを設定した場合は、それが優先され、ログインは始まりません。",
       },
       {
         heading: "Inspector以外のMCPクライアントでの確認手順",
@@ -712,7 +712,7 @@ export const gettingStarted: LocalizedDocsPage = {
               "client_idとcodeは署名つきで自己完結しています(保存先なし、どのbackendインスタンスでも検証できます)。" +
                 "codeの有効期間は60秒です。登録できるリダイレクトURIはループバックのhttp://と、claude.ai / " +
                 "claude.comのコールバックだけです。OAuthのルートはmcp-oauthタグを付けて、ツール一覧から外しています。",
-              "MCP Inspectorは設定内のデモトークンで通ります。トークンを持たないほかのクライアントは401になります。" +
+              "トークンを持たないクライアントは、MCP Inspectorも含めて401になり、このログインを始めます。" +
                 "agentgatewayは影響を受けません(REST経路を呼び、/mcpは使いません — シナリオ6を参照)。",
               "MCPクライアントを接続したままbackendのコードを編集すると、開いたままのGET /mcpストリームに" +
                 "uvicornの再読み込みが阻まれて固まります。docker restart nb-backendを使ってください。" +
