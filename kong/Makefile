@@ -23,7 +23,6 @@ kong:
 	@echo "Verification:"
 	@echo "  kong:list            - List all services and routes"
 	@echo "  kong:test-rate-limit - Test rate limiting with multiple requests"
-	@echo "  kong:test-jwt        - Check the JWT gate on /api/* (open routes, valid/tampered/expired tokens, CORS)"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  KONG_DB=postgres  # Database mode (uses PostgreSQL) - default"
@@ -136,6 +135,3 @@ kong-list:
 
 kong-test-rate-limit:
 	@./kong/bin/test_rate_limit.sh
-
-kong-test-jwt:
-	@./kong/bin/test_jwt.sh

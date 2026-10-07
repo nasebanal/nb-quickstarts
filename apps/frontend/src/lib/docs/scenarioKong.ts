@@ -15,23 +15,19 @@ export const scenarioKong: LocalizedDocsPage = {
           "Kafka's path (Scenario 3) does not go through Kong: by default the bridge posts to the backend directly. Kong is where the REST clients - the browser, the load tests - are routed, and where a contract mock can be swapped in.",
         ],
         bullets: [
-          "Kong: put auth (here, the JWT check at the gate), rate limiting and routing in one gateway in front of the backend, and change where traffic goes at runtime - no application code change.",
+          "Kong: put auth, rate limiting and routing in one gateway in front of the backend, and change where traffic goes at runtime - no application code change.",
           "Specmatic: a mock server generated straight from the OpenAPI contract, and the same contract can verify the real backend, so mock and implementation can't quietly drift apart.",
         ],
       },
       {
         heading: "Plugins used in this scenario",
         body: [
-          "Kong's behavior here comes from a handful of plugins, all declared in kong/conf/declarative.yml. On the protected /api route they run in this order: cors, then jwt, then acl, and only then is the request proxied to the backend.",
+          "Kong's behavior here comes from a handful of plugins, all declared in kong/conf/declarative.yml.",
         ],
-        table: {"headers": ["Plugin", "Applied to", "What it does"], "rows": [["[cors](https://developer.konghq.com/plugins/cors/)", "Route /api (protected)", "Answers the browser's preflight (OPTIONS) and puts CORS headers on Kong's own 401, so a frontend on another origin can read it."], ["[jwt](https://developer.konghq.com/plugins/jwt/)", "Route /api (protected)", "Verifies the token's RS256 signature and exp with the backend's public key (consumer backend-users, matched by the token's iss). A missing or invalid token gets 401."], ["[acl](https://developer.konghq.com/plugins/acl/)", "Route /api (protected)", "Lets only the consumer group backend-users through - the group of the JWT credential above."], ["[request-transformer](https://developer.konghq.com/plugins/request-transformer/)", "Route /api (open routes)", "For /health, /auth/login, /openapi.json, /docs, /.well-known/* and /oauth/* - the routes that skip the gate - rebuilds the upstream path without /api."], ["[mock-demo-token](https://developer.konghq.com/plugins/request-transformer/)", "Service apps_backend (off by default)", "A second request-transformer instance. When apps_backend points at Specmatic's mock, it swaps the client's token for the fixed demo token that the mock accepts (after the gate has checked the client's own token)."], ["[response-transformer](https://developer.konghq.com/plugins/response-transformer/)", "Service apps_backend", "Adds Access-Control-Expose-Headers: Via,X-Specmatic-Result, so the browser can read the headers the frontend uses to show \"Via Kong\" and \"Via Mock\"."], ["[opentelemetry](https://developer.konghq.com/plugins/opentelemetry/)", "Service apps_backend", "Sends a trace of each request to the OpenTelemetry Collector (Scenario 7, Observability)."], ["[rate-limiting](https://developer.konghq.com/plugins/rate-limiting/)", "Service example_service (/mock, /echo)", "Limits the demo routes to 5 requests per minute. It is not applied to /api."]], "nowrapColumns": [0]},
+        table: {"headers": ["Plugin", "Applied to", "What it does"], "rows": [["[mock-demo-token](https://developer.konghq.com/plugins/request-transformer/)", "Service apps_backend (off by default)", "A request-transformer instance. When apps_backend points at Specmatic's mock, it swaps the client's token for the fixed demo token that the mock accepts."], ["[response-transformer](https://developer.konghq.com/plugins/response-transformer/)", "Service apps_backend", "Adds Access-Control-Expose-Headers: Via,X-Specmatic-Result, so the browser can read the headers the frontend uses to show \"Via Kong\" and \"Via Mock\"."], ["[opentelemetry](https://developer.konghq.com/plugins/opentelemetry/)", "Service apps_backend", "Sends a trace of each request to the OpenTelemetry Collector (Scenario 7, Observability)."], ["[rate-limiting](https://developer.konghq.com/plugins/rate-limiting/)", "Service example_service (/mock, /echo)", "Limits the demo routes to 5 requests per minute. It is not applied to /api."]], "nowrapColumns": [0]},
         closing: [
           "The same list is in Kong Manager (Plugins), or with curl http://localhost:8001/plugins.",
         ],
-        noteTitle: "CORS and the preflight request",
-        noteHref: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS",
-        note:
-          "CORS (Cross-Origin Resource Sharing) is the browser's rule for a page on one origin - here the frontend, localhost:5173 - calling an API on another - Kong, localhost:8000. The browser hands the response to the page only if it carries the right CORS headers (Access-Control-Allow-Origin and the like). For a call with an Authorization header it first sends a preflight: an OPTIONS request, without that header, asking whether the real request is allowed. [Kong's cors plugin](https://developer.konghq.com/plugins/cors/) answers that preflight before the authentication plugins (jwt and acl), and adds the CORS headers to proxied responses and to Kong's own (a 401, for one). Here it is configured on the /api route in kong/conf/declarative.yml.",
       },
       {
         heading: "1. Start Kong and route the frontend through it",
@@ -63,7 +59,6 @@ export const scenarioKong: LocalizedDocsPage = {
             "frontend is using and three checkboxes. They are read-only indicators, and each is checked from a real " +
             "response header, not from configuration - Via Kong when the answer carries Kong's Via header. The same " +
             "balances appear either way; only the route changed.",
-          "Kong also checks the login token at the gate. kong/conf/declarative.yml puts the jwt and acl plugins on the /api route, and the only key it trusts is the backend's public key: a request with no token, or a tampered, expired or unsigned (alg none) one, gets 401 from Kong and never reaches the backend. The routes the backend itself leaves open - /health, /auth/login, /openapi.json, /docs, /.well-known/* and /oauth/* - skip the gate, and the cors plugin answers the browser's preflight and puts CORS headers on Kong's own 401, so the frontend can read it. The backend still verifies the token itself. Keycloak tokens (Scenario 4) are not accepted through Kong: they come from another issuer with a rotating key. make kong:test-jwt checks all of this with real requests.",
         ],
         noteTitle: "Kong: DB mode and declarative configuration",
         noteHref: "https://docs.konghq.com/gateway/latest/production/deployment-topologies/db-less-and-declarative-config/",
@@ -99,7 +94,7 @@ export const scenarioKong: LocalizedDocsPage = {
           "Every API route needs a bearer token now, and the mock answers only the one token its contract " +
             "examples carry (the fixed demo token), not the token a login hands out. So kong/conf/declarative.yml " +
             "ships a request-transformer plugin on apps_backend, named mock-demo-token and switched off, that " +
-            "swaps the demo token in for whatever the client sent (after the JWT gate has checked the client's own token). You switch it on together with the target " +
+            "swaps the demo token in for whatever the client sent. You switch it on together with the target " +
             "in step 4; against the real backend it stays off.",
         ],
         table: {
@@ -236,23 +231,19 @@ export const scenarioKong: LocalizedDocsPage = {
           "Kafkaの経路(シナリオ3)はKongを通りません: ブリッジはデフォルトでbackendへ直接POSTします。Kongは、RESTのクライアント — ブラウザや負荷テスト — をルーティングし、契約モックへ差し替えられる場所です。",
         ],
         bullets: [
-          "Kong: 認証(ここではJWTの検証)・レート制限・ルーティングをbackendの前段のゲートウェイに集約でき、向き先の変更もアプリのコードを触らず実行時に行えます。",
+          "Kong: 認証・レート制限・ルーティングをbackendの前段のゲートウェイに集約でき、向き先の変更もアプリのコードを触らず実行時に行えます。",
           "Specmatic: OpenAPIの契約からそのままモックサーバーを生成でき、同じ契約で実backendも検証できるため、モックと実装が知らないうちにずれることを防げます。",
         ],
       },
       {
         heading: "このシナリオで使っているプラグイン",
         body: [
-          "このシナリオのKongの動作は、いくつかのプラグインで実現していて、すべてkong/conf/declarative.ymlに宣言されています。保護された/apiのルートでは、cors、jwt、aclの順に実行され、そのあとでbackendへ中継されます。",
+          "このシナリオのKongの動作は、いくつかのプラグインで実現していて、すべてkong/conf/declarative.ymlに宣言されています。",
         ],
-        table: {"headers": ["プラグイン", "付けている場所", "用途"], "rows": [["[cors](https://developer.konghq.com/plugins/cors/)", "/apiのルート(保護あり)", "ブラウザのプリフライト(OPTIONS)に答え、Kong自身の401にもCORSヘッダーを付けます。別オリジンのfrontendが、401を読めるようにするためです。"], ["[jwt](https://developer.konghq.com/plugins/jwt/)", "/apiのルート(保護あり)", "backendの公開鍵(Consumer backend-users。トークンのissで対応づけ)で、トークンのRS256署名とexpを検証します。トークンがない、または不正なら401です。"], ["[acl](https://developer.konghq.com/plugins/acl/)", "/apiのルート(保護あり)", "Consumerのグループ backend-users(上のJWT認証情報のグループ)だけを通します。"], ["[request-transformer](https://developer.konghq.com/plugins/request-transformer/)", "/apiのルート(開放ルート)", "ゲートを通らない/health、/auth/login、/openapi.json、/docs、/.well-known/*、/oauth/*について、/apiを外した上流のパスに書き換えます。"], ["[mock-demo-token](https://developer.konghq.com/plugins/request-transformer/)", "サービス apps_backend(初期は無効)", "request-transformerの別のインスタンスです。apps_backendをSpecmaticのモックに向けたとき、クライアントのトークンを、モックが受け付ける固定デモトークンに差し替えます(ゲートがクライアント自身のトークンを検証したあと)。"], ["[response-transformer](https://developer.konghq.com/plugins/response-transformer/)", "サービス apps_backend", "Access-Control-Expose-Headers: Via,X-Specmatic-Result を足します。frontendが「Kong経由」「モック経由」の表示に使うヘッダーを、ブラウザが読めるようにするためです。"], ["[opentelemetry](https://developer.konghq.com/plugins/opentelemetry/)", "サービス apps_backend", "各リクエストのトレースを、OpenTelemetry Collectorへ送ります(シナリオ7: オブザーバビリティ)。"], ["[rate-limiting](https://developer.konghq.com/plugins/rate-limiting/)", "サービス example_service(/mock、/echo)", "デモ用のルートを、1分5リクエストに制限します。/apiにはかけていません。"]], "nowrapColumns": [0]},
+        table: {"headers": ["プラグイン", "付けている場所", "用途"], "rows": [["[mock-demo-token](https://developer.konghq.com/plugins/request-transformer/)", "サービス apps_backend(初期は無効)", "request-transformerのインスタンスです。apps_backendをSpecmaticのモックに向けたとき、クライアントのトークンを、モックが受け付ける固定デモトークンに差し替えます。"], ["[response-transformer](https://developer.konghq.com/plugins/response-transformer/)", "サービス apps_backend", "Access-Control-Expose-Headers: Via,X-Specmatic-Result を足します。frontendが「Kong経由」「モック経由」の表示に使うヘッダーを、ブラウザが読めるようにするためです。"], ["[opentelemetry](https://developer.konghq.com/plugins/opentelemetry/)", "サービス apps_backend", "各リクエストのトレースを、OpenTelemetry Collectorへ送ります(シナリオ7: オブザーバビリティ)。"], ["[rate-limiting](https://developer.konghq.com/plugins/rate-limiting/)", "サービス example_service(/mock、/echo)", "デモ用のルートを、1分5リクエストに制限します。/apiにはかけていません。"]], "nowrapColumns": [0]},
         closing: [
           "同じ一覧は、Kong Manager(Plugins)や、curl http://localhost:8001/plugins でも見られます。",
         ],
-        noteTitle: "CORSとプリフライトリクエスト",
-        noteHref: "https://developer.mozilla.org/ja/docs/Web/HTTP/Guides/CORS",
-        note:
-          "CORS(Cross-Origin Resource Sharing)は、あるオリジンのページ(ここではfrontendのlocalhost:5173)が、別のオリジンのAPI(Kongのlocalhost:8000)を呼ぶときの、ブラウザのルールです。ブラウザは、正しいCORSヘッダー(Access-Control-Allow-Originなど)が付いた応答だけを、ページに渡します。Authorizationヘッダー付きの呼び出しでは、本来のリクエストの前に、プリフライトを送ります。これは、そのヘッダーなしのOPTIONSリクエストで、本来のリクエストを許可するかを問い合わせるものです。[Kongのcorsプラグイン](https://developer.konghq.com/plugins/cors/)は、認証系のプラグイン(jwtとacl)より前にこのプリフライトに答え、中継した応答と、Kong自身が作る応答(401など)の両方にCORSヘッダーを付けます。ここでは、kong/conf/declarative.ymlの/apiのルートに設定しています。",
       },
       {
         heading: "1. Kongを起動し、frontendをKong経由にする",
@@ -284,7 +275,6 @@ export const scenarioKong: LocalizedDocsPage = {
             "3つのチェックボックスが表示されています。これらは読み取り専用の表示で、設定からの推測ではなく実際の" +
             "レスポンスヘッダーで判定しています — 応答にKongのViaヘッダーが付いていればVia Kongにチェックが入ります。" +
             "どちらの経路でも同じ残高が表示され、変わったのは経路だけです。",
-          "Kongは、ログインのトークンもゲートで検証します。kong/conf/declarative.ymlは、/apiのルートにjwtプラグインとaclプラグインを付けており、信頼する鍵はbackendの公開鍵だけです。トークンがない、または改ざんされた・期限切れ・署名のない(alg none)トークンのリクエストは、Kongが401を返し、backendには届きません。backend自身が開放しているルート — /health、/auth/login、/openapi.json、/docs、/.well-known/*、/oauth/* — はゲートを通らず、corsプラグインが、ブラウザのプリフライトに答え、Kong自身の401にもCORSヘッダーを付けるので、frontendがその401を読めます。backendも、引き続きトークンを自分で検証します。Keycloakのトークン(シナリオ4)は、発行者が別で鍵も入れ替わるため、Kong経由では受け付けません。make kong:test-jwtが、実際のリクエストで、これらをまとめて確認します。",
         ],
         noteTitle: "Kong: DBモードと宣言的設定",
         noteHref: "https://docs.konghq.com/gateway/latest/production/deployment-topologies/db-less-and-declarative-config/",
@@ -318,7 +308,7 @@ export const scenarioKong: LocalizedDocsPage = {
           "APIはすべてbearerトークンが必要になり、モックが答えるのは契約のexampleに書かれた1つのトークン" +
             "(固定デモトークン)だけで、ログインで得たトークンには答えません。そのためkong/conf/declarative.ymlには、" +
             "apps_backendに付けたrequest-transformerプラグイン(名前はmock-demo-token、初期は無効)があり、" +
-            "クライアントが送ったトークンを(JWTのゲートがそのトークンを検証したあとで)デモトークンに差し替えます。手順4で向き先と一緒にオンにします。" +
+            "クライアントが送ったトークンをデモトークンに差し替えます。手順4で向き先と一緒にオンにします。" +
             "実backendに向けているときはオフのままです。",
         ],
         table: {
