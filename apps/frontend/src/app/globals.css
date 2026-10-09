@@ -10,8 +10,8 @@
   --nb-fg-subtle: #999;
   --nb-accent: #2563eb;
   --nb-accent-hover: #1d4ed8;
-  --nb-logo-fg: #6b7a90; /* nav wordmark (NASEBANAL) */
-  --nb-brand-sub: #7c3aed; /* nav sub-word (Tools): violet - distinct from Growth teal, Evolution blue, Demo lime */
+  --nb-logo-fg: var(--nb-fg); /* nav wordmark (NASEBANAL): follows text colour, same as nb-landing-page */
+  --nb-brand-sub: #6b7a90; /* nav sub-word (Tools): same grey as the Tools glyph in nb-landing-page My Apps */
   --nb-header-bg: rgba(255, 255, 255, 0.95);
   --nb-page-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   --nb-surface: #ffffff;
@@ -32,8 +32,8 @@
   --nb-fg-subtle: #6b7684;
   --nb-accent: #3b82f6;
   --nb-accent-hover: #60a5fa;
-  --nb-logo-fg: #6b7a90;
-  --nb-brand-sub: #a78bfa;
+  --nb-logo-fg: var(--nb-fg);
+  --nb-brand-sub: #6b7a90;
   --nb-header-bg: rgba(20, 22, 27, 0.95);
   --nb-page-gradient: linear-gradient(135deg, #14161a 0%, #1b2430 100%);
   --nb-surface: #1a1d23;
@@ -56,8 +56,8 @@
     --nb-fg-subtle: #6b7684;
     --nb-accent: #3b82f6;
     --nb-accent-hover: #60a5fa;
-    --nb-logo-fg: #6b7a90;
-    --nb-brand-sub: #a78bfa;
+    --nb-logo-fg: var(--nb-fg);
+    --nb-brand-sub: #6b7a90;
     --nb-header-bg: rgba(20, 22, 27, 0.95);
     --nb-page-gradient: linear-gradient(135deg, #14161a 0%, #1b2430 100%);
     --nb-surface: #1a1d23;
@@ -356,7 +356,7 @@ body:has(> .nb-header) {
 
 /* Sub-word ("Tools") color. The class name matches nb-shared-navigation's
    .nb-nav-brand-demo (nb-dentiscope's lime "Demo"), but this app deliberately
-   uses its own --nb-brand-sub (violet, lighter in dark theme). */
+   uses its own --nb-brand-sub (slate grey, matching the Tools glyph in nb-landing-page). */
 .nb-nav-brand-demo {
   font-weight: 800;
   color: var(--nb-brand-sub);
