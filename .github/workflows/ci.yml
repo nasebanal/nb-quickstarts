@@ -44,7 +44,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.15"
 
       # Pinned in requirements-dev.txt so an upstream ruff release cannot
       # change what CI enforces without a commit here (Renovate raises the

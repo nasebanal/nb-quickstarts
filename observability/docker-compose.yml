@@ -5,7 +5,7 @@ services:
   # NewRelic, which also ingests OTLP) is a change to otel-collector.yaml
   # only - the apps' instrumentation stays the same.
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:${OBSERVABILITY_OTEL_COLLECTOR_VERSION:-0.161.0}
+    image: otel/opentelemetry-collector-contrib:${OBSERVABILITY_OTEL_COLLECTOR_VERSION:-0.162.0}
     container_name: nb-otel-collector
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
@@ -93,7 +93,7 @@ services:
   # Webhook receiver standing in for Slack/email/etc. Prints each alert it
   # is sent; see bin/alert_sink.py.
   alert-sink:
-    image: python:3.14-alpine
+    image: python:3.15-alpine
     container_name: nb-alert-sink
     command: ["python", "-u", "/app/alert_sink.py"]
     volumes:
