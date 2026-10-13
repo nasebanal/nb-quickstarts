@@ -16,7 +16,7 @@
 # `nb auth status` always exits 0, so its text is what tells the cases apart.
 
 if ! command -v nb >/dev/null 2>&1; then
-  echo "❌ 'nb' (the NASEBANAL CLI) is not on PATH - install it (npm i -g @nasebanal/cli) or link nb-cli."
+  echo "❌ 'nb' (the NASEBANAL CLI) is not on PATH - install it (npm i -g @nasebanal/cli, from the public npm registry) or npm link a local nb-cli. See README, 'The nb CLI'."
   exit 1
 fi
 

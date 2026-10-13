@@ -16,7 +16,7 @@ pytest:
 	@echo "Test Commands:"
 	@echo "  pytest:test   - Build (if needed) and run apps/backend unit tests"
 	@echo "  pytest:report - Open the last report.html in your browser"
-	@echo "  pytest:report-upload - Upload the last run (pytest/report/junit.xml) to NASEBANAL Assurance (see .env: NB_TOKEN)"
+	@echo "  pytest:report-upload - Upload the last run (pytest/report/junit.xml) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN)"
 	@echo "  pytest:reset  - Delete the generated report (pytest/report/)"
 	@echo ""
 	@echo "Note: these are unit tests against an in-memory SQLite DB;"

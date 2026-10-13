@@ -173,6 +173,10 @@ export const gettingStarted: LocalizedDocsPage = {
           "(and make locust:load, the headless load run, under locust/logs/<timestamp>/) - all gitignored, regenerated on every run. " +
           "[Scenario 1](/docs/scenario-testing) covers every one of them: how to check the results, real " +
           "screenshots, and the evaluation of the results from this repository.",
+          "To send a run's summary to NASEBANAL Assurance, use make <module>:report-upload (e.g. make pytest:report-upload). " +
+          "It runs the nb CLI on your host, not in a container, so nb must be on your PATH " +
+          "(npm i -g @nasebanal/cli); the first upload opens the browser for nb auth login, or set NB_TOKEN in .env " +
+          "for CI. See the README, 'The nb CLI'.",
         ],
       },
       {
@@ -548,6 +552,10 @@ export const gettingStarted: LocalizedDocsPage = {
           "ブラウザで見られるHTMLレポートが残ります — すべて.gitignore対象で、実行のたびに新しく生成されます。" +
           "[シナリオ1](/docs/scenario-testing)では、すべてのテストについて、結果の確認方法、実際のスクリーンショット、" +
           "本リポジトリでの結果の評価を記載しています。",
+          "実行結果の要約をNASEBANAL Assuranceに送るには、make <module>:report-upload(例: make pytest:report-upload)を使います。" +
+          "これはコンテナ内ではなくホスト上でnb CLIを実行するため、nbがPATH上にある必要があります" +
+          "(npm i -g @nasebanal/cli)。初回アップロード時はブラウザでnb auth loginが開きます。CIでは.envにNB_TOKENを設定してください。" +
+          "詳細はREADMEの「The nb CLI」を参照。",
         ],
       },
       {

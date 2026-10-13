@@ -22,7 +22,7 @@ playwright:
 	@echo "Report: playwright/report/index.html"
 	@echo ""
 	@echo "  playwright:report - Serve + open it via Playwright's own report viewer (Ctrl+C to stop)"
-	@echo "  playwright:report-upload - Upload the last run (playwright/junit/junit.xml) to NASEBANAL Assurance (see .env: NB_TOKEN)"
+	@echo "  playwright:report-upload - Upload the last run (playwright/junit/junit.xml) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN)"
 	@echo "  playwright:reset  - Delete the generated report and test-results (playwright/report/, playwright/test-results/)"
 
 playwright\:%:
