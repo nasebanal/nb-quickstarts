@@ -565,9 +565,10 @@ A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KA
 | Variable | Default | Description |
 |---|---|---|
 | `NB_TOKEN` | *(unset)* | PAT / service-account token for NASEBANAL Assurance - what `<module>:report-upload` sends with. Unset = use the credentials from `nb auth login` (CI needs the token) |
-| `NB_BASE_URL` | `https://api.assurance.nasebanal.com` | The Assurance **API** (not the web UI). A local `npm run dev` of nb-assurance-api is `http://localhost:8791` |
+| `NB_BASE_URL` | `https://api.assurance.nasebanal.com` | The Assurance **API** (not the web UI). To report to a local `npm run dev` of nb-assurance-api, set the URL that API listens on |
 | `PROJECT_NAME` | `nb-quickstarts` | The Assurance project the runs go to (created on first upload) |
-| `NB_RUN_KEY` | *(`local-<commit>-<day>`)* | Groups several uploads into one run |
+| `NB_RUN_KEY` | *(`make all:report-upload`: `local-<commit>-<UTC time>`, one per call; the single `<module>:report-upload` targets: `local-<commit>-<day>`)* | Groups uploads into one run: the same key replaces a result, a new key adds a point to the trend |
+| `NB_API_VERSION` | *(unset)* | The API version the runs are about (`v1`, `v2`) for a repository that serves several. Labels every kind except unit tests (those hold for all versions); the suite name is unchanged, so v1 and v2 of one suite sit side by side. One-off: `make specmatic:report-upload NB_API_VERSION=v2` |
 
 ### Apps
 
@@ -693,7 +694,16 @@ Every `make <module>:test` run leaves a browsable report behind. These are all g
 | `locust` | `locust/logs/<timestamp>/report.html`, plus the files below |
 | `zap` | `zap/report/<scan>-report.html` (also `.json`) - `baseline`/`full-scan`/`api-scan`, overwritten each run |
 
-**Send a run to NASEBANAL Assurance:** `make pytest:report-upload` (likewise `vitest:report-upload`, `playwright:report-upload`, `specmatic:report-upload`, `locust:report-upload`, `zap:report-upload`) uploads the last run's summary through the `nb` CLI. With no `NB_TOKEN` and no stored session it opens the browser for `nb auth login` (CI / no terminal: set `NB_TOKEN`). For production instead of a local `nb-assurance-api`, set for production instead of a local `nb-assurance-api`, `NB_BASE_URL` in `.env` - see `.env.example`. Everything uploaded for one commit on one day lands in one Assurance run (project `PROJECT_NAME`, default `nb-quickstarts`). `zap:report-upload` uploads every scan in `zap/report/` (converted to JUnit by `bin/zap_to_junit.mjs`, kind `security`, one suite per scan; an alert of Low or above counts as a failure) and, like `locust:report-upload` (after `make locust:load`), is not part of `all:report-upload`, just as neither Locust nor ZAP is part of `all:test`.
+**The `nb` CLI (prerequisite for every `report-upload`):** the uploads run `nb assurance report upload` **on your host** (not in a container - the reports are on the host, and the login lives in `~/.config/nasebanal/`), so `nb` must be on your `PATH`; the scripts stop with a pointer if it is not. Get it from the public npm registry - no token needed:
+
+```bash
+npm i -g @nasebanal/cli     # installs `nb`; Node >= 20
+nb --version
+```
+
+(Or run it without installing: `npx @nasebanal/cli ...`. To use a local nb-cli checkout instead, `npm link` it - then rebuilt changes show up here at once.) **Credentials:** the first upload opens the browser for `nb auth login` when there is no session, and the session then renews itself; in CI or anywhere without a terminal set `NB_TOKEN` (a PAT or service-account token). The per-test case lists in Assurance need `nb` **0.2.0 or later** (`nb --version`); an older `nb` still uploads the summary. `make all:report-upload` skips the tools whose test has not run yet and reports them at the end.
+
+**Send a run to NASEBANAL Assurance:** `make pytest:report-upload` (likewise `playwright:report-upload`, `specmatic:report-upload`, `locust:report-upload`, `zap:report-upload`) uploads the last run's summary through the `nb` CLI. With no `NB_TOKEN` and no stored session it opens the browser for `nb auth login` (CI / no terminal: set `NB_TOKEN`). The default is production; to report to a local `nb-assurance-api` (`npm run dev`) instead, set `NB_BASE_URL` in `.env` to that API's URL - see `.env.example`. Everything uploaded for one commit on one day lands in one Assurance run (project `PROJECT_NAME`, default `nb-quickstarts`). `zap:report-upload` also sends the alerts counted by severity (`--metric high=… medium=… low=… info=…`, from `bin/zap_counts.mjs`), which is what the Assurance security gate reads: it fails on high / critical only, medium and low are shown. It uploads every scan in `zap/report/` (converted to JUnit by `bin/zap_to_junit.mjs`, kind `security`, one suite per scan; an alert of Low or above counts as a failure) and, like `locust:report-upload` (after `make locust:load`), is not part of `all:report-upload`, just as neither Locust nor ZAP is part of `all:test`.
 
 **Locust** writes a whole timestamped directory per run, `locust/logs/YYYYMMDD_HHMMSS/`:
 

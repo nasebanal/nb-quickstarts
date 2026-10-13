@@ -31,7 +31,7 @@ locust:
 	@echo "  locust:restart     - Restart Locust containers"
 	@echo "  locust:reset       - Delete all past run logs/reports (locust/logs/) - move any you want to keep first"
 	@echo "  locust:open        - Open Locust UI in browser"
-	@echo "  locust:report-upload - Upload the most recent locust:load run to NASEBANAL Assurance (see .env: NB_TOKEN; pass/fail by LOCUST_MAX_FAIL_RATIO)"
+	@echo "  locust:report-upload - Upload the most recent locust:load run to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN; pass/fail by LOCUST_MAX_FAIL_RATIO)"
 	@echo "  locust:report      - Open the most recent run's report.html in your browser"
 	@echo ""
 	@echo "Load Testing (configure via .env or CLI, then run locust:up or locust:load):"

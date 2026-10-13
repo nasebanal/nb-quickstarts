@@ -33,7 +33,7 @@ zap:
 	@echo "  zap:reset     - Delete every generated scan report (zap/report/)"
 	@echo ""
 	@echo "  zap:report    - Open every *-report.html currently in zap/report/ in your browser"
-	@echo "  zap:report-upload - Upload every scan in zap/report/ (*-report.json, one suite per scan) to NASEBANAL Assurance (see .env: NB_TOKEN)"
+	@echo "  zap:report-upload - Upload every scan in zap/report/ (*-report.json, one suite per scan) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN)"
 	@echo "                  (whichever scans have actually been run - not a fixed list, so a"
 	@echo "                  new scan type added later is picked up with no change needed here)"
 	@echo ""
@@ -181,7 +181,7 @@ zap-report-upload:
 	for f in zap/report/*-report.json; do \
 		scan=$$(basename $$f -report.json); \
 		node bin/zap_to_junit.mjs $$f zap/report/$$scan-junit.xml \
-			&& bin/report_upload.sh zap:$$scan security zap $$scan zap/report/$$scan-junit.xml \
+			&& bin/report_upload.sh zap:$$scan security zap $$scan zap/report/$$scan-junit.xml $$(node bin/zap_counts.mjs $$f) \
 			|| failed="$$failed $$scan"; \
 	done; \
 	if [ -n "$$failed" ]; then echo "❌ Upload failed for:$$failed"; exit 1; fi

@@ -42,9 +42,11 @@ all:
 	@echo "  all:down    - Stop them all (apps last)"
 	@echo "  all:restart - all:down then all:up"
 	@echo "  all:status  - Show container status for every module"
+	@echo "  all:pull    - Pull every registry image and build every local image (pip/npm included), so everything runs afterwards without internet (air-gapped use)"
 	@echo "  all:test    - Run pytest/vitest/playwright/specmatic in sequence (starts apps:up first; not locust/zap - see locust:load)"
 	@echo "  all:report  - Open every existing test report in your browser"
-	@echo "  all:report-upload - Upload the last pytest/vitest/playwright/specmatic run to NASEBANAL Assurance (see .env: NB_TOKEN; locust and zap have their own locust:report-upload / zap:report-upload)"
+	@echo "  all:report-upload - Upload the last pytest/playwright/specmatic/zap/locust run (whichever have a report) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN; a tool with no report yet is skipped)"
+	@echo "              (NB_API_VERSION=v1 in .env labels the uploaded runs with an API version)"
 	@echo "  all:reset   - Stop everything, wipe apps/kong/kafka/observability persistent state and every test tool's generated logs/reports (nothing is started afterwards)"
 
 all\:%:
@@ -73,6 +75,23 @@ all-down:
 all-restart:
 	@$(MAKE) all-down
 	@$(MAKE) all-up
+
+# Project names match what each module's own Makefile uses (-p <name>; the
+# modules without -p fall back to their directory name; locust is nb-locust).
+# --profile '*' includes optional services (e.g. Kong's DB mode); build
+# covers the local images (nb-backend, nb-frontend, nb-pytest, nb-vitest,
+# kafka-bridge, locust-mysql, ...) whose Dockerfiles run pip/npm.
+ALL_PULL_MODULES := apps kong kafka keycloak vault locust agentgateway observability pytest vitest playwright specmatic zap
+
+all-pull:
+	@for m in $(ALL_PULL_MODULES); do \
+		p=$$m; [ $$m = locust ] && p=nb-locust; \
+		echo "=== $$m: pull ==="; \
+		docker compose -p $$p -f $$m/docker-compose.yml --profile '*' pull --ignore-buildable || exit 1; \
+		echo "=== $$m: build ==="; \
+		docker compose -p $$p -f $$m/docker-compose.yml --profile '*' build || exit 1; \
+	done
+	@echo "All images pulled and built. Disconnect now and the modules run offline."
 
 all-status:
 	@echo "=== apps ==="
@@ -134,20 +153,32 @@ all-report:
 	@echo "  make vitest:report"
 	@echo "  make playwright:report"
 
-# Uploads the last run of every tool `all:test` runs (see bin/report_upload.sh;
-# locust (locust:load) and zap are not part of all:test either, so they have their own
-# `locust:report-upload` / `zap:report-upload`; vitest's mock-based contract run is a dev-phase
-# check and is not uploaded). A module whose test has not run yet must not
-# stop the others, so each one is attempted and the failures are reported at
-# the end.
+# Uploads the last run of every tool whose report exists (see bin/report_upload.sh): pytest, playwright and
+# specmatic (what `all:test` runs and Assurance cares about - vitest, the frontend's unit tests run against
+# mocks, is not uploaded), plus zap and locust (not part of all:test, as a scan or a load run is long). A tool
+# that has not run yet has no report: it is skipped, not a failure, so one call after any mix of runs works. The
+# others do not stop on one failure; the failures are reported at the end.
+# One run key per call (commit + UTC time) so everything this call uploads is one Assurance run and every call is a
+# new run: the trend gets a point per upload instead of one per commit per day (NB_RUN_KEY overrides it).
 all-report-upload:
 	@bin/ensure_nb_auth.sh || exit 1
-	@failed=""; \
-	for t in pytest vitest playwright specmatic; do \
-		$(MAKE) $$t-report-upload || failed="$$failed $$t"; \
+	@key="$${NB_RUN_KEY:-local-$$(git rev-parse --short=7 HEAD 2>/dev/null || echo nocommit)-$$(date -u +%Y%m%d-%H%M%S)}"; \
+	echo "Run key for this upload: $$key"; \
+	has() { [ -n "$$(find "$$1" -name "$$2" 2>/dev/null | head -1)" ]; }; \
+	failed=""; uploaded=0; \
+	for t in pytest playwright specmatic zap locust; do \
+		case $$t in \
+			pytest) has pytest/report junit.xml ;; \
+			playwright) has playwright/junit junit.xml ;; \
+			specmatic) has specmatic/junit 'TEST-junit-jupiter.xml' ;; \
+			zap) has zap/report '*-report.json' ;; \
+			locust) has locust/logs '*_stats.csv' ;; \
+		esac; \
+		if [ $$? -ne 0 ]; then echo "- $$t: no report yet, skipped"; continue; fi; \
+		NB_RUN_KEY="$$key" $(MAKE) $$t-report-upload && uploaded=$$((uploaded + 1)) || failed="$$failed $$t"; \
 	done; \
 	if [ -n "$$failed" ]; then echo "❌ Upload failed for:$$failed"; exit 1; fi; \
-	echo "✅ Uploaded every report."
+	echo "✅ Uploaded $$uploaded report(s)."
 
 # apps/kong/kafka each have a named Docker volume worth wiping
 # (apps_apps-db-data, kong_kong-db-data, kafka_kafka-data -

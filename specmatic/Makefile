@@ -29,7 +29,7 @@ specmatic:
 	@echo "Report: specmatic/report/test/html/index.html (also specmatic/junit/TEST-junit-jupiter.xml)"
 	@echo ""
 	@echo "  specmatic:report - Open that report in your browser"
-	@echo "  specmatic:report-upload - Upload the last specmatic:test run (specmatic/junit/TEST-junit-jupiter.xml) to NASEBANAL Assurance (see .env: NB_TOKEN)"
+	@echo "  specmatic:report-upload - Upload the last specmatic:test run (specmatic/junit/TEST-junit-jupiter.xml) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN)"
 	@echo "  specmatic:reset  - Delete the generated report and JUnit output (specmatic/report/, specmatic/junit/)"
 
 specmatic\:%:
