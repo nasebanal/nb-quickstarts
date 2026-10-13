@@ -198,7 +198,7 @@ services:
   # is the container itself, so this sidecar shares its network namespace and forwards those two ports to the
   # real services. (The OAuth callback needs nothing: the browser reaches localhost:6274 on the host.)
   mcp-inspector-localhost:
-    image: alpine/socat:${APPS_SOCAT_VERSION:-1.8.0.0}
+    image: alpine/socat:${APPS_SOCAT_VERSION:-1.8.1.3}
     container_name: nb-mcp-inspector-localhost
     network_mode: "service:mcp-inspector"
     entrypoint:
