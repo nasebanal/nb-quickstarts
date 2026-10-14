@@ -26,8 +26,8 @@ class MySQLUser(User):
     def on_start(self):
         """Initialize MySQL connection when user starts.
 
-        起動直後は mysql-server がまだ初期化中で接続を拒否する（Connection
-        refused）ことがあるため、起動時のみ多めにリトライして待つ。
+        Right after startup mysql-server may still be initializing and refuse
+        connections (Connection refused), so retry generously at start only.
         """
         self.connection = None
         self.connect_to_mysql(
@@ -38,8 +38,8 @@ class MySQLUser(User):
     def connect_to_mysql(self, max_attempts=1, retry_wait=2.0):
         """Establish MySQL connection.
 
-        max_attempts > 1 のときは接続できるまでリトライする（起動時の待ち用）。
-        計測イベント(connect)は最終結果として1回だけ発火する。
+        When max_attempts > 1, retry until connected (used to wait at startup).
+        The measurement event (connect) fires only once, with the final result.
         """
         start_time = time.time()
         last_exc = None

@@ -7,15 +7,16 @@ ifneq (,$(wildcard ../.env))
 endif
 
 #################### TARGET HOST ###################
-# 対象ホストは Makefile では決めない。各 locustfile が環境変数から自分で設定する:
-#   - HTTP/GraphQL: locustfile が HTTP_HOST を読む（compose が LOCUST_HTTP_HOST を渡す）
-#   - MySQL:        locustfile が MYSQL_HOST/PORT/USER/... を読んで接続する
-# よって別ホストを叩くときは .env の LOCUST_HTTP_HOST / LOCUST_MYSQL_* を変更する。
+# The target host is not decided in the Makefile. Each locustfile configures itself
+# from environment variables:
+#   - HTTP/GraphQL: the locustfile reads HTTP_HOST (compose passes LOCUST_HTTP_HOST)
+#   - MySQL:        the locustfile reads MYSQL_HOST/PORT/USER/... and connects with them
+# So to hit a different host, change LOCUST_HTTP_HOST / LOCUST_MYSQL_* in .env.
 #
-# locust:up はテスト対象アプリ（MySQL/HTTPサーバー）を起動しない。
-#   - apps（同梱のモックアプリ）を対象にするときは、先に `make apps:up` しておく
-#   - 外部ホストを対象にするときは、.env の LOCUST_HTTP_HOST / LOCUST_MYSQL_HOST を
-#     外部URLに変更するだけでよい（apps を起動する必要はない）
+# locust:up does not start the app under test (MySQL/HTTP server).
+#   - To target apps (the bundled mock app), run `make apps:up` first
+#   - To target an external host, just change LOCUST_HTTP_HOST / LOCUST_MYSQL_HOST in
+#     .env to the external URL (no need to start apps)
 
 #################### LOCUST MANAGEMENT ###################
 

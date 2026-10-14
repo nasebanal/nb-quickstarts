@@ -77,9 +77,9 @@ services:
       - locust-master
 
 networks:
-  # apps モジュール (../apps/docker-compose.yml) が所有するネットワーク。
-  # ここでは external として参照するだけなので、apps を起動していなくても
-  # `make apps-network-ensure` 相当の冪等な作成さえ済んでいれば起動できる。
+  # Network belonging to the apps module (../apps/docker-compose.yml).
+  # It is only referenced here as external, so this starts fine without apps running,
+  # as long as the network has been created idempotently (like `make apps-network-ensure`).
   apps-network:
     name: apps-network
     external: true

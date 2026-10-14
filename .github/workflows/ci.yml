@@ -1,7 +1,7 @@
 name: CI
 
-# このリポジトリは docker-compose / Makefile / Python(locust) / シェルスクリプトの
-# 構成ファイル集なので、CI では「各成果物が壊れていないか」を検証する。
+# This repository is a collection of docker-compose / Makefile / Python (locust) /
+# shell script configuration files, so CI verifies that each artifact is not broken.
 
 on:
   push:
@@ -9,20 +9,20 @@ on:
   pull_request:
     branches: [main]
 
-# 同一ブランチで新しい push があったら古い実行はキャンセル
+# Cancel the older run when a newer push arrives on the same branch
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ---- docker-compose 定義の文法チェック ----
+  # ---- Syntax check of docker-compose definitions ----
   compose:
     name: Validate docker-compose
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # .env が無くても compose が解決できるよう example をコピー
+      # Copy the example so compose can resolve without a real .env
       - name: Prepare .env
         run: cp .env.example .env
 
@@ -35,7 +35,7 @@ jobs:
             echo "::endgroup::"
           done
 
-  # ---- Python(locust) の lint / 文法チェック ----
+  # ---- Lint / syntax check of Python (locust) ----
   python:
     name: Lint Python
     runs-on: ubuntu-latest
@@ -58,9 +58,9 @@ jobs:
       - name: Ruff lint
         run: ruff check locust/bin apps/backend kafka/bridge
 
-  # ---- シェルスクリプトの構文チェック ----
-  # スクリプトは #!/bin/zsh（Makefile も SHELL := /bin/zsh）。
-  # shellcheck は zsh 非対応なので、正しいインタプリタ zsh の構文チェックを使う。
+  # ---- Syntax check of shell scripts ----
+  # Scripts use #!/bin/zsh (and the Makefiles set SHELL := /bin/zsh).
+  # shellcheck does not support zsh, so use zsh's own syntax check (the correct interpreter).
   shell:
     name: Syntax check (zsh)
     runs-on: ubuntu-latest
@@ -76,7 +76,7 @@ jobs:
             zsh -n "$f"
           done
 
-  # ---- TypeScript(apps/frontend) の型チェック ----
+  # ---- Type check of TypeScript (apps/frontend) ----
   typescript:
     name: Typecheck frontend
     runs-on: ubuntu-latest
@@ -95,7 +95,7 @@ jobs:
         working-directory: apps/frontend
         run: npm run typecheck
 
-  # ---- Dockerfile の lint と build 確認 ----
+  # ---- Dockerfile lint and build check ----
   docker:
     name: Lint & build Dockerfile
     runs-on: ubuntu-latest
@@ -121,7 +121,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.5.0
         with:
           dockerfile: ${{ matrix.dockerfile }}
-          # ARG のバージョン固定など軽微な指摘は失敗扱いにしない
+          # Do not fail on minor findings such as unpinned ARG versions
           failure-threshold: error
 
       - name: Build image
