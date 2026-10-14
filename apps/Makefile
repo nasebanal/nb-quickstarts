@@ -65,8 +65,8 @@ apps\:%:
 
 #################### APPS ACTIONS ###################
 
-# 他モジュール(locust 等)からも呼ばれる、冪等なネットワーク作成ターゲット。
-# apps を起動していなくても、apps-network に接続するモジュールを先に起動できるようにする。
+# Idempotent network-creation target, also called from other modules (locust, etc.).
+# Lets modules that attach to apps-network start first, even when apps itself is not running.
 apps-network-ensure:
 	@docker network create apps-network >/dev/null 2>&1 || true
 

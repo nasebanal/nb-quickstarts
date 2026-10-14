@@ -14,7 +14,7 @@ services:
       MYSQL_USER: ${APPS_MYSQL_USER:-demo}
       MYSQL_PASSWORD: ${APPS_MYSQL_PASSWORD:-demo}
     healthcheck:
-      # TCP(127.0.0.1) で mysqld が接続を受け付けられるまでを ready とみなす
+      # Consider it ready once mysqld accepts connections over TCP (127.0.0.1)
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${APPS_MYSQL_ROOT_PASSWORD:-rootpassword}"]
       interval: 3s
       timeout: 5s
@@ -212,8 +212,8 @@ services:
       - mcp-inspector
 
 networks:
-  # apps-network は compose ではなく `apps-network-ensure` (apps/Makefile) が
-  # 冪等に作成する。apps/locust 等どちらが先に起動しても壊れないようにするため。
+  # apps-network is created idempotently by `apps-network-ensure` (apps/Makefile),
+  # not by compose, so nothing breaks whichever of apps/locust etc. starts first.
   apps-network:
     name: apps-network
     external: true
