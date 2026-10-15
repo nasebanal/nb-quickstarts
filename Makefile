@@ -45,7 +45,7 @@ all:
 	@echo "  all:pull    - Pull every registry image and build every local image (pip/npm included), so everything runs afterwards without internet (air-gapped use)"
 	@echo "  all:test    - Run pytest/vitest/playwright/specmatic in sequence (starts apps:up first; not locust/zap - see locust:load)"
 	@echo "  all:report  - Open every existing test report in your browser"
-	@echo "  all:report-upload - Upload the last pytest/playwright/specmatic/zap/locust run (whichever have a report) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN; a tool with no report yet is skipped)"
+	@echo "  all:report-upload - Upload the last pytest/vitest/playwright/specmatic/zap/locust run (whichever have a report) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN; a tool with no report yet is skipped)"
 	@echo "              (NB_API_VERSION=v1 in .env labels the uploaded runs with an API version)"
 	@echo "  all:reset   - Stop everything, wipe apps/kong/kafka/observability persistent state and every test tool's generated logs/reports (nothing is started afterwards)"
 
@@ -153,9 +153,8 @@ all-report:
 	@echo "  make vitest:report"
 	@echo "  make playwright:report"
 
-# Uploads the last run of every tool whose report exists (see bin/report_upload.sh): pytest, playwright and
-# specmatic (what `all:test` runs and Assurance cares about - vitest, the frontend's unit tests run against
-# mocks, is not uploaded), plus zap and locust (not part of all:test, as a scan or a load run is long). A tool
+# Uploads the last run of every tool whose report exists (see bin/report_upload.sh): pytest, vitest (unit and contract,
+# one call), playwright and specmatic (what `all:test` runs), plus zap and locust (not part of all:test, as a scan or a load run is long). A tool
 # that has not run yet has no report: it is skipped, not a failure, so one call after any mix of runs works. The
 # others do not stop on one failure; the failures are reported at the end.
 # One run key per call (commit + UTC time) so everything this call uploads is one Assurance run and every call is a
@@ -166,9 +165,10 @@ all-report-upload:
 	echo "Run key for this upload: $$key"; \
 	has() { [ -n "$$(find "$$1" -name "$$2" 2>/dev/null | head -1)" ]; }; \
 	failed=""; uploaded=0; \
-	for t in pytest playwright specmatic zap locust; do \
+	for t in pytest vitest playwright specmatic zap locust; do \
 		case $$t in \
 			pytest) has pytest/report junit.xml ;; \
+			vitest) has vitest junit.xml ;; \
 			playwright) has playwright/junit junit.xml ;; \
 			specmatic) has specmatic/junit 'TEST-junit-jupiter.xml' ;; \
 			zap) has zap/report '*-report.json' ;; \

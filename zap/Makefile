@@ -33,7 +33,7 @@ zap:
 	@echo "  zap:reset     - Delete every generated scan report (zap/report/)"
 	@echo ""
 	@echo "  zap:report    - Open every *-report.html currently in zap/report/ in your browser"
-	@echo "  zap:report-upload - Upload every scan in zap/report/ (*-report.json, one suite per scan) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN)"
+	@echo "  zap:report-upload - Upload every scan in zap/report/ (*-report.json, one result per scan, for the component it targets - backend for api-scan, frontend for the others - labelled with the scan's name) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN)"
 	@echo "                  (whichever scans have actually been run - not a fixed list, so a"
 	@echo "                  new scan type added later is picked up with no change needed here)"
 	@echo ""
@@ -169,9 +169,12 @@ zap-report:
 
 # `nb` reads JUnit and Locust only, so each scan's JSON is first converted to
 # JUnit (bin/zap_to_junit.mjs: an alert of Low or above is a failed case, INFO
-# passes) and uploaded as kind `security`, one suite per scan (baseline,
-# api-scan, full-scan). Whichever scans have been run are uploaded; one that
-# fails to upload does not stop the others.
+# passes) and uploaded as kind `security`, one result per scan, for the component
+# the scan targets: `api-scan` scans apps/backend, `baseline` and `full-scan` scan
+# apps/frontend. The scan's name is the result's label (`--label`), so `baseline` and
+# `full-scan` - both `frontend` - stay two results in one Assurance run.
+# Whichever scans have been run are uploaded; one that fails to upload does not
+# stop the others.
 zap-report-upload:
 	@if ! ls zap/report/*-report.json >/dev/null 2>&1; then \
 		echo "No report yet - run 'make zap:baseline' (or :full-scan/:api-scan) first."; \
@@ -180,8 +183,9 @@ zap-report-upload:
 	failed=""; \
 	for f in zap/report/*-report.json; do \
 		scan=$$(basename $$f -report.json); \
+		case $$scan in api-scan) component=backend;; *) component=frontend;; esac; \
 		node bin/zap_to_junit.mjs $$f zap/report/$$scan-junit.xml \
-			&& bin/report_upload.sh zap:$$scan security zap $$scan zap/report/$$scan-junit.xml $$(node bin/zap_counts.mjs $$f) \
+			&& bin/report_upload.sh zap:$$scan security zap $$component zap/report/$$scan-junit.xml --label $$scan $$(node bin/zap_counts.mjs $$f) \
 			|| failed="$$failed $$scan"; \
 	done; \
 	if [ -n "$$failed" ]; then echo "❌ Upload failed for:$$failed"; exit 1; fi
