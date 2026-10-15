@@ -249,4 +249,4 @@ locust-join-cluster:
 # its siblings) to NASEBANAL Assurance - see bin/report_upload.sh. nb applies the
 # same LOCUST_MAX_FAIL_RATIO rule as locust:load (exit_code.py).
 locust-report-upload:
-	@bin/report_upload.sh locust:load load locust http locust/logs
+	@bin/report_upload.sh locust:load load locust backend locust/logs

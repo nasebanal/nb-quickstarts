@@ -1,8 +1,11 @@
 #!/bin/sh
 # Uploads one test report to NASEBANAL Assurance via the `nb` CLI.
 #
-# Usage: bin/report_upload.sh <make-target-to-run-first> <kind> <tool> <suite> <file|dir> [extra nb flags...]
+# Usage: bin/report_upload.sh <make-target-to-run-first> <kind> <tool> <components> <file|dir> [extra nb flags...]
 #   e.g. bin/report_upload.sh pytest:test unit pytest backend pytest/report/junit.xml
+#
+# <components> is what the result is about: one component (frontend, backend), or several separated by
+# commas (frontend,backend) for a result that covers them together. Each becomes one `--component`.
 #
 # <file|dir> is a JUnit XML file, or - for Locust - a directory holding
 # *_stats.csv (a `locust/logs/<timestamp>` run directory, or `locust/logs`
@@ -23,14 +26,14 @@
 #                       call is a new run and adds a point to the trend
 #   NB_API_VERSION      optional - the API version the run is about (v1, v2) when
 #                       the repository serves several (/v1, /v2). It labels every
-#                       kind except unit tests, which hold for all versions. The suite name
-#                       stays as it is: the version is part of the suite's identity, so v1
-#                       and v2 of one name sit side by side in a run.
+#                       kind except unit tests, which hold for all versions. The components
+#                       stay as they are: the version is part of the result's identity, so v1
+#                       and v2 of one component sit side by side in a run.
 #                       One-off: make specmatic:report-upload NB_API_VERSION=v2
 label=$1
 kind=$2
 tool=$3
-suite=$4
+components=$4
 target=$5
 shift 5 2>/dev/null || shift $#
 # What is left is passed to nb as is (e.g. --metric high=0 for a ZAP scan).
@@ -53,6 +56,15 @@ if [ -n "${NB_API_VERSION:-}" ] && [ "$kind" != "unit" ]; then
   version_flag="--api-version $NB_API_VERSION"
 fi
 
+# One --component per name (the names have no spaces).
+component_flags=""
+old_ifs=$IFS
+IFS=,
+for c in $components; do
+  component_flags="$component_flags --component $c"
+done
+IFS=$old_ifs
+
 if [ -d "$target" ]; then
   # Locust: nb takes a run directory; pick the newest one under locust/logs.
   if ! ls "$target"/*_stats.csv >/dev/null 2>&1; then
@@ -70,6 +82,6 @@ if [ -z "$target" ] || { [ ! -e "$target" ]; }; then
 fi
 
 echo "Uploading $label report ($target) to $NB_BASE_URL, project '$project'..."
-# shellcheck disable=SC2086  # $input is "--file x" / "--dir x" and $version_flag "--api-version v2" on purpose; neither has spaces in a value
-nb assurance report upload $input --kind "$kind" --tool "$tool" --suite "$suite" $version_flag --project "$project" \
+# shellcheck disable=SC2086  # $input is "--file x" / "--dir x", $component_flags "--component a --component b" and $version_flag "--api-version v2" on purpose; none has spaces in a value
+nb assurance report upload $input --kind "$kind" --tool "$tool" $component_flags $version_flag --project "$project" \
   ${NB_RUN_KEY:+--run-key "$NB_RUN_KEY"} "$@"

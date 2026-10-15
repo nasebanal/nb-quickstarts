@@ -4,6 +4,8 @@
 //
 // Usage: node bin/zap_counts.mjs <zap-report.json>
 //
+// Also prints `--tool-version <ZAP version>` when the report says which ZAP wrote it.
+//
 // One alert counts once, however many instances it has (the same unit as zap_to_junit.mjs: one case per
 // alert per site). ZAP has no "critical" level: High (riskcode 3) is the top. Informational alerts (riskcode 0)
 // are counted too, but the Assurance gate only looks at critical / high.
@@ -24,4 +26,8 @@ for (const site of report.site ?? []) {
     if (level) counts[level] += 1;
   }
 }
-console.log(Object.entries(counts).map(([k, v]) => `--metric ${k}=${v}`).join(" "));
+// The ZAP version that wrote the report ("@version": "2.17.0"), passed on so Assurance can show it next to the tool.
+const version = typeof report["@version"] === "string" ? report["@version"].trim() : "";
+const flags = Object.entries(counts).map(([k, v]) => `--metric ${k}=${v}`);
+if (version) flags.push(`--tool-version ${version}`);
+console.log(flags.join(" "));

@@ -20,6 +20,12 @@ const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]);
 
 const report = JSON.parse(readFileSync(input, "utf8"));
+// A report without a `site` list is not ZAP's JSON (or a layout this script does not know): a scan with no alerts has
+// `site` with no `alerts`, so a missing `site` must not read as "no alerts, all clear".
+if (!Array.isArray(report.site)) {
+  console.error(`${input} has no "site" list - is it a ZAP traditional-json report? (found: ${Object.keys(report).join(", ")})`);
+  process.exit(2);
+}
 const cases = [];
 for (const site of report.site ?? []) {
   for (const alert of site.alerts ?? []) {

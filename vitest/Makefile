@@ -28,8 +28,10 @@ vitest:
 	@echo "Report: vitest/report/index.html (vitest:test),"
 	@echo "        vitest/report-contract/index.html (vitest:contract-test)"
 	@echo ""
-	@echo "  vitest:report          - Serve + open vitest/report/index.html (Ctrl+C to stop serving)"
-	@echo "  vitest:report-contract - Same, for vitest/report-contract/index.html"
+	@echo "  vitest:report          - Serve + open every existing report (vitest/report and vitest/report-contract; Ctrl+C to stop serving)"
+	@echo "  vitest:report-contract - Only vitest/report-contract/index.html"
+	@echo "  vitest:report-upload   - Upload the last vitest:test and vitest:contract-test runs (whichever have a report) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN)"
+	@echo "  vitest:contract-report-upload - Only the vitest:contract-test run (vitest/report-contract/junit.xml)"
 	@echo "  vitest:reset           - Delete both generated reports (vitest/report/, vitest/report-contract/)"
 
 vitest\:%:
@@ -59,7 +61,22 @@ vitest-reset:
 # way `npx playwright show-report` does for Playwright below. Runs in the
 # foreground (like that command) - Ctrl+C stops it; nothing is left running.
 vitest-report:
-	@$(MAKE) _vitest-serve-report DIR=vitest/report PORT=$${VITEST_REPORT_PORT:-4173}
+	@if [ ! -f vitest/report/index.html ] && [ ! -f vitest/report-contract/index.html ]; then \
+		echo "No report yet - run vitest:test and/or vitest:contract-test first."; \
+		exit 1; \
+	fi
+	@trap 'kill $$(jobs -p) 2>/dev/null' INT TERM EXIT; \
+	for r in report:$${VITEST_REPORT_PORT:-4173} report-contract:$${VITEST_REPORT_CONTRACT_PORT:-4174}; do \
+		dir=vitest/$${r%%:*}; port=$${r##*:}; \
+		if [ -f $$dir/index.html ]; then \
+			echo "Serving $$dir at http://localhost:$$port (Ctrl+C to stop)..."; \
+			python3 -m http.server $$port --directory $$dir >/dev/null 2>&1 & \
+			(sleep 1 && bin/open_browser.sh http://localhost:$$port) & \
+		else \
+			echo "- $$dir: no report yet, skipped"; \
+		fi; \
+	done; \
+	wait
 
 vitest-report-contract:
 	@$(MAKE) _vitest-serve-report DIR=vitest/report-contract PORT=$${VITEST_REPORT_CONTRACT_PORT:-4174}
@@ -72,3 +89,18 @@ _vitest-serve-report:
 	@echo "Serving $(DIR) at http://localhost:$(PORT) (Ctrl+C to stop)..."
 	@(sleep 1 && bin/open_browser.sh http://localhost:$(PORT)) &
 	@python3 -m http.server $(PORT) --directory $(DIR)
+
+# Sends the last run's summary to NASEBANAL Assurance - see bin/report_upload.sh.
+# Uploads whichever of the two runs (vitest:test, vitest:contract-test) has a report; a missing one is skipped.
+vitest-report-upload:
+	@done=0; \
+	if [ -f vitest/report/junit.xml ]; then \
+		bin/report_upload.sh vitest:test unit vitest frontend vitest/report/junit.xml || exit 1; done=1; \
+	else echo "- vitest:test: no report yet, skipped"; fi; \
+	if [ -f vitest/report-contract/junit.xml ]; then \
+		$(MAKE) vitest-contract-report-upload || exit 1; done=1; \
+	else echo "- vitest:contract-test: no report yet, skipped"; fi; \
+	[ $$done = 1 ] || { echo "No vitest report yet - run vitest:test and/or vitest:contract-test first."; exit 1; }
+
+vitest-contract-report-upload:
+	@bin/report_upload.sh vitest:contract-test contract vitest frontend vitest/report-contract/junit.xml
