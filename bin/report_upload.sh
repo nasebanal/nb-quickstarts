@@ -2,10 +2,10 @@
 # Uploads one test report to NASEBANAL Assurance via the `nb` CLI.
 #
 # Usage: bin/report_upload.sh <make-target-to-run-first> <kind> <tool> <components> <file|dir> [extra nb flags...]
-#   e.g. bin/report_upload.sh pytest:test unit pytest backend pytest/report/junit.xml
+#   e.g. bin/report_upload.sh pytest:test unit pytest api pytest/report/junit.xml
 #
-# <components> is what the result is about: one component (frontend, backend), or several separated by
-# commas (frontend,backend) for a result that covers them together. Each becomes one `--component`.
+# <components> is what the result is about: one component (web, api, mobile), or several separated by
+# commas (web,api) for a result that covers them together. Each becomes one `--component`.
 #
 # <file|dir> is a JUnit XML file, or - for Locust - a directory holding
 # *_stats.csv (a `locust/logs/<timestamp>` run directory, or `locust/logs`

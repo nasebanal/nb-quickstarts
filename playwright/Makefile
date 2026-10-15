@@ -64,4 +64,4 @@ playwright-report:
 
 # Sends the last run's summary to NASEBANAL Assurance - see bin/report_upload.sh.
 playwright-report-upload:
-	@bin/report_upload.sh playwright:test e2e playwright frontend playwright/junit/junit.xml
+	@bin/report_upload.sh playwright:test e2e playwright web playwright/junit/junit.xml

@@ -95,7 +95,7 @@ _vitest-serve-report:
 vitest-report-upload:
 	@done=0; \
 	if [ -f vitest/report/junit.xml ]; then \
-		bin/report_upload.sh vitest:test unit vitest frontend vitest/report/junit.xml || exit 1; done=1; \
+		bin/report_upload.sh vitest:test unit vitest web vitest/report/junit.xml || exit 1; done=1; \
 	else echo "- vitest:test: no report yet, skipped"; fi; \
 	if [ -f vitest/report-contract/junit.xml ]; then \
 		$(MAKE) vitest-contract-report-upload || exit 1; done=1; \
@@ -103,4 +103,4 @@ vitest-report-upload:
 	[ $$done = 1 ] || { echo "No vitest report yet - run vitest:test and/or vitest:contract-test first."; exit 1; }
 
 vitest-contract-report-upload:
-	@bin/report_upload.sh vitest:contract-test contract vitest frontend vitest/report-contract/junit.xml
+	@bin/report_upload.sh vitest:contract-test contract vitest web vitest/report-contract/junit.xml
