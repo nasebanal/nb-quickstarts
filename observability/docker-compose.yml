@@ -21,7 +21,7 @@ services:
       - apps-network
 
   prometheus:
-    image: prom/prometheus:${OBSERVABILITY_PROMETHEUS_VERSION:-v3.15.0}
+    image: prom/prometheus:${OBSERVABILITY_PROMETHEUS_VERSION:-v3.15.1}
     container_name: nb-prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -40,7 +40,7 @@ services:
       - apps-network
 
   tempo:
-    image: grafana/tempo:${OBSERVABILITY_TEMPO_VERSION:-2.10.8}
+    image: grafana/tempo:${OBSERVABILITY_TEMPO_VERSION:-2.10.10}
     container_name: nb-tempo
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     # Named volumes are created root-owned but Tempo runs as a non-root
@@ -57,7 +57,7 @@ services:
   # Application logs. Receives OTLP logs from the collector on its native
   # /otlp endpoint; Grafana queries it (LogQL) alongside metrics and traces.
   loki:
-    image: grafana/loki:${OBSERVABILITY_LOKI_VERSION:-3.7.8}
+    image: grafana/loki:${OBSERVABILITY_LOKI_VERSION:-3.7.9}
     container_name: nb-loki
     command: ["-config.file=/etc/loki/loki.yaml"]
     # Same reason as tempo above: root-owned named volume, non-root process.
