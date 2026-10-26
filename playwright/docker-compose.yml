@@ -1,6 +1,6 @@
 services:
   playwright:
-    image: mcr.microsoft.com/playwright:v1.48.0-noble
+    image: mcr.microsoft.com/playwright:v1.64.1-noble
     working_dir: /app
     # Runs on the host network, on purpose: apps/frontend's client bundle
     # calls the backend at NEXT_PUBLIC_API_BASE (http://localhost:8080),
