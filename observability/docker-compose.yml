@@ -5,7 +5,7 @@ services:
   # NewRelic, which also ingests OTLP) is a change to otel-collector.yaml
   # only - the apps' instrumentation stays the same.
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:${OBSERVABILITY_OTEL_COLLECTOR_VERSION:-0.162.0}
+    image: otel/opentelemetry-collector-contrib:${OBSERVABILITY_OTEL_COLLECTOR_VERSION:-0.164.0}
     container_name: nb-otel-collector
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
