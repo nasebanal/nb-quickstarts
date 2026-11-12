@@ -1,4 +1,5 @@
 #!/bin/zsh
+"$(dirname "$0")/../../bin/require.sh" jq curl || exit 1
 set -e
 
 # Load .env if exists

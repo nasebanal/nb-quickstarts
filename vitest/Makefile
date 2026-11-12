@@ -61,6 +61,7 @@ vitest-reset:
 # way `npx playwright show-report` does for Playwright below. Runs in the
 # foreground (like that command) - Ctrl+C stops it; nothing is left running.
 vitest-report:
+	@bin/require.sh python3
 	@if [ ! -f vitest/report/index.html ] && [ ! -f vitest/report-contract/index.html ]; then \
 		echo "No report yet - run vitest:test and/or vitest:contract-test first."; \
 		exit 1; \
@@ -82,6 +83,7 @@ vitest-report-contract:
 	@$(MAKE) _vitest-serve-report DIR=vitest/report-contract PORT=$${VITEST_REPORT_CONTRACT_PORT:-4174}
 
 _vitest-serve-report:
+	@bin/require.sh python3
 	@if [ ! -f $(DIR)/index.html ]; then \
 		echo "No report yet in $(DIR) - run the matching vitest:test first."; \
 		exit 1; \

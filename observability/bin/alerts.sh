@@ -1,4 +1,5 @@
 #!/bin/sh
+"$(dirname "$0")/../../bin/require.sh" jq curl || exit 1
 # What Alertmanager currently holds, and what its webhook receiver got.
 
 ALERTMANAGER="http://localhost:${OBSERVABILITY_ALERTMANAGER_PORT:-9095}"
