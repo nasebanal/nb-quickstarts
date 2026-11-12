@@ -16,7 +16,16 @@
 # `nb auth status` always exits 0, so its text is what tells the cases apart.
 
 if ! command -v nb >/dev/null 2>&1; then
-  echo "❌ 'nb' (the NASEBANAL CLI) is not on PATH - install it (npm i -g @nasebanal/cli, from the public npm registry) or npm link a local nb-cli. See README, 'The nb CLI'."
+  echo "❌ 'nb' (the NASEBANAL CLI) is not on PATH - install it (npm i -g @nasebanal/cli, from the public npm registry). See README, 'The nb CLI'."
+  exit 1
+fi
+
+# nb 0.14.0 reads the Assurance host from NB_ASSURANCE_BASE_URL (and shows where a command goes); an older nb would ignore it
+# and call the production default.
+nb_min=0.14.0
+nb_have=$(nb --version 2>/dev/null | head -n 1)
+if [ -n "$nb_have" ] && [ "$(printf '%s\n%s\n' "$nb_min" "$nb_have" | sort -V | head -n 1)" != "$nb_min" ]; then
+  echo "❌ nb $nb_have is too old - this needs nb $nb_min or later (npm i -g @nasebanal/cli). See README, 'The nb CLI'."
   exit 1
 fi
 

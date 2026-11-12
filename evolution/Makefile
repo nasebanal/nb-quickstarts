@@ -18,6 +18,7 @@ evolution:
 	@echo "Sign-in:"
 	@echo "  evolution:login    - Sign in to NASEBANAL (opens the browser; nb auth login)"
 	@echo "  evolution:logout   - Sign out: removes nb's stored credentials (shared by every use of nb on this machine)"
+	@echo "  evolution:status   - Who is signed in, and which host each nb command goes to (nb auth status, with this .env applied)"
 	@echo ""
 	@echo "Catalog Management:"
 	@echo "  evolution:check    - Show the signed-in session and user, and what evolution:register would do (writes nothing)"
@@ -45,6 +46,9 @@ evolution-login:
 
 evolution-logout:
 	@bin/evolution_auth.sh logout
+
+evolution-status:
+	@bin/evolution_auth.sh status
 
 evolution-register:
 	@bin/evolution_register.sh
