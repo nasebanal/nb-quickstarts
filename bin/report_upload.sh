@@ -19,8 +19,7 @@
 # Settings (.env or the environment):
 #   NB_TOKEN            required - a PAT or service-account token for the Assurance
 #                       API (`nb auth login` also works when it is unset)
-#   NB_BASE_URL         Assurance API; defaults to production. Set the URL of a
-#                       local `npm run dev` of nb-assurance-api to report there
+#   NB_ASSURANCE_BASE_URL  Assurance API (not the web UI); defaults to production (nb 0.14.0 or later)
 #   NB_SPEC_ID_<COMPONENT>  the spec to report to, by id, per component: NB_SPEC_ID_WEB, NB_SPEC_ID_API,
 #                       NB_SPEC_ID_MOBILE (wins over the names below)
 #   NB_REPOSITORY       by names: the repository (default: nasebanal/nb-quickstarts)
@@ -50,15 +49,13 @@ shift 5 2>/dev/null || shift $#
 # What is left is passed to nb as is (e.g. --metric high=0 for a ZAP scan).
 
 if ! command -v nb >/dev/null 2>&1; then
-  echo "❌ 'nb' (the NASEBANAL CLI) is not on PATH - install it (npm i -g @nasebanal/cli, from the public npm registry) or npm link a local nb-cli. See README, 'The nb CLI'."
+  echo "❌ 'nb' (the NASEBANAL CLI) is not on PATH - install it (npm i -g @nasebanal/cli, from the public npm registry). See README, 'The nb CLI'."
   exit 1
 fi
 
 # NB_TOKEN, a stored 'nb auth login' session, or - with neither - a browser login.
 "$(dirname "$0")/ensure_nb_auth.sh" || exit 1
 
-NB_BASE_URL=${NB_BASE_URL:-https://api.assurance.nasebanal.com}
-export NB_BASE_URL
 
 # The version selects the spec (a new major API version is a new spec) - for every kind, unit tests
 # included: once a repository has specs of two versions, a name alone no longer says which one.
@@ -112,7 +109,14 @@ upload_component() {
     if [ -n "${NB_GROUP:-}" ]; then set -- --group "$NB_GROUP" "$@"; fi
     where="$repo / $spec"
   fi
-  echo "Uploading $label report ($target) to $NB_BASE_URL, $where..."
+  # The host nb will call, as nb resolves it: NB_ASSURANCE_BASE_URL (the older NB_BASE_URL still counts), else by NB_ENV.
+  assurance_url=${NB_ASSURANCE_BASE_URL:-${NB_BASE_URL:-}}
+  if [ -z "$assurance_url" ]; then
+    if [ "${NB_ENV:-}" = "local" ]; then assurance_url=http://localhost:8791; else assurance_url=https://api.assurance.nasebanal.com; fi
+  fi
+  assurance_host=${assurance_url#*://}; assurance_host=${assurance_host%%[/:]*}
+  case "$assurance_host" in localhost|127.0.0.1) assurance_kind=local ;; nasebanal.com|*.nasebanal.com) assurance_kind=production ;; *) assurance_kind=other ;; esac
+  echo "Uploading $label report ($target) to $assurance_kind Assurance ($assurance_url), $where..."
   # shellcheck disable=SC2086  # $input ("--file x" / "--dir x") and $version_flag are word lists on purpose; none has spaces in a value
   nb assurance report upload $input --kind "$kind" --tool "$tool" $version_flag \
     ${NB_SPECS_ORG:+--org "$NB_SPECS_ORG"} ${NB_RUN_KEY:+--run-key "$NB_RUN_KEY"} "$@"

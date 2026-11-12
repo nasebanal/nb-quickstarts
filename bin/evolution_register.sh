@@ -7,7 +7,7 @@
 # Settings (.env or the environment): NB_REPOSITORY (default nasebanal/nb-quickstarts - set your own
 # owner/name to use your own catalog), NB_SPEC (default: the contract's info.title,
 # NASEBANAL Quickstarts API), NB_GROUP, NB_SPECS_ORG,
-# NB_TOKEN / NB_BASE_URL (see report_upload.sh), EVOLUTION_OPENAPI_FILE (default:
+# NB_TOKEN / NB_ASSURANCE_BASE_URL (see report_upload.sh), EVOLUTION_OPENAPI_FILE (default:
 # shared/openapi/openapi.yaml). Safe to repeat: the same document uploads nothing.
 
 if ! command -v nb >/dev/null 2>&1; then
@@ -15,8 +15,6 @@ if ! command -v nb >/dev/null 2>&1; then
   exit 1
 fi
 
-NB_BASE_URL=${NB_BASE_URL:-https://api.assurance.nasebanal.com}
-export NB_BASE_URL
 
 # --dry-run (make evolution:check): say who is signed in before anything else.
 if [ "$1" = "--dry-run" ]; then
@@ -56,7 +54,14 @@ fi
 title=$(sed -n 's/^  title: *//p' "$file" | head -n1 | tr -d '"')
 spec=${NB_SPEC:-${title:-nb-quickstarts}}
 
-echo "Registering $file as spec '$spec' of $repo..."
+# The catalog's host, as nb resolves it: NB_SPECS_BASE_URL, else by NB_ENV.
+catalog_url=${NB_SPECS_BASE_URL:-}
+if [ -z "$catalog_url" ]; then
+  if [ "${NB_ENV:-}" = "local" ]; then catalog_url=http://localhost:8792; else catalog_url=https://api.specs.nasebanal.com; fi
+fi
+catalog_host=${catalog_url#*://}; catalog_host=${catalog_host%%[/:]*}
+case "$catalog_host" in localhost|127.0.0.1) catalog_kind=local ;; nasebanal.com|*.nasebanal.com) catalog_kind=production ;; *) catalog_kind=other ;; esac
+echo "Registering $file as spec '$spec' of $repo in the $catalog_kind catalog ($catalog_url)..."
 # shellcheck disable=SC2086  # the optional flags are word lists on purpose
 nb specs specs push --file "$file" --name "$spec" --repository "$repo" \
   ${NB_GROUP:+--group "$NB_GROUP"} ${NB_SPECS_ORG:+--org "$NB_SPECS_ORG"} "$@"
