@@ -10,7 +10,7 @@ cryptography~=50.0.1
 # Keycloak JWT validation (app/auth.py) - only exercised when
 # KEYCLOAK_ISSUER is set; a bare opaque token never reaches PyJWKClient.
 pyjwt~=2.15.1
-strawberry-graphql[fastapi]~=0.334.4
+strawberry-graphql[fastapi]~=0.341.2
 fastapi-mcp~=0.4.0
 # fastapi-mcp 0.4.0 calls mcp's Server(name, description) positionally;
 # every mcp release newer than this made `description` keyword-only
