@@ -5,7 +5,8 @@
 # Usage: bin/evolution_register.sh [--dry-run]
 #
 # Settings (.env or the environment): NB_REPOSITORY (default nasebanal/nb-quickstarts - set your own
-# owner/name to use your own catalog), NB_SPEC (default nb-quickstarts), NB_GROUP, NB_SPECS_ORG,
+# owner/name to use your own catalog), NB_SPEC (default: the contract's info.title,
+# NASEBANAL Quickstarts API), NB_GROUP, NB_SPECS_ORG,
 # NB_TOKEN / NB_BASE_URL (see report_upload.sh), EVOLUTION_OPENAPI_FILE (default:
 # shared/openapi/openapi.yaml). Safe to repeat: the same document uploads nothing.
 
@@ -45,12 +46,15 @@ fi
 # the backend against. Not the running backend's own /openapi.json (FastAPI's generated, thin one).
 file=${EVOLUTION_OPENAPI_FILE:-shared/openapi/openapi.yaml}
 repo=${NB_REPOSITORY:-nasebanal/nb-quickstarts}
-spec=${NB_SPEC:-nb-quickstarts}
 
 if [ ! -f "$file" ]; then
   echo "❌ $file not found (EVOLUTION_OPENAPI_FILE)."
   exit 1
 fi
+# The spec's name is the contract's own title unless NB_SPEC says otherwise: the same name nb would pick,
+# and the one report_upload.sh looks the spec up by.
+title=$(sed -n 's/^  title: *//p' "$file" | head -n1 | tr -d '"')
+spec=${NB_SPEC:-${title:-nb-quickstarts}}
 
 echo "Registering $file as spec '$spec' of $repo..."
 # shellcheck disable=SC2086  # the optional flags are word lists on purpose

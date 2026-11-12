@@ -25,7 +25,7 @@ evolution:
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  NB_REPOSITORY=nasebanal/nb-quickstarts # Catalog repository (owner/name) - set your own to use your own catalog"
-	@echo "  NB_SPEC=nb-quickstarts                 # Spec name in the catalog"
+	@echo "  NB_SPEC=<info.title>                   # Spec name in the catalog (default: the contract's title, NASEBANAL Quickstarts API)"
 	@echo "  NB_GROUP=                              # Optional: catalog group to file the spec in (default: none)"
 	@echo "  NB_SPECS_ORG=                          # Optional: organization whose catalog it is (default: personal)"
 	@echo "  NB_TOKEN=                              # Optional: PAT / service-account token (default: nb auth login)"

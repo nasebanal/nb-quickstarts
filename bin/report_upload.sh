@@ -24,8 +24,9 @@
 #   NB_SPEC_ID_<COMPONENT>  the spec to report to, by id, per component: NB_SPEC_ID_WEB, NB_SPEC_ID_API,
 #                       NB_SPEC_ID_MOBILE (wins over the names below)
 #   NB_REPOSITORY       by names: the repository (default: nasebanal/nb-quickstarts)
-#   NB_SPEC             by names: the spec's name in the catalog (default: nb-quickstarts, one spec for the
-#                       repository as a whole - register it with `make evolution:register`)
+#   NB_SPEC             by names: the spec's name in the catalog (default: the contract's info.title, NASEBANAL
+#                       Quickstarts API - one spec for the repository as a whole, registered with
+#                       `make evolution:register`)
 #   NB_SPEC_PER_COMPONENT=1  one spec per component instead (repository row + component, spec
 #                       nb-quickstarts-<component>), the org-wide web / api naming; register them yourself
 #   NB_GROUP            by names, optional: the catalog group the spec is filed in (none = no group)
@@ -82,30 +83,38 @@ if [ -z "$target" ] || { [ ! -e "$target" ]; }; then
   exit 1
 fi
 
-# Where the result goes: --spec-id when NB_SPEC_ID_<COMPONENT> is set, else the names.
+# The default spec name is the contract's own title (NASEBANAL Quickstarts API) - what
+# `nb specs specs push` names a spec by when no --name is given, so the catalog and the uploads agree.
+default_spec_name() {
+  t=$(sed -n 's/^  title: *//p' "$(dirname "$0")/../shared/openapi/openapi.yaml" 2>/dev/null | head -n1 | tr -d '"')
+  printf '%s' "${t:-nb-quickstarts}"
+}
+
+# Where the result goes: --spec-id when NB_SPEC_ID_<COMPONENT> is set, else the names. The spec
+# arguments are built as positional parameters (not a word list) because a name has spaces.
 upload_component() {
-  c=$1
+  c=$1; shift
   var="NB_SPEC_ID_$(printf '%s' "$c" | tr '[:lower:]-' '[:upper:]_')"
   id=$(eval "printf '%s' \"\${$var:-}\"")
   if [ -n "$id" ]; then
-    spec_flags="--spec-id $id"
+    set -- --spec-id "$id" "$@"
     where="spec $id ($c)"
   else
     repo=${NB_REPOSITORY:-nasebanal/nb-quickstarts}
     if [ "${NB_SPEC_PER_COMPONENT:-}" = 1 ]; then
       spec=${NB_SPEC:-nb-quickstarts-$c}
-      spec_flags="--repository $repo --component $c --spec $spec"
+      set -- --repository "$repo" --component "$c" --spec "$spec" "$@"
     else
       # Default: one spec for the repository as a whole (what `make evolution:register` creates).
-      spec=${NB_SPEC:-nb-quickstarts}
-      spec_flags="--repository $repo --spec $spec"
+      spec=${NB_SPEC:-$(default_spec_name)}
+      set -- --repository "$repo" --spec "$spec" "$@"
     fi
-    [ -n "${NB_GROUP:-}" ] && spec_flags="$spec_flags --group $NB_GROUP"
+    if [ -n "${NB_GROUP:-}" ]; then set -- --group "$NB_GROUP" "$@"; fi
     where="$repo / $spec"
   fi
   echo "Uploading $label report ($target) to $NB_BASE_URL, $where..."
-  # shellcheck disable=SC2086  # $input ("--file x" / "--dir x"), $spec_flags and $version_flag are word lists on purpose; none has spaces in a value
-  nb assurance report upload $input --kind "$kind" --tool "$tool" $spec_flags $version_flag \
+  # shellcheck disable=SC2086  # $input ("--file x" / "--dir x") and $version_flag are word lists on purpose; none has spaces in a value
+  nb assurance report upload $input --kind "$kind" --tool "$tool" $version_flag \
     ${NB_SPECS_ORG:+--org "$NB_SPECS_ORG"} ${NB_RUN_KEY:+--run-key "$NB_RUN_KEY"} "$@"
 }
 
