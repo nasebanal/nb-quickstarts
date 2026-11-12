@@ -92,6 +92,7 @@ vault-put-mysql-secret:
 	@echo "Written. Check with: make vault:get-mysql-secret"
 
 vault-get-mysql-secret:
+	@bin/require.sh jq curl
 	@echo "Reading apps' MySQL credential back from Vault..."
 	@curl -s -H "X-Vault-Token: $${VAULT_ROOT_TOKEN:-nb-vault-root-token}" \
 		http://localhost:$${VAULT_PORT:-8200}/v1/secret/data/apps/mysql | jq '.data.data'
@@ -134,6 +135,7 @@ vault-prove-needs-vault:
 	@echo "'make apps:restart' returns it to the normal configuration."
 
 vault-verify-apps: vault-setup-mysql
+	@bin/require.sh jq curl
 	@echo ""
 	@echo "Recreating apps/backend with NO MySQL password of its own, but WITH Vault..."
 	@APPS_BACKEND_MYSQL_PASSWORD= VAULT_ADDR=http://vault:8200 VAULT_TOKEN=$${VAULT_ROOT_TOKEN:-nb-vault-root-token} \

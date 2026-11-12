@@ -46,7 +46,13 @@ info:
     implementation). /transactions is the append-only event log itself;
     /accounts is the balance view derived from it. This contract
     (openapi.yaml) is the source of truth, and the implementation follows it.
-  version: 0.1.0
+  version: 1.0.0
+# The base URL of the apps backend as `make apps:up` publishes it. It is only reachable from the machine
+# running apps - there is no public deployment, so an external monitor cannot use it; it just lets tools
+# (the catalog's monitoring form, the API reference's "try it") prefill the address.
+servers:
+  - url: http://localhost:8080
+    description: apps backend, local (make apps:up)
 # Every operation needs a bearer token (an RS256 JWT, see /auth/login) unless it says `security: []`
 # itself: the login, the health check and the JWKS that verifies the tokens.
 security:

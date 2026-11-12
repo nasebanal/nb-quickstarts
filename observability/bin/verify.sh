@@ -1,4 +1,5 @@
 #!/bin/sh
+"$(dirname "$0")/../../bin/require.sh" jq curl || exit 1
 # Checks each component answers, then whether apps/backend's telemetry has
 # actually arrived (needs APPS_OTEL_EXPORTER_OTLP_ENDPOINT set + some traffic).
 

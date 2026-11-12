@@ -81,6 +81,7 @@ keycloak-open:
 # passes either way.
 
 keycloak-login:
+	@bin/require.sh jq
 	@echo "Requesting a token for keycloak-demo from inside apps-network..."
 	@docker run --rm --network apps-network curlimages/curl:8.11.1 -s -X POST \
 		http://keycloak:8080/realms/nasebanal/protocol/openid-connect/token \
@@ -90,6 +91,7 @@ keycloak-login:
 	@echo ""
 
 keycloak-verify-apps:
+	@bin/require.sh jq
 	@echo "1. Getting a real access token from Keycloak (realm nasebanal, user keycloak-demo)..."
 	@TOKEN=$$(docker run --rm --network apps-network curlimages/curl:8.11.1 -s -X POST \
 		http://keycloak:8080/realms/nasebanal/protocol/openid-connect/token \

@@ -17,7 +17,7 @@ zap:
 	@echo ""
 	@echo "Scans (all one-shot, all require apps:up first):"
 	@echo "  zap:baseline  - Passive scan of apps/frontend (safe - spiders + observes, never attacks, ~1-2 min)"
-	@echo "  zap:api-scan  - Scans apps/backend's REST API directly from its live OpenAPI schema (active, endpoint-aware; leaves payloads in the DB - apps:reset after)"
+	@echo "  zap:api-scan  - Scans apps/backend's REST API directly from its live OpenAPI schema (active, endpoint-aware; the database is saved before and restored after, so no junk is left behind)"
 	@echo "  zap:scan      - Runs zap:baseline + zap:api-scan in sequence, stops at the first one that fails."
 	@echo "                  Deliberately excludes zap:full-scan (see below) - run that one explicitly."
 	@echo ""
@@ -80,7 +80,7 @@ zap-baseline: apps-network-ensure
 zap-full-scan: apps-network-ensure
 	@echo "⚠️  Running ZAP full scan (ACTIVE - sends real attack payloads) against apps/frontend..."
 	@mkdir -p zap/report
-	@bin/run_test.sh zap:full-scan zap:report -- \
+	@bin/with_db_restore.sh bin/run_test.sh zap:full-scan zap:report -- \
 		docker compose -p zap -f zap/docker-compose.yml run --rm --name nb-zap-$$(openssl rand -hex 3) zap \
 		zap-full-scan.py -t http://frontend:5173 \
 		-r full-scan-report.html -J full-scan-report.json -I
@@ -113,7 +113,7 @@ zap-api-scan: apps-network-ensure
 	@export ZAP_BEARER_TOKEN=$$(curl -s -X POST http://localhost:8080/auth/login -H 'content-type: application/json' \
 		-d '{"username":"demo","password":"demo"}' | sed -n 's/.*"token":"\([^"]*\)".*/\1/p'); \
 	test -n "$$ZAP_BEARER_TOKEN" || { echo "Could not log in to apps/backend - is make apps:up running?"; exit 70; }; \
-	bin/run_test.sh zap:api-scan zap:report -- \
+	bin/with_db_restore.sh bin/run_test.sh zap:api-scan zap:report -- \
 		docker compose -p zap -f zap/docker-compose.yml run --rm -e ZAP_BEARER_TOKEN --name nb-zap-$$(openssl rand -hex 3) zap \
 		zap-api-scan.py -t http://backend:8080/openapi.json -f openapi -z "-silent" --hook /zap/hooks/bearer_token.py \
 		-r api-scan-report.html -J api-scan-report.json -I
@@ -176,6 +176,7 @@ zap-report:
 # Whichever scans have been run are uploaded; one that fails to upload does not
 # stop the others.
 zap-report-upload:
+	@bin/require.sh node nb
 	@if ! ls zap/report/*-report.json >/dev/null 2>&1; then \
 		echo "No report yet - run 'make zap:baseline' (or :full-scan/:api-scan) first."; \
 		exit 1; \

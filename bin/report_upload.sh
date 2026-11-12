@@ -23,9 +23,11 @@
 #                       local `npm run dev` of nb-assurance-api to report there
 #   NB_SPEC_ID_<COMPONENT>  the spec to report to, by id, per component: NB_SPEC_ID_WEB, NB_SPEC_ID_API,
 #                       NB_SPEC_ID_MOBILE (wins over the names below)
-#   NB_REPOSITORY       by names: the repository (default: nasebanal/nb-quickstarts); with the component
-#                       it is the repository row the spec must be tied to
-#   NB_SPEC             by names: the spec's name in the catalog (default: nb-quickstarts-<component>)
+#   NB_REPOSITORY       by names: the repository (default: nasebanal/nb-quickstarts)
+#   NB_SPEC             by names: the spec's name in the catalog (default: nb-quickstarts, one spec for the
+#                       repository as a whole - register it with `make evolution:register`)
+#   NB_SPEC_PER_COMPONENT=1  one spec per component instead (repository row + component, spec
+#                       nb-quickstarts-<component>), the org-wide web / api naming; register them yourself
 #   NB_GROUP            by names, optional: the catalog group the spec is filed in (none = no group)
 #   NB_SPECS_ORG        optional: the organization whose specs these are (default: personal)
 #   NB_RUN_KEY          optional - group several uploads into one run (default:
@@ -33,10 +35,10 @@
 #                       the same commit lands in one run). `make all:report-upload`
 #                       sets one key per call instead (commit + UTC time), so each
 #                       call is a new run and adds a point to the trend
-#   NB_API_VERSION      optional - the API version the run is about (v1, v2) when
-#                       the repository serves several (/v1, /v2). It labels every
-#                       kind except unit tests, which hold for all versions. It selects the spec
-#                       by names (a new major API version is a new spec).
+#   NB_API_VERSION      optional - the API version of the spec to report to (v1, v2) when
+#                       the repository has specs of several versions. It selects the spec
+#                       by names, for every kind (a new major API version is a new spec;
+#                       the version comes from the contract's info.version, 1.0.0 -> v1).
 #                       One-off: make specmatic:report-upload NB_API_VERSION=v2
 label=$1
 kind=$2
@@ -57,9 +59,10 @@ fi
 NB_BASE_URL=${NB_BASE_URL:-https://api.assurance.nasebanal.com}
 export NB_BASE_URL
 
-# A version labels the result; unit tests are the same for every version, so they carry none.
+# The version selects the spec (a new major API version is a new spec) - for every kind, unit tests
+# included: once a repository has specs of two versions, a name alone no longer says which one.
 version_flag=""
-if [ -n "${NB_API_VERSION:-}" ] && [ "$kind" != "unit" ]; then
+if [ -n "${NB_API_VERSION:-}" ]; then
   version_flag="--api-version $NB_API_VERSION"
 fi
 
@@ -88,9 +91,17 @@ upload_component() {
     spec_flags="--spec-id $id"
     where="spec $id ($c)"
   else
-    spec_flags="--repository ${NB_REPOSITORY:-nasebanal/nb-quickstarts} --component $c --spec ${NB_SPEC:-nb-quickstarts-$c}"
+    repo=${NB_REPOSITORY:-nasebanal/nb-quickstarts}
+    if [ "${NB_SPEC_PER_COMPONENT:-}" = 1 ]; then
+      spec=${NB_SPEC:-nb-quickstarts-$c}
+      spec_flags="--repository $repo --component $c --spec $spec"
+    else
+      # Default: one spec for the repository as a whole (what `make evolution:register` creates).
+      spec=${NB_SPEC:-nb-quickstarts}
+      spec_flags="--repository $repo --spec $spec"
+    fi
     [ -n "${NB_GROUP:-}" ] && spec_flags="$spec_flags --group $NB_GROUP"
-    where="${NB_REPOSITORY:-nasebanal/nb-quickstarts} / $c / ${NB_SPEC:-nb-quickstarts-$c}"
+    where="$repo / $spec"
   fi
   echo "Uploading $label report ($target) to $NB_BASE_URL, $where..."
   # shellcheck disable=SC2086  # $input ("--file x" / "--dir x"), $spec_flags and $version_flag are word lists on purpose; none has spaces in a value
