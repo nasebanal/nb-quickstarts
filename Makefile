@@ -1,13 +1,25 @@
 SHELL := /bin/zsh
 .DEFAULT_GOAL := default
-.PHONY: apps pytest vitest playwright specmatic kong kafka locust keycloak vault zap agentgateway observability all default
+.PHONY: evolution apps pytest vitest playwright specmatic kong kafka locust keycloak vault zap agentgateway observability all default
 
 # Load environment variables from .env file if it exists
 -include .env
 export
 
+# Every goal that talks to Docker (all but the report viewers/uploaders and the
+# evolution:* nb helpers) first checks that the Docker Engine is up, and says
+# how to start it when not - once, here, instead of a raw docker error later.
+# (findstring, not filter: GNU Make 3.81, the macOS default, cannot match a ':' in a pattern.)
+DOCKER_GOALS := $(foreach g,$(MAKECMDGOALS),$(if $(findstring :,$(g)),$(if $(findstring report,$(g))$(findstring evolution:,$(g)),,$(g))))
+ifneq ($(strip $(DOCKER_GOALS)),)
+ifneq ($(shell $(CURDIR)/bin/require.sh docker >&2 && echo ok),ok)
+$(error Docker is not ready - see the message above)
+endif
+endif
+
 # Include service-specific Makefiles
 include apps/Makefile
+include evolution/Makefile
 include kong/Makefile
 include kafka/Makefile
 include keycloak/Makefile
@@ -211,6 +223,7 @@ default:
 	@echo ""
 	@echo "Commands:"
 	@echo "  apps         Show Apps (test target) commands"
+	@echo "  evolution    Show Evolution (NASEBANAL API catalog: register the spec the reports go to) commands"
 	@echo "  kong         Show Kong API Gateway commands"
 	@echo "  kafka        Show Kafka-related commands"
 	@echo "  keycloak     Show Keycloak (OIDC identity provider) commands"

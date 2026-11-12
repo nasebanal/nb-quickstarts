@@ -71,6 +71,24 @@ Every module prints its own "Endpoints once started" block from `make <module>:u
 
 ## 🏁 Getting Started
 
+### Prerequisites
+
+Everything the quickstarts run (the apps, every test tool, Kong, Kafka, Keycloak, Vault, ...) runs **in Docker containers**, so a machine with Docker and `make` is enough to start and test. A few steps run on your host instead; each needs the tool below, and when it is missing the step stops and tells you how to get it (`bin/require.sh`).
+
+| Tool | Needed for | If it is missing |
+|---|---|---|
+| **Docker Engine** with Compose v2 (Docker Desktop on macOS/Windows) | every `make` target that starts a container (all `*:up`, `*:test`, ...) | A message says to install it, or to start it (`open -a Docker` on macOS, `sudo systemctl start docker` on Linux) |
+| **GNU Make** (3.81 or later, zsh as the shell) | running anything | - (macOS has both) |
+| `openssl`, `curl` | random container names; waiting for / calling the running services | present on macOS and most Linux; `curl` is checked where it matters |
+| `jq` | `keycloak:login`, `keycloak:verify-apps`, `vault:get-mysql-secret`, `vault:verify-apps`, `kong` and `observability` helper scripts | A message with the install command (`brew install jq` / `apt install jq`) |
+| `python3` | opening the Vitest reports (`vitest:report*`), which need a local web server | A message with the install command |
+| `nb` CLI (+ Node.js >= 20) | every `*:report-upload`, `all:report-upload`, `evolution:*` - see [Test Results](#test-results) | A message to `npm i -g @nasebanal/cli`, then `nb auth login` (or `NB_TOKEN` in `.env`) |
+| Node.js | `zap:report-upload` (converts the ZAP report to JUnit) | A message with the install command |
+| a browser opener (`open` / `xdg-open`) | the `*:open` / `*:report` targets | the URL is printed instead |
+| `npx` (optional) | `playwright:report` (falls back to opening the static file) | - |
+
+Nothing else is installed on your machine: Python, Node.js dependencies, Playwright, Specmatic, ZAP and Locust all live in the images.
+
 1. **Clone the repository**
    ```bash
    git clone https://github.com/nasebanal/nb-quickstarts.git
@@ -541,7 +559,7 @@ Verified end-to-end against this repo's own `apps`: `baseline` found only WARN-l
 
 Same pass/fail convention as `pytest`/`specmatic`: a real (non-INFO) alert exits non-zero, so `zap:baseline` etc. can gate a pipeline the same way; see `zap/report/<scan>-report.html` for what was actually found.
 
-**⚠️ `zap:api-scan` and `zap:full-scan` leave attack payloads in the database - run `make apps:reset` (then `make apps:up`) after them.** The scans log in and `POST /transactions` with SQL-injection / script strings as the account name, so the Balances table on `/accounts` fills with junk accounts (this is the payloads being stored as plain data, not a display bug). That is expected; reset to get a clean demo state back (`apps:reset` wipes the MySQL volume and the seed restores `demo` / `Cash`; it does not start `apps` again). `zap:baseline` only observes and writes nothing. Locust's load runs and Kafka-fed runs also write a lot of transactions, so the same reset applies after them.
+**`zap:api-scan` and `zap:full-scan` write attack payloads into the database - and take them back out.** The scans log in and send SQL-injection / script / XSLT strings as account names and profile fields. So that the demo data (and the other tests that read it, e.g. Playwright expecting the display name `Demo User`) stays intact, both scans save the `apps` database first (`mysqldump`, inside the MySQL container) and load it back when they end - also when they fail or are stopped with Ctrl+C (`bin/with_db_restore.sh`). The apps keep running and stay connected the whole time; anything you write to the database *during* a scan is lost with the payloads. If the restore itself fails the message says where the saved copy is, and `make apps:reset` then `make apps:up` gives a fresh demo database. `zap:baseline` only observes and writes nothing. Locust's load runs and Kafka-fed runs also write a lot of transactions and are **not** restored - `make apps:reset` after them.
 
 **`zap:full-scan` and `zap:api-scan` send real attack payloads** - only ever point these at `apps` (this repo's own bundled test target, exactly what the Makefile does), never at an external host. Unlike Locust or Playwright, `zap`'s targets aren't overridable via an env var for this reason - there's no `ZAP_TARGET_URL` to accidentally repoint at production.
 
@@ -566,11 +584,11 @@ A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KA
 |---|---|---|
 | `NB_TOKEN` | *(unset)* | PAT / service-account token for NASEBANAL Assurance - what `<module>:report-upload` sends with. Unset = use the credentials from `nb auth login` (CI needs the token) |
 | `NB_BASE_URL` | `https://api.assurance.nasebanal.com` | The Assurance **API** (not the web UI). To report to a local `npm run dev` of nb-assurance-api, set the URL that API listens on |
-| `NB_REPOSITORY` | `nasebanal/nb-quickstarts` | The catalog repository the target spec is tied to (with the result's component `api` / `web`). **Nothing is created by an upload** (nb 0.13.0+): register the repository and specs first, see "The nb CLI" |
-| `NB_SPEC` | `nb-quickstarts-<component>` | The target spec's name in the catalog (optional `NB_GROUP` for its group) |
-| `NB_SPEC_ID_API` / `NB_SPEC_ID_WEB` | *(unset)* | The target spec by id, per component; wins over the names above |
+| `NB_REPOSITORY` | `nasebanal/nb-quickstarts` | The catalog repository the target spec is tied to; set your own owner/name for your own catalog. **Nothing is created by an upload** (nb 0.13.0+): `make evolution:register` registers the spec |
+| `NB_SPEC` | `nb-quickstarts` | The target spec's name in the catalog (optional `NB_GROUP` for its group) |
+| `NB_SPEC_PER_COMPONENT` / `NB_SPEC_ID_API` / `NB_SPEC_ID_WEB` | *(unset)* | One spec per component (`nb-quickstarts-<component>`, you register them), or each component's spec by id (wins) |
 | `NB_RUN_KEY` | *(`make all:report-upload`: `local-<commit>-<UTC time>`, one per call; the single `<module>:report-upload` targets: `local-<commit>-<day>`)* | Groups uploads into one run: the same key replaces a result, a new key adds a point to the trend |
-| `NB_API_VERSION` | *(unset)* | The API version the runs are about (`v1`, `v2`) for a repository that serves several. Labels every kind except unit tests (those hold for all versions); it selects the spec by names (a new major API version is a new spec). One-off: `make specmatic:report-upload NB_API_VERSION=v2` |
+| `NB_API_VERSION` | *(unset)* | The API version the runs are about (`v1`, `v2`) for a repository that serves several. Selects the spec by names, for every kind of test (unit tests included; the version comes from the contract's `info.version`, 1.0.0 -> v1) (a new major API version is a new spec). One-off: `make specmatic:report-upload NB_API_VERSION=v2` |
 
 ### Apps
 
@@ -705,7 +723,7 @@ nb --version
 
 (Or run it without installing: `npx @nasebanal/cli ...`. To use a local nb-cli checkout instead, `npm link` it - then rebuilt changes show up here at once.) **Credentials:** the first upload opens the browser for `nb auth login` when there is no session, and the session then renews itself; in CI or anywhere without a terminal set `NB_TOKEN` (a PAT or service-account token). The per-test case lists in Assurance need `nb` **0.2.0 or later** (`nb --version`); an older `nb` still uploads the summary. `make all:report-upload` skips the tools whose test has not run yet and reports them at the end.
 
-**Register the target once (nb 0.13.0+):** an upload creates nothing - the result goes to a *spec* of the catalog that is tied to a repository row (`github`, `nasebanal/nb-quickstarts`, component `api` or `web`). For each component that reports, register the repository (`nb specs repositories upsert --name nasebanal/nb-quickstarts --component api`) and a spec tied to it named `nb-quickstarts-api` (`NB_SPEC`; likewise `web`), or set `NB_SPEC_ID_API` / `NB_SPEC_ID_WEB` in `.env` to the ids. Without it, the upload stops with `No repository ... in the catalog`.
+**Register the target once (nb 0.13.0+):** an upload creates nothing - the result goes to a *spec* of the catalog (NASEBANAL Evolution) that is tied to a repository. `make evolution:register` registers the shared OpenAPI contract `shared/openapi/openapi.yaml` (the one apps:up documents and specmatic:test checks) as the spec `NB_SPEC` (default `nb-quickstarts`) of the repository `NB_REPOSITORY` (default `nasebanal/nb-quickstarts`; **set your own owner/name to use your own catalog**); `make evolution:check` only reads the catalog and says what would happen. Safe to repeat. The first command that needs it opens the NASEBANAL login (`nb auth login`) when there is no session. So the whole path is: `make apps:up` → `make evolution:register` → `make all:test` → `make all:report-upload`. Without the registration the upload stops with `No repository ... in the catalog`. One spec covers every tool (the repository as a whole); for one spec per component (`api` / `web`, the org-wide names) set `NB_SPEC_PER_COMPONENT=1` and register `nb-quickstarts-api` / `-web` yourself, or give each component's spec id as `NB_SPEC_ID_API` / `NB_SPEC_ID_WEB`.
 
 **Send a run to NASEBANAL Assurance:** `make pytest:report-upload` (likewise `vitest:report-upload`, `vitest:contract-report-upload`, `playwright:report-upload`, `specmatic:report-upload`, `locust:report-upload`, `zap:report-upload`) uploads the last run's summary through the `nb` CLI. With no `NB_TOKEN` and no stored session it opens the browser for `nb auth login` (CI / no terminal: set `NB_TOKEN`). The default is production; to report to a local `nb-assurance-api` (`npm run dev`) instead, set `NB_BASE_URL` in `.env` to that API's URL - see `.env.example`. Everything uploaded for one commit on one day lands in one Assurance run (in the specs named by `NB_REPOSITORY` / `NB_SPEC`, or `NB_SPEC_ID_<COMPONENT>`). `zap:report-upload` also sends the alerts counted by severity (`--metric high=… medium=… low=… info=…`, from `bin/zap_counts.mjs`), which is what the Assurance security gate reads: it fails on high / critical only, medium and low are shown. It uploads every scan in `zap/report/` (converted to JUnit by `bin/zap_to_junit.mjs`, kind `security`, one result per scan, for the component it targets - `api` for `api-scan`, `web` for `baseline` and `full-scan` - and labelled with the scan's name, so `baseline` and `full-scan` stay two results; an alert of Low or above counts as a failure) and, like `locust:report-upload` (after `make locust:load`), is not part of `all:report-upload`, just as neither Locust nor ZAP is part of `all:test`.
 
