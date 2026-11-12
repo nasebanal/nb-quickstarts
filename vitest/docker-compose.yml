@@ -1,14 +1,15 @@
 services:
   vitest:
     build:
-      context: ../apps/frontend
+      context: .
     image: nb-vitest
     volumes:
       - ../apps/frontend:/app
       - vitest-node-modules:/app/node_modules
       - ./report:/report
     working_dir: /app
-    command: npm run test:report
+    command: >
+      sh -c "h=$$(sha256sum package-lock.json | cut -c1-64); [ \"$$h\" = \"$$(cat node_modules/.lock-hash 2>/dev/null)\" ] || { npm ci || exit 70; echo $$h > node_modules/.lock-hash; }; npm run test:report"
 
   # Consumer-side contract test: runs only src/lib/contract/ against a
   # Specmatic mock (make specmatic:mock-up), not the real backend - see
@@ -17,7 +18,7 @@ services:
   # (fetch entirely mocked, no network needed at all).
   vitest-contract:
     build:
-      context: ../apps/frontend
+      context: .
     image: nb-vitest
     volumes:
       - ../apps/frontend:/app
@@ -26,7 +27,8 @@ services:
     working_dir: /app
     environment:
       NEXT_PUBLIC_API_BASE: http://specmatic-mock:9091
-    command: npm run test:contract-report
+    command: >
+      sh -c "h=$$(sha256sum package-lock.json | cut -c1-64); [ \"$$h\" = \"$$(cat node_modules/.lock-hash 2>/dev/null)\" ] || { npm ci || exit 70; echo $$h > node_modules/.lock-hash; }; npm run test:contract-report"
     networks:
       - apps-network
 

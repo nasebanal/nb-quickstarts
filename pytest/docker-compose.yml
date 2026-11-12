@@ -1,7 +1,9 @@
 services:
   pytest:
     build:
-      context: ../apps/backend
+      context: .
+      additional_contexts:
+        backend: ../apps/backend
     image: nb-pytest
     volumes:
       - ../apps/backend:/app

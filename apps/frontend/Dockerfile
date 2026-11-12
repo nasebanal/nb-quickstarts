@@ -8,9 +8,15 @@ WORKDIR /app
 RUN npm install -g npm@11
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# The stamp lets docker-compose.yml's command tell whether the named
+# node_modules volume (seeded from this image once, never refreshed) is still
+# in step with package-lock.json, and run `npm ci` itself if not.
+RUN npm ci && sha256sum package-lock.json | cut -c1-64 > node_modules/.lock-hash
 
-COPY . .
+# No `COPY . .`: docker-compose.yml bind-mounts the source (./frontend:/app), so
+# a copy is never used - and it would give every code edit a new image ID and
+# leave the previous image behind as an untagged (<none>) image on each
+# `apps:up`.
 
 EXPOSE 5173
 

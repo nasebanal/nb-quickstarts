@@ -126,6 +126,10 @@ services:
       # /api-specs reads the contract straight from here (no backend needed).
       - ../shared:/shared:ro
       - frontend-node-modules:/app/node_modules
+    # Reinstall only when package-lock.json differs from the stamp the image (or
+    # the last reinstall) left in node_modules - see apps/frontend/Dockerfile.
+    command: >
+      sh -c "[ \"$$(sha256sum package-lock.json | cut -c1-64)\" = \"$$(cat node_modules/.lock-hash 2>/dev/null)\" ] || { npm ci && sha256sum package-lock.json | cut -c1-64 > node_modules/.lock-hash; } && exec npm run dev"
     environment:
       # URL called from the browser. The browser is outside the Docker
       # network, so this must be the host-published port, not the
