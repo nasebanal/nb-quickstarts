@@ -66,12 +66,14 @@ vitest-report:
 		echo "No report yet - run vitest:test and/or vitest:contract-test first."; \
 		exit 1; \
 	fi
-	@trap 'kill $$(jobs -p) 2>/dev/null' INT TERM EXIT; \
+	@pids=""; \
+	trap 'echo $$pids | xargs kill 2>/dev/null; exit 130' INT TERM; \
+	trap 'echo $$pids | xargs kill 2>/dev/null' EXIT; \
 	for r in report:$${VITEST_REPORT_PORT:-4173} report-contract:$${VITEST_REPORT_CONTRACT_PORT:-4174}; do \
 		dir=vitest/$${r%%:*}; port=$${r##*:}; \
 		if [ -f $$dir/index.html ]; then \
 			echo "Serving $$dir at http://localhost:$$port (Ctrl+C to stop)..."; \
-			python3 -m http.server $$port --directory $$dir >/dev/null 2>&1 & \
+			python3 -m http.server $$port --directory $$dir >/dev/null 2>&1 & pids="$$pids $$!"; \
 			(sleep 1 && bin/open_browser.sh http://localhost:$$port) & \
 		else \
 			echo "- $$dir: no report yet, skipped"; \
