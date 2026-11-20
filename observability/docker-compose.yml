@@ -57,7 +57,7 @@ services:
   # Application logs. Receives OTLP logs from the collector on its native
   # /otlp endpoint; Grafana queries it (LogQL) alongside metrics and traces.
   loki:
-    image: grafana/loki:${OBSERVABILITY_LOKI_VERSION:-3.7.9}
+    image: grafana/loki:${OBSERVABILITY_LOKI_VERSION:-3.7.10}
     container_name: nb-loki
     command: ["-config.file=/etc/loki/loki.yaml"]
     # Same reason as tempo above: root-owned named volume, non-root process.
