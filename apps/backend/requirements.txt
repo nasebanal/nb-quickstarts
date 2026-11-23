@@ -1,7 +1,7 @@
 # Pinned to the minor version (`~=X.Y.Z` = patch releases float, minor/major
 # don't); Renovate proposes the minor bumps. Same policy as the image tags in
 # .env.example and the `~` ranges in apps/frontend/package.json.
-fastapi~=0.143.0
+fastapi~=0.165.0
 uvicorn[standard]~=0.54.0
 pyyaml~=6.0.3
 sqlalchemy~=2.1.1
