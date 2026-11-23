@@ -24,7 +24,7 @@ specmatic:
 	@echo "Endpoints once started:"
 	@echo "  Mock server: http://localhost:$${SPECMATIC_MOCK_PORT:-9091}"
 	@echo ""
-	@echo "Note: specmatic:test requires apps to be running first - make apps:up. The mock does not."
+	@echo "Note: specmatic:test requires apps to be running first - $(QS) apps:up. The mock does not."
 	@echo ""
 	@echo "Report: specmatic/report/test/html/index.html (also specmatic/junit/TEST-junit-jupiter.xml)"
 	@echo ""
@@ -47,7 +47,7 @@ specmatic-test: apps-network-ensure
 # via file://.
 specmatic-report:
 	@if [ ! -f specmatic/report/test/html/index.html ]; then \
-		echo "No report yet - run 'make specmatic:test' first."; \
+		echo "No report yet - run '$(QS) specmatic:test' first."; \
 		exit 1; \
 	fi
 	@bin/open_browser.sh specmatic/report/test/html/index.html

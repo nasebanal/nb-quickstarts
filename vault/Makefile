@@ -54,9 +54,9 @@ vault-up: apps-network-ensure
 	@echo "  Root token: $${VAULT_ROOT_TOKEN:-nb-vault-root-token}"
 	@echo ""
 	@echo "Next steps:"
-	@echo "  make vault:open            # Open the Vault UI"
-	@echo "  make vault:setup-mysql     # Let Vault issue MySQL users (needs apps:up)"
-	@echo "  make vault:verify-apps     # Have the real backend log in with a Vault-issued user, no password in its config"
+	@echo "  $(QS) vault:open            # Open the Vault UI"
+	@echo "  $(QS) vault:setup-mysql     # Let Vault issue MySQL users (needs apps:up)"
+	@echo "  $(QS) vault:verify-apps     # Have the real backend log in with a Vault-issued user, no password in its config"
 
 vault-down:
 	@echo "Stopping Vault..."
@@ -89,7 +89,7 @@ vault-put-mysql-secret:
 	@curl -s -H "X-Vault-Token: $${VAULT_ROOT_TOKEN:-nb-vault-root-token}" \
 		-X POST -d "{\"data\": {\"user\": \"$${APPS_MYSQL_USER:-demo}\", \"password\": \"$${APPS_MYSQL_PASSWORD:-demo}\"}}" \
 		http://localhost:$${VAULT_PORT:-8200}/v1/secret/data/apps/mysql >/dev/null
-	@echo "Written. Check with: make vault:get-mysql-secret"
+	@echo "Written. Check with: $(QS) vault:get-mysql-secret"
 
 vault-get-mysql-secret:
 	@bin/require.sh jq curl
@@ -131,8 +131,8 @@ vault-prove-needs-vault:
 	@echo "And a real request:"
 	@curl -s -m 5 -o /dev/null -w "  GET /accounts -> HTTP %{http_code}\n" http://localhost:8080/accounts || echo "  (no answer - the backend never came up)"
 	@echo ""
-	@echo "'make vault:verify-apps' fixes it by handing the backend a Vault-issued credential;"
-	@echo "'make apps:restart' returns it to the normal configuration."
+	@echo "'$(QS) vault:verify-apps' fixes it by handing the backend a Vault-issued credential;"
+	@echo "'$(QS) apps:restart' returns it to the normal configuration."
 
 vault-verify-apps: vault-setup-mysql
 	@bin/require.sh jq curl
@@ -153,5 +153,5 @@ vault-verify-apps: vault-setup-mysql
 	@echo ""
 	@$(MAKE) --no-print-directory vault-db-users
 	@echo ""
-	@echo "Note: 'make apps:restart' afterward returns the backend to its normal MYSQL_PASSWORD from .env,"
+	@echo "Note: '$(QS) apps:restart' afterward returns the backend to its normal MYSQL_PASSWORD from .env,"
 	@echo "since these variables only apply to this one --force-recreate, not to .env itself."

@@ -23,7 +23,7 @@ vitest:
 	@echo ""
 	@echo "Note: vitest:test mocks fetch entirely; apps:up is NOT required."
 	@echo "      vitest:contract-test instead needs a running mock -"
-	@echo "      make specmatic:mock-up first (apps:up is not needed)."
+	@echo "      $(QS) specmatic:mock-up first (apps:up is not needed)."
 	@echo ""
 	@echo "Report: vitest/report/index.html (vitest:test),"
 	@echo "        vitest/report-contract/index.html (vitest:contract-test)"

@@ -17,7 +17,7 @@ MYSQL_CONTAINER=nb-mysql-server
 # Check if MySQL container is running
 if ! docker ps --format '{{.Names}}' | grep -q "^${MYSQL_CONTAINER}$"; then
     echo "Error: MySQL container '${MYSQL_CONTAINER}' is not running"
-    echo "Please start the MySQL container first with: make apps:up"
+    echo "Please start the MySQL container first with: ${QS:-make} apps:up"
     exit 1
 fi
 

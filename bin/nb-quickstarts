@@ -44,4 +44,4 @@ esac
 
 [ -f "$root/Makefile" ] || { echo "nb-quickstarts: no Makefile in $root" >&2; exit 1; }
 command -v make >/dev/null 2>&1 || { echo "nb-quickstarts: make is not installed" >&2; exit 1; }
-exec make -C "$root" --no-print-directory "$@"
+exec env QS=nb-quickstarts make -C "$root" --no-print-directory "$@"

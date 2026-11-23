@@ -36,7 +36,7 @@ keycloak:
 	@echo "  Realm:         nasebanal (client apps-demo, user keycloak-demo / nasebanal-demo)"
 	@echo ""
 	@echo "Note: keycloak:verify-apps only succeeds once apps/backend actually trusts this realm -"
-	@echo "      uncomment KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal in .env, then 'make apps:restart'."
+	@echo "      uncomment KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal in .env, then '$(QS) apps:restart'."
 
 keycloak\:%:
 	@$(MAKE) keycloak-$(subst keycloak:,,$@)
@@ -51,9 +51,9 @@ keycloak-up: apps-network-ensure
 	@echo "  Admin console: http://localhost:$${KEYCLOAK_PORT:-8180}/admin"
 	@echo ""
 	@echo "Next steps:"
-	@echo "  make keycloak:open            # Open the admin console"
-	@echo "  make keycloak:login           # Get a real token for the demo user"
-	@echo "  make keycloak:verify-apps     # Use it against the real backend (needs apps:up + KEYCLOAK_ISSUER set)"
+	@echo "  $(QS) keycloak:open            # Open the admin console"
+	@echo "  $(QS) keycloak:login           # Get a real token for the demo user"
+	@echo "  $(QS) keycloak:verify-apps     # Use it against the real backend (needs apps:up + KEYCLOAK_ISSUER set)"
 
 keycloak-down:
 	@echo "Stopping Keycloak..."
@@ -99,7 +99,7 @@ keycloak-verify-apps:
 		-d "username=keycloak-demo" -d "password=nasebanal-demo" \
 		| jq -r '.access_token'); \
 	if [ "$$TOKEN" = "null" ] || [ -z "$$TOKEN" ]; then \
-		echo "   Failed to get a token - is 'make keycloak:up' running?"; \
+		echo "   Failed to get a token - is '$(QS) keycloak:up' running?"; \
 		exit 1; \
 	fi; \
 	echo "   Got token (truncated): $${TOKEN:0:24}..."; \
@@ -117,5 +117,5 @@ keycloak-verify-apps:
 	else \
 		echo ""; \
 		echo "   Not accepted (expected on a fresh checkout). apps/backend only trusts this realm once"; \
-		echo "   KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal is set in .env and 'make apps:restart' has run."; \
+		echo "   KEYCLOAK_ISSUER=http://localhost:8180/realms/nasebanal is set in .env and '$(QS) apps:restart' has run."; \
 	fi

@@ -44,7 +44,7 @@ pytest-reset:
 # reports below (see their own comments for why those need a real server).
 pytest-report:
 	@if [ ! -f pytest/report/report.html ]; then \
-		echo "No report yet - run 'make pytest:test' first."; \
+		echo "No report yet - run '$(QS) pytest:test' first."; \
 		exit 1; \
 	fi
 	@bin/open_browser.sh pytest/report/report.html

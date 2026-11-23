@@ -51,7 +51,7 @@ zap:
 	@echo "Note: zap:api-scan/zap:full-scan store their attack payloads as data"
 	@echo "      (POST /transactions with SQLi/script strings as account names),"
 	@echo "      so the Balances table fills with junk. Expected - run"
-	@echo "      'make apps:reset' then 'make apps:up' afterwards. zap:baseline"
+	@echo "      '$(QS) apps:reset' then '$(QS) apps:up' afterwards. zap:baseline"
 	@echo "      writes nothing."
 	@echo ""
 	@echo "Note: apps/frontend runs Next.js in dev mode (Turbopack), which"
@@ -112,7 +112,7 @@ zap-api-scan: apps-network-ensure
 	@# The whole API needs a token: log in as the demo user and have ZAP send it with every request (zap/hooks/bearer_token.py).
 	@export ZAP_BEARER_TOKEN=$$(curl -s -X POST http://localhost:8080/auth/login -H 'content-type: application/json' \
 		-d '{"username":"demo","password":"demo"}' | sed -n 's/.*"token":"\([^"]*\)".*/\1/p'); \
-	test -n "$$ZAP_BEARER_TOKEN" || { echo "Could not log in to apps/backend - is make apps:up running?"; exit 70; }; \
+	test -n "$$ZAP_BEARER_TOKEN" || { echo "Could not log in to apps/backend - is $(QS) apps:up running?"; exit 70; }; \
 	bin/with_db_restore.sh bin/run_test.sh zap:api-scan zap:report -- \
 		docker compose -p zap -f zap/docker-compose.yml run --rm -e ZAP_BEARER_TOKEN --name nb-zap-$$(openssl rand -hex 3) zap \
 		zap-api-scan.py -t http://backend:8080/openapi.json -f openapi -z "-silent" --hook /zap/hooks/bearer_token.py \
@@ -139,7 +139,7 @@ zap-scan:
 	@$(MAKE) zap-api-scan
 	@echo ""
 	@echo "Both scans passed. Reports: zap/report/{baseline,api-scan}-report.html"
-	@echo "(zap:full-scan not included - see 'make zap' for why - run it separately if you want it.)"
+	@echo "(zap:full-scan not included - see '$(QS) zap' for why - run it separately if you want it.)"
 
 # ZAP's own report.html is self-contained (styles/JS inlined) - opens fine
 # via file://, same as pytest's/specmatic's. Globs zap/report/*.html rather
@@ -162,7 +162,7 @@ zap-reset:
 zap-report:
 	@reports=$$(ls zap/report/*-report.html 2>/dev/null); \
 	if [ -z "$$reports" ]; then \
-		echo "No report yet - run 'make zap:baseline' (or :full-scan/:api-scan) first."; \
+		echo "No report yet - run '$(QS) zap:baseline' (or :full-scan/:api-scan) first."; \
 		exit 1; \
 	fi; \
 	echo "$$reports" | while IFS= read -r f; do bin/open_browser.sh "$$f"; done
@@ -178,7 +178,7 @@ zap-report:
 zap-report-upload:
 	@bin/require.sh node nb
 	@if ! ls zap/report/*-report.json >/dev/null 2>&1; then \
-		echo "No report yet - run 'make zap:baseline' (or :full-scan/:api-scan) first."; \
+		echo "No report yet - run '$(QS) zap:baseline' (or :full-scan/:api-scan) first."; \
 		exit 1; \
 	fi; \
 	failed=""; \
