@@ -33,7 +33,7 @@ evolution:
 	@echo ""
 	@echo "Note: run evolution:check first. evolution:register sends shared/openapi/openapi.yaml (apps:up is not needed)"
 	@echo "      and opens the NASEBANAL login if you are not signed in. Run it once; after that"
-	@echo "      make all:test && make all:report-upload files the reports under that spec."
+	@echo "      $(QS) all:test && $(QS) all:report-upload files the reports under that spec."
 	@echo "      Needs nb on PATH (npm i -g @nasebanal/cli)."
 
 evolution\:%:

@@ -33,7 +33,7 @@ apps:
 	@echo "  apps:restart        - Restart apps containers (MySQL data preserved)"
 	@echo "  apps:reset          - Stop AND wipe MySQL data (does not start anything; run apps:up after)"
 	@echo "  apps:open           - Open the frontend (TypeScript UI) in browser"
-	@echo "  apps:mysql          - Open a mysql shell on the database (or: make apps:mysql SQL='SELECT ...')"
+	@echo "  apps:mysql          - Open a mysql shell on the database (or: $(QS) apps:mysql SQL='SELECT ...')"
 	@echo "  apps:sql            - Open the SQL client (phpMyAdmin, already logged in to demo) in browser"
 	@echo "  apps:mcp            - Open MCP Inspector in browser (lists both the backend's MCP and agentgateway's MCP)"
 	@echo ""
@@ -86,14 +86,14 @@ apps-up: apps-network-ensure
 	@echo "  Backend REST:    http://localhost:8080"
 	@echo "  Backend GraphQL: http://localhost:8080/graphql"
 	@echo "  MCP server:      http://localhost:8080/mcp"
-	@echo "  MCP Inspector:   http://localhost:$${APPS_MCP_INSPECTOR_PORT:-6274} (make apps:mcp)"
+	@echo "  MCP Inspector:   http://localhost:$${APPS_MCP_INSPECTOR_PORT:-6274} ($(QS) apps:mcp)"
 	@echo "  MySQL:           localhost:$${APPS_MYSQL_PORT:-3306}"
 	@echo "  SQL client:      http://localhost:$${APPS_SQL_CLIENT_PORT:-8081} (phpMyAdmin, already logged in)"
 
 apps-down:
 	@echo "Stopping apps containers..."
 	@docker compose -p apps -f apps/docker-compose.yml down --remove-orphans
-	@echo "Apps containers stopped and removed. (MySQL data preserved in the apps_apps-db-data Docker volume — use 'make apps:reset' to wipe it.)"
+	@echo "Apps containers stopped and removed. (MySQL data preserved in the apps_apps-db-data Docker volume — use '$(QS) apps:reset' to wipe it.)"
 
 apps-status:
 	@echo "Checking apps container status..."
@@ -106,7 +106,7 @@ apps-restart:
 apps-reset:
 	@echo "Resetting apps (wiping MySQL data)..."
 	@docker compose -p apps -f apps/docker-compose.yml down --remove-orphans --volumes
-	@echo "Apps containers and MySQL data removed. Nothing is started - run 'make apps:up' for a fresh database."
+	@echo "Apps containers and MySQL data removed. Nothing is started - run '$(QS) apps:up' for a fresh database."
 
 apps-open:
 	@bin/open_browser.sh http://localhost:5173
@@ -125,7 +125,7 @@ apps-mcp: apps-network-ensure
 	@docker compose -p apps -f apps/docker-compose.yml up -d mcp-inspector mcp-inspector-localhost
 	@printf "Waiting for MCP Inspector"
 	@i=0; until curl -fs -o /dev/null "http://localhost:$${APPS_MCP_INSPECTOR_PORT:-6274}/" || [ $$i -ge 30 ]; do printf "."; sleep 1; i=$$((i+1)); done; echo ""
-	@if ! docker ps --format '{{.Names}}' | grep -q '^nb-agentgateway$$'; then echo "Note: agentgateway is not running - its server will fail to connect until 'make agentgateway:up'."; fi
+	@if ! docker ps --format '{{.Names}}' | grep -q '^nb-agentgateway$$'; then echo "Note: agentgateway is not running - its server will fail to connect until '$(QS) agentgateway:up'."; fi
 	@bin/open_browser.sh "http://localhost:$${APPS_MCP_INSPECTOR_PORT:-6274}/?MCP_INSPECTOR_API_TOKEN=$${APPS_MCP_INSPECTOR_TOKEN:-nb-mcp-inspector-token}"
 
 # With SQL='...' runs that one statement; without, opens an interactive shell.

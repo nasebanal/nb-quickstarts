@@ -17,7 +17,7 @@ playwright:
 	@echo "Configuration (.env file):"
 	@echo "  PLAYWRIGHT_BASE_URL=http://localhost:5173 # Frontend URL Playwright navigates to"
 	@echo ""
-	@echo "Note: requires apps to be running first - make apps:up."
+	@echo "Note: requires apps to be running first - $(QS) apps:up."
 	@echo ""
 	@echo "Report: playwright/report/index.html"
 	@echo ""
@@ -51,7 +51,7 @@ playwright-reset:
 # caveat) only if npx isn't on the host at all.
 playwright-report:
 	@if [ ! -f playwright/report/index.html ]; then \
-		echo "No report yet - run 'make playwright:test' first."; \
+		echo "No report yet - run '$(QS) playwright:test' first."; \
 		exit 1; \
 	fi
 	@if command -v npx >/dev/null 2>&1; then \

@@ -36,22 +36,22 @@ locust:
 	@echo "  locust:report      - Open the most recent run's report.html in your browser"
 	@echo ""
 	@echo "Load Testing (configure via .env or CLI, then run locust:up or locust:load):"
-	@echo "  make apps:up                                            # start test target apps (once)"
-	@echo "  make locust:up                                          # UI mode - uses .env settings, start the test from the browser"
-	@echo "  make locust:load LOCUST_RUN_TIME=60s                    # headless - starts immediately, stops after LOCUST_RUN_TIME"
-	@echo "  make locust:up LOCUST_FILE=locustfile_http.py"
-	@echo "  make locust:up LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS=graphql-query"
-	@echo "  make locust:up LOCUST_FILE=locustfile_mysql.py   LOCUST_TAGS=mysql-select"
-	@echo "  make locust:up LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100  # direct-REST overload: ~30% of POST /transactions fail (use the same users/spawn rate for the Kafka run below)"
-	@echo "  make kafka:up && make kafka:bridge-up && make locust:up LOCUST_FILE=locustfile_kafka.py  # Kafka-buffered ingestion (see README 'Kafka bridge')"
+	@echo "  $(QS) apps:up                                            # start test target apps (once)"
+	@echo "  $(QS) locust:up                                          # UI mode - uses .env settings, start the test from the browser"
+	@echo "  $(QS) locust:load LOCUST_RUN_TIME=60s                    # headless - starts immediately, stops after LOCUST_RUN_TIME"
+	@echo "  $(QS) locust:up LOCUST_FILE=locustfile_http.py"
+	@echo "  $(QS) locust:up LOCUST_FILE=locustfile_graphql.py LOCUST_TAGS=graphql-query"
+	@echo "  $(QS) locust:up LOCUST_FILE=locustfile_mysql.py   LOCUST_TAGS=mysql-select"
+	@echo "  $(QS) locust:up LOCUST_FILE=locustfile_http_overload.py LOCUST_USERS=300 LOCUST_SPAWN_RATE=100  # direct-REST overload: ~30% of POST /transactions fail (use the same users/spawn rate for the Kafka run below)"
+	@echo "  $(QS) kafka:up && $(QS) kafka:bridge-up && $(QS) locust:up LOCUST_FILE=locustfile_kafka.py  # Kafka-buffered ingestion (see README 'Kafka bridge')"
 	@echo "  (to switch test types cleanly, run locust:restart, or locust:down then locust:up)"
 	@echo ""
 	@echo "Cluster Management:"
 	@echo "  locust:join-cluster - Join an existing Locust cluster as worker from remote PC"
 	@echo ""
 	@echo "Other commands (with optional parameters):"
-	@echo "  make locust:up [LOCUST_HTTP_HOST=url] [LOCUST_MYSQL_HOST=host] [LOCUST_WORKERS=n]"
-	@echo "  make locust:join-cluster [LOCUST_MASTER_HOST=ip] [LOCUST_WORKERS=n]"
+	@echo "  $(QS) locust:up [LOCUST_HTTP_HOST=url] [LOCUST_MYSQL_HOST=host] [LOCUST_WORKERS=n]"
+	@echo "  $(QS) locust:join-cluster [LOCUST_MASTER_HOST=ip] [LOCUST_WORKERS=n]"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  LOCUST_FILE=locustfile_http.py     # Choose: locustfile_http.py, locustfile_graphql.py, locustfile_mysql.py, locustfile_kafka.py, locustfile_http_overload.py"
@@ -86,7 +86,7 @@ locust-up: apps-network-ensure
 locust-load: apps-network-ensure
 	@if [ -z "$${LOCUST_RUN_TIME}" ]; then \
 		echo "Error: LOCUST_RUN_TIME is required for locust:load (headless mode)"; \
-		echo "Set it via .env or: make locust:load LOCUST_RUN_TIME=60s"; \
+		echo "Set it via .env or: $(QS) locust:load LOCUST_RUN_TIME=60s"; \
 		exit 1; \
 	fi
 	@$(MAKE) locust-run LOCUST_HEADLESS_FLAG=--headless
@@ -194,7 +194,7 @@ locust-down:
 	@docker compose -p nb-locust -f locust/docker-compose.yml down --remove-orphans
 	@docker compose -p nb-locust -f locust/docker-compose-worker.yml down 2>/dev/null || true
 	@rm -f .locust_cluster_mode
-	@echo "Locust containers stopped and removed. (apps are unaffected; use 'make apps:down' to stop them.)"
+	@echo "Locust containers stopped and removed. (apps are unaffected; use '$(QS) apps:down' to stop them.)"
 
 locust-status:
 	@echo "Checking Locust container status..."
@@ -224,7 +224,7 @@ locust-open:
 locust-report:
 	@latest=$$(ls -d locust/logs/*/ 2>/dev/null | sort | tail -1); \
 	if [ -z "$$latest" ] || [ ! -f "$$latest/report.html" ]; then \
-		echo "No report yet - run 'make locust:load' (or locust:up and let a run finish) first."; \
+		echo "No report yet - run '$(QS) locust:load' (or locust:up and let a run finish) first."; \
 		exit 1; \
 	fi; \
 	echo "Opening $${latest}report.html (most recent run)..."; \
@@ -234,8 +234,8 @@ locust-join-cluster:
 	@echo "Joining existing Locust cluster..."
 	@if [ -z "$(LOCUST_MASTER_HOST)" ]; then \
 		echo "Error: LOCUST_MASTER_HOST is required"; \
-		echo "Set it in .env file or pass as argument: make locust:join-cluster LOCUST_MASTER_HOST=<master-ip>"; \
-		echo "Usage: make locust:join-cluster [LOCUST_MASTER_HOST=<master-ip>] [LOCUST_WORKERS=n] [LOCUST_FILE=locustfile.py]"; \
+		echo "Set it in .env file or pass as argument: $(QS) locust:join-cluster LOCUST_MASTER_HOST=<master-ip>"; \
+		echo "Usage: $(QS) locust:join-cluster [LOCUST_MASTER_HOST=<master-ip>] [LOCUST_WORKERS=n] [LOCUST_FILE=locustfile.py]"; \
 		exit 1; \
 	fi
 	@echo "Starting $(LOCUST_WORKERS) worker(s) to connect to $(LOCUST_MASTER_HOST)..."

@@ -36,7 +36,7 @@ kong:
 	@echo "  Admin API:          http://localhost:8001 (HTTPS: 8444)"
 	@echo "  Manager UI:         http://localhost:8002 (HTTPS: 8445)"
 	@echo ""
-	@echo "Note: override KONG_DB per invocation, e.g. 'make kong:up KONG_DB=off'."
+	@echo "Note: override KONG_DB per invocation, e.g. '$(QS) kong:up KONG_DB=off'."
 
 export KONG_DB
 
@@ -78,7 +78,7 @@ kong-up: apps-network-ensure
 		else \
 			echo ""; \
 			echo "Existing database found. Skipping configuration import."; \
-			echo "To re-import configuration, run: make kong:reset, then make kong:up"; \
+			echo "To re-import configuration, run: $(QS) kong:reset, then $(QS) kong:up"; \
 		fi; \
 	else \
 		echo "Starting Kong in DB-less mode..."; \
@@ -98,7 +98,7 @@ kong-up: apps-network-ensure
 kong-down:
 	@echo "Stopping Kong containers..."
 	@docker-compose -f kong/docker-compose.yml --profile database down
-	@echo "Kong containers stopped and removed. (In KONG_DB=postgres mode, config is preserved in the kong_kong-db-data Docker volume — use 'make kong:reset' to clear it, then 'make kong:up' to re-import kong/conf/declarative.yml.)"
+	@echo "Kong containers stopped and removed. (In KONG_DB=postgres mode, config is preserved in the kong_kong-db-data Docker volume — use '$(QS) kong:reset' to clear it, then '$(QS) kong:up' to re-import kong/conf/declarative.yml.)"
 
 kong-status:
 	@echo "Checking Kong container status..."
@@ -124,7 +124,7 @@ kong-wipe:
 kong-reset:
 	@if [ "$${KONG_DB:-postgres}" = "postgres" ]; then \
 		$(MAKE) kong-wipe; \
-		echo "Kong stopped and its database wiped. Nothing is started - run 'make kong:up' for a fresh one imported from kong/conf/declarative.yml."; \
+		echo "Kong stopped and its database wiped. Nothing is started - run '$(QS) kong:up' for a fresh one imported from kong/conf/declarative.yml."; \
 	else \
 		echo "Reloading Kong's declarative configuration (DB-less mode)..."; \
 		docker exec nb-kong kong reload; \

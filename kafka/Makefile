@@ -64,9 +64,9 @@ kafka-up: apps-network-ensure
 	@echo "  Controller: localhost:${KAFKA_CONTROLLER_PORT:-9093}"
 	@echo ""
 	@echo "Next steps:"
-	@echo "  make kafka:list-topics    # List topics"
-	@echo "  make kafka:add-topics     # Create sample topic"
-	@echo "  make kafka:bridge-up      # Forward topic events into a REST backend"
+	@echo "  $(QS) kafka:list-topics    # List topics"
+	@echo "  $(QS) kafka:add-topics     # Create sample topic"
+	@echo "  $(QS) kafka:bridge-up      # Forward topic events into a REST backend"
 
 kafka-bridge-up: apps-network-ensure
 	@echo "Starting kafka-bridge (forwards topic events to $${KAFKA_BRIDGE_TARGET_URL:-http://backend:8080})..."
@@ -81,7 +81,7 @@ kafka-bridge-down:
 kafka-down:
 	@echo "Stopping Kafka containers..."
 	@docker-compose -f kafka/docker-compose.yml down
-	@echo "Kafka containers stopped and removed. (Topic data preserved in the kafka_kafka-data Docker volume — use 'make kafka:reset' to wipe it.)"
+	@echo "Kafka containers stopped and removed. (Topic data preserved in the kafka_kafka-data Docker volume — use '$(QS) kafka:reset' to wipe it.)"
 
 kafka-status:
 	@echo "Checking Kafka container status..."
@@ -98,7 +98,7 @@ kafka-wipe:
 
 kafka-reset:
 	@$(MAKE) kafka-wipe
-	@echo "Kafka stopped and its topic data wiped. Nothing is started - run 'make kafka:up' for a fresh broker."
+	@echo "Kafka stopped and its topic data wiped. Nothing is started - run '$(QS) kafka:up' for a fresh broker."
 
 kafka-add-topics:
 	@echo "Creating Kafka topic: $${KAFKA_TOPIC_NAME:-quickstart-events}..."

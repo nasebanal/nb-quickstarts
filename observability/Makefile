@@ -28,8 +28,8 @@ observability:
 	@echo ""
 	@echo "Sending apps/backend's telemetry here (off by default):"
 	@echo "  1. Set APPS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 in .env"
-	@echo "  2. make apps:restart   # backend reads it at startup"
-	@echo "  3. Generate traffic (make locust:load, or just use the frontend)"
+	@echo "  2. $(QS) apps:restart   # backend reads it at startup"
+	@echo "  3. Generate traffic ($(QS) locust:load, or just use the frontend)"
 	@echo ""
 	@echo "Configuration (.env file):"
 	@echo "  OBSERVABILITY_GRAFANA_PORT=3030       # Host-published Grafana port"
@@ -62,12 +62,12 @@ observability-up: apps-network-ensure
 	@echo "Prometheus: http://localhost:$${OBSERVABILITY_PROMETHEUS_PORT:-9094}"
 	@echo "Alertmanager: http://localhost:$${OBSERVABILITY_ALERTMANAGER_PORT:-9095}"
 	@echo "OTLP:       http://localhost:$${OBSERVABILITY_OTEL_HTTP_PORT:-4318} (from apps-network: http://otel-collector:4318)"
-	@echo "Next: set APPS_OTEL_EXPORTER_OTLP_ENDPOINT in .env + make apps:restart, then make observability:verify"
+	@echo "Next: set APPS_OTEL_EXPORTER_OTLP_ENDPOINT in .env + $(QS) apps:restart, then $(QS) observability:verify"
 
 observability-down:
 	@echo "Stopping observability stack..."
 	@docker compose -p observability -f observability/docker-compose.yml down --remove-orphans
-	@echo "Stopped and removed. (State preserved in the observability_* Docker volumes - use 'make observability:reset' to wipe it.)"
+	@echo "Stopped and removed. (State preserved in the observability_* Docker volumes - use '$(QS) observability:reset' to wipe it.)"
 
 observability-status:
 	@echo "Checking observability container status..."
@@ -84,7 +84,7 @@ observability-wipe:
 
 observability-reset:
 	@$(MAKE) observability-wipe
-	@echo "Observability stopped and its stored state wiped. Nothing is started - run 'make observability:up' for a fresh one."
+	@echo "Observability stopped and its stored state wiped. Nothing is started - run '$(QS) observability:up' for a fresh one."
 
 observability-open:
 	@bin/open_browser.sh http://localhost:$${OBSERVABILITY_GRAFANA_PORT:-3030}

@@ -1,0 +1,59 @@
+#!/bin/sh
+# nb-quickstarts - run this repository's `make` targets from any directory
+#
+# Usage:
+#   nb-quickstarts                      show the modules (same as `make`)
+#   nb-quickstarts <module> <target>    e.g. nb-quickstarts kong up   =  make kong:up
+#   nb-quickstarts <make args...>       anything else goes to make as is, e.g. nb-quickstarts kong:up
+#   nb-quickstarts --root               print the repository directory
+#   nb-quickstarts --install [DIR]      symlink this script into DIR (default ~/.local/bin)
+#   nb-quickstarts -h | --help
+#
+# A thin wrapper: `<module> <target>` is turned into `<module>:<target>` (only when the first word
+# is one of this repository's modules and the second is a plain word, not an option, a
+# VAR=value or a name that already has a colon); everything else goes to `make -C <repository>` unchanged, so
+# the Makefile stays the single source of truth and plain `make` keeps working. The
+# repository is found through this script's own location, following symlinks. `make` runs
+# inside the repository, so relative paths in its arguments are relative to it, not to the
+# directory you called from.
+set -eu
+
+# Resolve the real path of this script (portable: no `readlink -f` on older macOS).
+self=$0
+while [ -L "$self" ]; do
+  dir=$(cd "$(dirname "$self")" && pwd)
+  link=$(readlink "$self")
+  case $link in /*) self=$link ;; *) self=$dir/$link ;; esac
+done
+root=$(cd "$(dirname "$self")/.." && pwd)
+self=$(cd "$(dirname "$self")" && pwd)/$(basename "$self")
+
+help() { sed -n '2,/^set -eu/{/^set -eu/!p;}' "$self" | sed 's/^# \{0,1\}//'; }
+
+case ${1-} in
+  -h|--help) help; exit 0 ;;
+  --root) printf '%s\n' "$root"; exit 0 ;;
+  --install)
+    target=${2:-$HOME/.local/bin}
+    mkdir -p "$target"
+    ln -sf "$self" "$target/nb-quickstarts"
+    echo "Linked $target/nb-quickstarts -> $self"
+    case ":$PATH:" in
+      *":$target:"*) ;;
+      *) echo "Note: $target is not on your PATH; add it (e.g. in ~/.zshrc): export PATH=\"$target:\$PATH\"" ;;
+    esac
+    exit 0 ;;
+esac
+
+[ -f "$root/Makefile" ] || { echo "nb-quickstarts: no Makefile in $root" >&2; exit 1; }
+command -v make >/dev/null 2>&1 || { echo "nb-quickstarts: make is not installed" >&2; exit 1; }
+# "apps up" -> "apps:up". The modules are the goals the Makefile declares .PHONY, minus "default".
+if [ $# -ge 2 ]; then
+  case $2 in -*|*=*|*:*) ;; *)
+    if sed -n 's/^\.PHONY:[[:space:]]*//p' "$root/Makefile" | tr ' ' '\n' | grep -vx default | grep -qx -- "$1"; then
+      mod=$1; target=$2; shift 2
+      set -- "$mod:$target" "$@"
+    fi ;;
+  esac
+fi
+exec env QS=nb-quickstarts make -C "$root" --no-print-directory "$@"

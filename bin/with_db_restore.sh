@@ -22,7 +22,7 @@ db=${APPS_MYSQL_DATABASE:-demo}
 pw=${APPS_MYSQL_ROOT_PASSWORD:-rootpassword}
 
 if [ "$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null)" != "true" ]; then
-  echo "❌ The apps database container ($c) is not running - run 'make apps:up' first." >&2
+  echo "❌ The apps database container ($c) is not running - run '${QS:-make} apps:up' first." >&2
   exit 70
 fi
 
@@ -42,7 +42,7 @@ restore() {
     echo "✅ Database restored."
     rm -f "$dump"
   else
-    echo "❌ Restoring failed. The saved copy is kept at $dump - or run 'make apps:reset' then 'make apps:up' for a fresh demo database." >&2
+    echo "❌ Restoring failed. The saved copy is kept at $dump - or run '${QS:-make} apps:reset' then '${QS:-make} apps:up' for a fresh demo database." >&2
   fi
 }
 trap restore EXIT

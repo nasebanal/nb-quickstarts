@@ -4,6 +4,10 @@ SHELL := /bin/zsh
 
 # Load environment variables from .env file if it exists
 -include .env
+
+# How the user invokes this Makefile, for the hints it prints: `make`, or `nb-quickstarts` (bin/nb-quickstarts sets QS).
+QS ?= make
+export QS
 export
 
 # Every goal that talks to Docker (all but the report viewers/uploaders and the
@@ -162,8 +166,8 @@ all-report:
 	@echo ""
 	@echo "vitest and playwright reports need their own local server each -"
 	@echo "run these separately (each opens your browser once ready):"
-	@echo "  make vitest:report"
-	@echo "  make playwright:report"
+	@echo "  $(QS) vitest:report"
+	@echo "  $(QS) playwright:report"
 
 # Uploads the last run of every tool whose report exists (see bin/report_upload.sh): pytest, vitest (unit and contract,
 # one call), playwright and specmatic (what `all:test` runs), plus zap and locust (not part of all:test, as a scan or a load run is long). A tool
@@ -213,11 +217,15 @@ all-reset:
 	@$(MAKE) playwright-reset
 	@$(MAKE) specmatic-reset
 	@$(MAKE) zap-reset
-	@echo "All persistent state wiped and every service is stopped - run 'make all:up' for a fresh start."
+	@echo "All persistent state wiped and every service is stopped - run '$(QS) all:up' for a fresh start."
 
 #################### DEFAULT HELP ###################
 default:
-	@echo "Usage: make <command>"
+ifeq ($(QS),nb-quickstarts)
+	@echo "Usage: nb-quickstarts <module> [<target>]    e.g. nb-quickstarts apps up   (nb-quickstarts apps:up and make apps:up work too)"
+else
+	@echo "Usage: make <module>[:<target>]    e.g. make apps:up   (nb-quickstarts apps up does the same, from any directory)"
+endif
 	@echo ""
 	@echo "🚀 NASEBANAL Quick Start - verification toolkit for the NASEBANAL Stack."
 	@echo ""
@@ -238,5 +246,5 @@ default:
 	@echo "  observability Show Observability (OpenTelemetry + Prometheus + Tempo + Grafana) commands"
 	@echo "  all          Show commands that act on every module above at once"
 	@echo ""
-	@echo "Run 'make <command>' for more information on a command."
+	@echo "Run '$(QS) <command>' for more information on a command."
 	@echo	""
