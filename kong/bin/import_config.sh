@@ -1,8 +1,9 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -e
 
 # Load .env if exists
 if [ -f ".env" ]; then
+    # shellcheck disable=SC2046  # splitting on whitespace is intended: one KEY=value per word
     export $(grep -v '^#' .env | xargs)
 fi
 
