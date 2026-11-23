@@ -221,7 +221,11 @@ all-reset:
 
 #################### DEFAULT HELP ###################
 default:
-	@echo "Usage: $(QS) <command>"
+ifeq ($(QS),nb-quickstarts)
+	@echo "Usage: nb-quickstarts <module> [<target>]    e.g. nb-quickstarts apps up   (nb-quickstarts apps:up and make apps:up work too)"
+else
+	@echo "Usage: make <module>[:<target>]    e.g. make apps:up   (nb-quickstarts apps up does the same, from any directory)"
+endif
 	@echo ""
 	@echo "🚀 NASEBANAL Quick Start - verification toolkit for the NASEBANAL Stack."
 	@echo ""

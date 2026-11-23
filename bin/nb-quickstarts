@@ -3,12 +3,15 @@
 #
 # Usage:
 #   nb-quickstarts                      show the modules (same as `make`)
-#   nb-quickstarts <make args...>       e.g. nb-quickstarts kong:up   =  make kong:up
+#   nb-quickstarts <module> <target>    e.g. nb-quickstarts kong up   =  make kong:up
+#   nb-quickstarts <make args...>       anything else goes to make as is, e.g. nb-quickstarts kong:up
 #   nb-quickstarts --root               print the repository directory
 #   nb-quickstarts --install [DIR]      symlink this script into DIR (default ~/.local/bin)
 #   nb-quickstarts -h | --help
 #
-# A thin wrapper: everything after the command goes to `make -C <repository>` unchanged, so
+# A thin wrapper: `<module> <target>` is turned into `<module>:<target>` (only when the first word
+# is one of this repository's modules and the second is a plain word, not an option, a
+# VAR=value or a name that already has a colon); everything else goes to `make -C <repository>` unchanged, so
 # the Makefile stays the single source of truth and plain `make` keeps working. The
 # repository is found through this script's own location, following symlinks. `make` runs
 # inside the repository, so relative paths in its arguments are relative to it, not to the
@@ -44,4 +47,13 @@ esac
 
 [ -f "$root/Makefile" ] || { echo "nb-quickstarts: no Makefile in $root" >&2; exit 1; }
 command -v make >/dev/null 2>&1 || { echo "nb-quickstarts: make is not installed" >&2; exit 1; }
+# "apps up" -> "apps:up". The modules are the goals the Makefile declares .PHONY, minus "default".
+if [ $# -ge 2 ]; then
+  case $2 in -*|*=*|*:*) ;; *)
+    if sed -n 's/^\.PHONY:[[:space:]]*//p' "$root/Makefile" | tr ' ' '\n' | grep -vx default | grep -qx -- "$1"; then
+      mod=$1; target=$2; shift 2
+      set -- "$mod:$target" "$@"
+    fi ;;
+  esac
+fi
 exec env QS=nb-quickstarts make -C "$root" --no-print-directory "$@"
