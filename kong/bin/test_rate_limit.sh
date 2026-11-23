@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 
 # Test rate limiting by sending multiple requests to Kong proxy
 

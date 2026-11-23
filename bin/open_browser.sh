@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 #
 # Cross-platform browser opener
 # Usage: open_browser.sh <URL>

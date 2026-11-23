@@ -148,10 +148,10 @@ zap-scan:
 # needing this target edited too - the *-report.json siblings are the raw
 # data those HTML files are rendered from, not meant to be opened directly.
 # Iterates with `while read` rather than `for f in $$reports` - this
-# Makefile's SHELL is zsh (see root Makefile), which, unlike bash/POSIX sh,
-# does NOT word-split an unquoted variable by default: `for f in $$reports`
-# silently treated the whole multi-line ls output as one argument instead of
-# iterating (caught by actually running this, not just reading it back).
+# Makefile's SHELL is bash (see root Makefile). A `for f in $$reports` over the
+# multi-line ls output would split on every space and tab, and zsh (the previous SHELL)
+# does not split an unquoted variable at all, so the line-by-line loop is the form
+# that behaves the same everywhere.
 # Empties zap/report/ (gitignored, each scan overwrites only its own files);
 # the directory itself stays. Doesn't stop a scan that's running - that's
 # zap:stop.

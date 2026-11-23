@@ -1,9 +1,10 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 "$(dirname "$0")/../../bin/require.sh" jq curl || exit 1
 set -e
 
 # Load .env if exists
 if [ -f ".env" ]; then
+    # shellcheck disable=SC2046  # splitting on whitespace is intended: one KEY=value per word
     export $(grep -v '^#' .env | xargs)
 fi
 
@@ -35,11 +36,10 @@ if [ -z "$SERVICES" ]; then
     exit 0
 fi
 
-# Loop through each service. ${(f)SERVICES} is zsh's split-on-newline
-# expansion - a bare $SERVICES doesn't word-split by default in zsh (unlike
-# bash), so with more than one service this used to hand the whole
-# newline-joined blob to curl as a single malformed URL.
-for SERVICE in ${(f)SERVICES}; do
+# Loop through each service, one per line. Read the list line by line instead of word-splitting
+# it: it works the same in bash and zsh, and with more than one service a bare $SERVICES would
+# otherwise reach curl as a single newline-joined URL.
+while IFS= read -r SERVICE; do
     # Get service details
     SERVICE_DATA=$(curl -s "${KONG_ADMIN_URL}/services/${SERVICE}")
     HOST=$(echo "$SERVICE_DATA" | jq -r '.host')
@@ -72,6 +72,6 @@ for SERVICE in ${(f)SERVICES}; do
     fi
 
     echo ""
-done
+done <<< "$SERVICES"
 
 echo -e "${BLUE}========================================${NC}"

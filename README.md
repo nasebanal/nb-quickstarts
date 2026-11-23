@@ -78,7 +78,7 @@ Everything the quickstarts run (the apps, every test tool, Kong, Kafka, Keycloak
 | Tool | Needed for | If it is missing |
 |---|---|---|
 | **Docker Engine** with Compose v2 (Docker Desktop on macOS/Windows) | every `make` target that starts a container (all `*:up`, `*:test`, ...) | A message says to install it, or to start it (`open -a Docker` on macOS, `sudo systemctl start docker` on Linux) |
-| **GNU Make** (3.81 or later, zsh as the shell) | running anything | - (macOS has both) |
+| **GNU Make** (3.81 or later) and **bash** (3.2 or later) | running anything | - (macOS and most Linux distributions have both) |
 | `openssl`, `curl` | random container names; waiting for / calling the running services | present on macOS and most Linux; `curl` is checked where it matters |
 | `jq` | `keycloak:login`, `keycloak:verify-apps`, `vault:get-mysql-secret`, `vault:verify-apps`, `kong` and `observability` helper scripts | A message with the install command (`brew install jq` / `apt install jq`) |
 | `python3` | opening the Vitest reports (`vitest:report*`), which need a local web server | A message with the install command |

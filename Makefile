@@ -1,4 +1,4 @@
-SHELL := /bin/zsh
+SHELL := /bin/bash
 .DEFAULT_GOAL := default
 .PHONY: evolution apps pytest vitest playwright specmatic kong kafka locust keycloak vault zap agentgateway observability all default
 
