@@ -1,13 +1,18 @@
 #!/bin/sh
-# nb-quickstarts - run this repository's `make` targets from any directory
+# nb-quickstarts - verification toolkit for the NASEBANAL Stack
 #
-# Usage:
-#   nb-quickstarts                      show the modules (same as `make`)
-#   nb-quickstarts <module> <target>    e.g. nb-quickstarts kong up   =  make kong:up
-#   nb-quickstarts <make args...>       anything else goes to make as is, e.g. nb-quickstarts kong:up
-#   nb-quickstarts --root               print the repository directory
-#   nb-quickstarts --install [DIR]      symlink this script into DIR (default ~/.local/bin)
-#   nb-quickstarts -h | --help
+# Usage: nb-quickstarts <module> [<target>]
+# Also runs as: nb quickstarts <module> [<target>]   (through the nb command, nb 0.15.0 or later)
+#
+# Commands:
+#   (none)                      show the modules (same as `make`)
+#   <module> <target>           e.g. nb-quickstarts kong up   =  make kong:up
+#   <make args...>              anything else goes to make as is, e.g. nb-quickstarts kong:up
+#   --root                      print the repository directory
+#   --install [DIR]             symlink this script into DIR (default ~/.local/bin)
+#
+# Options:
+#   -h, --help                  show this help
 #
 # A thin wrapper: `<module> <target>` is turned into `<module>:<target>` (only when the first word
 # is one of this repository's modules and the second is a plain word, not an option, a
@@ -28,7 +33,21 @@ done
 root=$(cd "$(dirname "$self")/.." && pwd)
 self=$(cd "$(dirname "$self")" && pwd)/$(basename "$self")
 
-help() { sed -n '2,/^set -eu/{/^set -eu/!p;}' "$self" | sed 's/^# \{0,1\}//'; }
+# Layout (the same in nb, nb-secrets and nb-quickstarts): Usage first, then one description line, "<emoji> NASEBANAL <Name> -
+# <what it does>", then Commands and Options. The description is the first comment line above, so `nb -h` (which reads it
+# without running anything) and this text cannot differ. When the nb command runs this tool (`nb quickstarts ...`, which
+# sets NB_PLUGIN_NAME) the name shown, and the name the Makefile prints in its hints (QS), is the one the user typed.
+qs=nb-quickstarts
+[ "${NB_PLUGIN_NAME-}" = "nb quickstarts" ] && qs="nb quickstarts"
+help() {
+  desc=$(sed -n '2s/^# nb-quickstarts - //p' "$self")
+  text=$(sed -n '3,/^set -eu/{/^set -eu/!p;}' "$self" | sed 's/^# \{0,1\}//' |
+    awk -v t="⚡ NASEBANAL Quickstarts - $desc" 'NR == 1 && $0 == "" { next } /^Commands:/ && !done { print t; print ""; done = 1 } { print }')
+  if [ "$qs" = "nb quickstarts" ]; then
+    text=$(printf '%s\n' "$text" | sed -e '/^Also runs as:/d' -e 's/nb-quickstarts/nb quickstarts/g')
+  fi
+  printf '%s\n' "$text"
+}
 
 case ${1-} in
   -h|--help) help; exit 0 ;;
@@ -56,4 +75,4 @@ if [ $# -ge 2 ]; then
     fi ;;
   esac
 fi
-exec env QS=nb-quickstarts make -C "$root" --no-print-directory "$@"
+exec env QS="$qs" make -C "$root" --no-print-directory "$@"
