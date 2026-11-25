@@ -105,6 +105,7 @@ Nothing else is installed on your machine: Python, Node.js dependencies, Playwri
 3. **Install the `nb-quickstarts` command (once)**
    ```bash
    bin/nb-quickstarts --install      # links a thin wrapper into ~/.local/bin; put that on your PATH
+   # (bin/nb-quickstarts --uninstall removes that link again)
    ```
    `nb-quickstarts apps up` does the same as `make apps:up` run in this repository, from any directory: the wrapper turns `<module> <target>` into `<module>:<target>` and forwards it to `make -C <this repository>` (`nb-quickstarts apps:up` works too). With the [`nb` command](https://github.com/nasebanal/nb-cli) (0.15.0 or later) installed it also runs as `nb quickstarts apps up` (`nb` runs `nb-<name>` from your PATH, and `nb -h` lists it). Plain `make` keeps working, with the `<module>:<target>` form: every `nb-quickstarts <module> <target>` command below can be written as `make <module>:<target>` inside the repository.
 
