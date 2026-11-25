@@ -10,6 +10,7 @@
 #   <make args...>              anything else goes to make as is, e.g. nb-quickstarts kong:up
 #   --root                      print the repository directory
 #   --install [DIR]             symlink this script into DIR (default ~/.local/bin)
+#   --uninstall [DIR]           remove that symlink (only a link to this script)
 #
 # Options:
 #   -h, --help                  show this help
@@ -49,6 +50,20 @@ help() {
   printf '%s\n' "$text"
 }
 
+# The real path of a symlink (following a chain of links), for --uninstall to compare with this script's own.
+resolve_link() {
+  l=$1
+  while [ -L "$l" ]; do
+    d=$(cd "$(dirname "$l")" && pwd)
+    t=$(readlink "$l")
+    case $t in
+      /*) l=$t ;;
+      *) l=$d/$t ;;
+    esac
+  done
+  printf '%s/%s\n' "$(cd "$(dirname "$l")" 2>/dev/null && pwd)" "$(basename "$l")"
+}
+
 case ${1-} in
   -h|--help) help; exit 0 ;;
   --root) printf '%s\n' "$root"; exit 0 ;;
@@ -61,6 +76,22 @@ case ${1-} in
       *":$target:"*) ;;
       *) echo "Note: $target is not on your PATH; add it (e.g. in ~/.zshrc): export PATH=\"$target:\$PATH\"" ;;
     esac
+    exit 0 ;;
+  --uninstall)
+    target=${2:-$HOME/.local/bin}
+    link=$target/nb-quickstarts
+    # only a symlink that points to this script is removed: never a file, never another program's link
+    linked=""
+    [ -L "$link" ] && linked=$(resolve_link "$link")
+    if [ -n "$linked" ] && [ "$linked" = "$self" ]; then
+      rm "$link"
+      echo "Removed $link"
+    elif [ -e "$link" ] || [ -L "$link" ]; then
+      echo "nb-quickstarts: $link is not a link to this script: not removed" >&2
+      exit 1
+    else
+      echo "Nothing to remove: $link does not exist"
+    fi
     exit 0 ;;
 esac
 
