@@ -11,6 +11,8 @@
 #   --root                      print the repository directory
 #   --install [DIR]             symlink this script into DIR (default ~/.local/bin)
 #   --uninstall [DIR]           remove that symlink (only a link to this script)
+#   --complete [WORD...]        print the tab-completion candidates for WORD... (the last one is being typed),
+#                               one per line; `nb completion` calls it for `nb quickstarts <TAB>`
 #
 # Options:
 #   -h, --help                  show this help
@@ -67,6 +69,20 @@ resolve_link() {
 case ${1-} in
   -h|--help) help; exit 0 ;;
   --root) printf '%s\n' "$root"; exit 0 ;;
+  --complete)
+    # Candidates for the words typed so far (the last is the one being completed): the modules first, then the
+    # targets of the module just typed (the Makefile's `<module>-<target>` goals, called as `<module> <target>`).
+    # Prints nothing, and fails nothing, when it cannot tell: a completion must never get in the way.
+    shift
+    [ -f "$root/Makefile" ] && command -v make >/dev/null 2>&1 || exit 0
+    mods=$(sed -n 's/^\.PHONY:[[:space:]]*//p' "$root/Makefile" | tr ' ' '\n' | grep -vx default | grep -v '^$' || true)
+    if [ $# -le 1 ]; then
+      printf '%s\n' "$mods" | awk -v p="${1-}" 'index($0, p) == 1'
+    elif [ $# -eq 2 ] && printf '%s\n' "$mods" | grep -qx -- "$1"; then
+      make -C "$root" --no-print-directory -Rrqp 2>/dev/null |
+        sed -n "s/^$1-\([a-z0-9][a-z0-9_-]*\):.*/\1/p" | sort -u | awk -v p="$2" 'index($0, p) == 1'
+    fi
+    exit 0 ;;
   --install)
     target=${2:-$HOME/.local/bin}
     mkdir -p "$target"
