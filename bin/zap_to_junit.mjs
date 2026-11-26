@@ -38,6 +38,9 @@ for (const site of report.site ?? []) {
   }
 }
 
+// When the scan ran, kept in the JUnit file: bin/report_time.sh builds the upload's run key from it.
+const timestamp = report.created ? ` timestamp="${esc(report.created)}"` : "";
+
 const failed = cases.filter((c) => c.risk >= 1);
 const body =
   cases.length === 0
@@ -53,5 +56,5 @@ const body =
 writeFileSync(
   output,
   `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<testsuites>\n  <testsuite name="zap" tests="${Math.max(cases.length, 1)}" failures="${failed.length}">\n${body}  </testsuite>\n</testsuites>\n`,
+    `<testsuites>\n  <testsuite name="zap" tests="${Math.max(cases.length, 1)}" failures="${failed.length}"${timestamp}>\n${body}  </testsuite>\n</testsuites>\n`,
 );

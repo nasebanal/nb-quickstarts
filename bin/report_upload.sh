@@ -31,10 +31,13 @@
 #   NB_GROUP            by names, optional: the catalog group the spec is filed in (none = no group)
 #   NB_SPECS_ORG        optional: the organization whose specs these are (default: personal)
 #   NB_RUN_KEY          optional - group several uploads into one run (default:
-#                       local-<commit>-<day>, so everything uploaded today for
-#                       the same commit lands in one run). `make all:report-upload`
-#                       sets one key per call instead (commit + UTC time), so each
-#                       call is a new run and adds a point to the trend
+#                       local-<commit>-<day the report was RUN, UTC>, so the tools
+#                       run on one day for the same commit land in one run, and a
+#                       report sent again - even another day - replaces its result.
+#                       CI: nb's own key). `make all:report-upload` sets one key per
+#                       call instead (commit + the time of the newest report), so
+#                       running the tests again adds a point to the trend and
+#                       uploading the same reports again does not
 #   NB_API_VERSION      optional - the API version of the spec to report to (v1, v2) when
 #                       the repository has specs of several versions. It selects the spec
 #                       by names, for every kind (a new major API version is a new spec;
@@ -78,6 +81,15 @@ fi
 if [ -z "$target" ] || { [ ! -e "$target" ]; }; then
   echo "No report yet - run 'make $label' first."
   exit 1
+fi
+
+# The run key comes from when the report was run, not from when it is uploaded (bin/report_time.sh). In CI nb
+# derives the key from the pipeline run; a report with no time in it also keeps nb's default.
+if [ -z "${NB_RUN_KEY:-}" ] && [ -z "${GITHUB_RUN_ID:-}" ] && [ -z "${CI_PIPELINE_ID:-}" ]; then
+  if ran=$("$(dirname "$0")/report_time.sh" "$target"); then
+    commit=$(git rev-parse --short=7 HEAD 2>/dev/null || true)
+    NB_RUN_KEY="local-${commit:+$commit-}${ran%-*}"
+  fi
 fi
 
 # The default spec name is the contract's own title (NASEBANAL Quickstarts API) - what

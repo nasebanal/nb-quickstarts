@@ -595,7 +595,7 @@ A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KA
 | `NB_REPOSITORY` | `nasebanal/nb-quickstarts` | The catalog repository the target spec is tied to; set your own owner/name for your own catalog. **Nothing is created by an upload** (nb 0.13.0+): `nb-quickstarts evolution register` registers the spec |
 | `NB_SPEC` | `NASEBANAL Quickstarts API` (the contract's `info.title`) | The target spec's name in the catalog (optional `NB_GROUP` for its group) |
 | `NB_SPEC_PER_COMPONENT` / `NB_SPEC_ID_API` / `NB_SPEC_ID_WEB` | *(unset)* | One spec per component (`nb-quickstarts-<component>`, you register them), or each component's spec by id (wins) |
-| `NB_RUN_KEY` | *(`nb-quickstarts all report-upload`: `local-<commit>-<UTC time>`, one per call; the single `<module>:report-upload` targets: `local-<commit>-<day>`)* | Groups uploads into one run: the same key replaces a result, a new key adds a point to the trend |
+| `NB_RUN_KEY` | *(`nb-quickstarts all report-upload`: `local-<commit>-<time of the newest report>`; the single `<module>:report-upload` targets: `local-<commit>-<day the report was run>`; UTC, read from inside the report)* | Groups uploads into one run: the same key replaces a result, a new key adds a point to the trend. So uploading the same reports again adds nothing, and running the tests again does |
 | `NB_API_VERSION` | *(unset)* | The API version the runs are about (`v1`, `v2`) for a repository that serves several. Selects the spec by names, for every kind of test (unit tests included; the version comes from the contract's `info.version`, 1.0.0 -> v1) (a new major API version is a new spec). One-off: `nb-quickstarts specmatic report-upload NB_API_VERSION=v2` |
 
 ### Apps
