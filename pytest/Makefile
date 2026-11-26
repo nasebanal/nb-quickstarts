@@ -52,4 +52,4 @@ pytest-report:
 # Sends the last run's summary to NASEBANAL Assurance - see bin/report_upload.sh
 # for NB_TOKEN / NB_ASSURANCE_BASE_URL / NB_REPOSITORY / NB_SPEC.
 pytest-report-upload:
-	@bin/report_upload.sh pytest:test unit pytest api pytest/report/junit.xml
+	@REPORT_ORIGINAL=pytest/report/report.html bin/report_upload.sh pytest:test unit pytest api pytest/report/junit.xml

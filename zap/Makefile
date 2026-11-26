@@ -186,7 +186,7 @@ zap-report-upload:
 		scan=$$(basename $$f -report.json); \
 		case $$scan in api-scan) component=api;; *) component=web;; esac; \
 		node bin/zap_to_junit.mjs $$f zap/report/$$scan-junit.xml \
-			&& bin/report_upload.sh zap:$$scan security zap $$component zap/report/$$scan-junit.xml --label $$scan $$(node bin/zap_counts.mjs $$f) \
+			&& REPORT_ORIGINAL=zap/report/$$scan-report.html bin/report_upload.sh zap:$$scan security zap $$component zap/report/$$scan-junit.xml --label $$scan $$(node bin/zap_counts.mjs $$f) \
 			|| failed="$$failed $$scan"; \
 	done; \
 	if [ -n "$$failed" ]; then echo "❌ Upload failed for:$$failed"; exit 1; fi

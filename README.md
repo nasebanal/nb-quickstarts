@@ -591,6 +591,7 @@ A variable that belongs to one module is prefixed with it (`APPS_`, `KONG_`, `KA
 | Variable | Default | Description |
 |---|---|---|
 | `NB_TOKEN` | *(unset)* | PAT / service-account token for NASEBANAL Assurance - what `<module>:report-upload` sends with. Unset = use the credentials from `nb auth login` (CI needs the token) |
+| `NB_ATTACH_REPORTS` | *(unset)* | `1` = also send each tool's own report, for download in NASEBANAL Evolution - see [Attaching the original reports](#attaching-the-original-reports) |
 | `NB_ASSURANCE_BASE_URL` | `https://api.assurance.nasebanal.com` | The Assurance **API** (not the web UI); needs nb 0.14.0 or later |
 | `NB_REPOSITORY` | `nasebanal/nb-quickstarts` | The catalog repository the target spec is tied to; set your own owner/name for your own catalog. **Nothing is created by an upload** (nb 0.13.0+): `nb-quickstarts evolution register` registers the spec |
 | `NB_SPEC` | `NASEBANAL Quickstarts API` (the contract's `info.title`) | The target spec's name in the catalog (optional `NB_GROUP` for its group) |
@@ -734,6 +735,28 @@ nb --version
 **Register the target once (nb 0.13.0+):** an upload creates nothing - the result goes to a *spec* of the catalog (NASEBANAL Evolution) that is tied to a repository. `nb-quickstarts evolution register` registers the shared OpenAPI contract `shared/openapi/openapi.yaml` (the one apps:up documents and specmatic:test checks) as the spec `NB_SPEC` (default: the contract's `info.title`, `NASEBANAL Quickstarts API`) of the repository `NB_REPOSITORY` (default `nasebanal/nb-quickstarts`; **set your own owner/name to use your own catalog**); `nb-quickstarts evolution check` only reads the catalog and says what would happen. Safe to repeat. The first command that needs it opens the NASEBANAL login (`nb auth login`) when there is no session. So the whole path is: `nb-quickstarts apps up` → `nb-quickstarts evolution register` → `nb-quickstarts all test` → `nb-quickstarts all report-upload`. Without the registration the upload stops with `No repository ... in the catalog`. One spec covers every tool (the repository as a whole); for one spec per component (`api` / `web`, the org-wide names) set `NB_SPEC_PER_COMPONENT=1` and register `nb-quickstarts-api` / `-web` yourself, or give each component's spec id as `NB_SPEC_ID_API` / `NB_SPEC_ID_WEB`.
 
 **Send a run to NASEBANAL Assurance:** `nb-quickstarts pytest report-upload` (likewise `vitest:report-upload`, `vitest:contract-report-upload`, `playwright:report-upload`, `specmatic:report-upload`, `locust:report-upload`, `zap:report-upload`) uploads the last run's summary through the `nb` CLI. With no `NB_TOKEN` and no stored session it opens the browser for `nb auth login` (CI / no terminal: set `NB_TOKEN`). Everything uploaded for one commit on one day lands in one Assurance run (in the specs named by `NB_REPOSITORY` / `NB_SPEC`, or `NB_SPEC_ID_<COMPONENT>`). `zap:report-upload` also sends the alerts counted by severity (`--metric high=… medium=… low=… info=…`, from `bin/zap_counts.mjs`), which is what the Assurance security gate reads: it fails on high / critical only, medium and low are shown. It uploads every scan in `zap/report/` (converted to JUnit by `bin/zap_to_junit.mjs`, kind `security`, one result per scan, for the component it targets - `api` for `api-scan`, `web` for `baseline` and `full-scan` - and labelled with the scan's name, so `baseline` and `full-scan` stay two results; an alert of Low or above counts as a failure) and, like `locust:report-upload` (after `nb-quickstarts locust load`), is not part of `all:report-upload`, just as neither Locust nor ZAP is part of `all:test`.
+
+##### Attaching the original reports
+
+By default only a summary is sent. To make the tool's own report downloadable in NASEBANAL Evolution:
+
+1. In Evolution, **Repository Management**, set **Attaching original reports** to **Allowed** for your repository.
+2. Upload with `NB_ATTACH_REPORTS=1` (or set it in `.env`): `NB_ATTACH_REPORTS=1 nb-quickstarts all report-upload`.
+
+| Tool | Attached |
+| --- | --- |
+| pytest | `pytest/report/report.html` |
+| vitest | `vitest/report/` and `vitest/report-contract/` (zip) |
+| Playwright | `playwright/report/` (zip) |
+| Specmatic | `specmatic/report/test/html/index.html` |
+| ZAP | `zap/report/<scan>-report.html` |
+| Locust | `locust/logs/<timestamp>/report.html` |
+
+**Look at the reports first:** they can hold tokens, cookies or request data (a Playwright trace and a ZAP report
+in particular). Anyone who can see the results in Evolution may be able to download them. A report is at most 20 MiB
+(over it, that tool's upload stops before sending anything). If the repository does not allow attachments, the result
+is kept, the report is refused and the command reports a failure. To add reports to a run already uploaded, send the
+same reports again with this setting: the same run key replaces the results.
 
 **Locust** writes a whole timestamped directory per run, `locust/logs/YYYYMMDD_HHMMSS/`:
 

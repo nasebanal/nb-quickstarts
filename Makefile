@@ -61,7 +61,7 @@ all:
 	@echo "  all:pull    - Pull every registry image and build every local image (pip/npm included), so everything runs afterwards without internet (air-gapped use)"
 	@echo "  all:test    - Run pytest/vitest/playwright/specmatic in sequence (starts apps:up first; not locust/zap - see locust:load)"
 	@echo "  all:report  - Open every existing test report in your browser"
-	@echo "  all:report-upload - Upload the last pytest/vitest/playwright/specmatic/zap/locust run (whichever have a report) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN; a tool with no report yet is skipped)"
+	@echo "  all:report-upload - Upload the last pytest/vitest/playwright/specmatic/zap/locust run (whichever have a report) to NASEBANAL Assurance by running the nb CLI on your host (needs nb on PATH: npm i -g @nasebanal/cli; see .env: NB_TOKEN; a tool with no report yet is skipped; NB_ATTACH_REPORTS=1 also attaches each tool's original report)"
 	@echo "              (NB_API_VERSION=v1 in .env labels the uploaded runs with an API version)"
 	@echo "  all:reset   - Stop everything, wipe apps/kong/kafka/observability persistent state and every test tool's generated logs/reports (nothing is started afterwards)"
 
