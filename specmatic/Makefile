@@ -70,4 +70,4 @@ specmatic-mock-down:
 
 # Sends the last provider-test run's summary to NASEBANAL Assurance - see bin/report_upload.sh.
 specmatic-report-upload:
-	@REPORT_ORIGINAL=specmatic/report/test/html/index.html bin/report_upload.sh specmatic:test contract specmatic api specmatic/junit/TEST-junit-jupiter.xml
+	@REPORT_ORIGINAL=specmatic/report/test/html/index.html bin/report_upload.sh specmatic:test contract specmatic api specmatic/junit/TEST-junit-jupiter.xml --label api

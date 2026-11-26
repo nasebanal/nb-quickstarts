@@ -4,6 +4,11 @@
 # Usage: bin/report_upload.sh <make-target-to-run-first> <kind> <tool> <components> <file|dir> [extra nb flags...]
 #   e.g. bin/report_upload.sh pytest:test unit pytest api pytest/report/junit.xml
 #
+# Assurance tells results of one run apart by kind and sub-kind (--label) only: not by tool, and not by the
+# component below, which only picks the spec. Two results of one kind therefore need different labels, or the
+# later one replaces the earlier (and the dashboard shows only one of them): the modules whose kind another one
+# also reports pass --label api / web (unit: pytest and vitest; contract: Specmatic and vitest), ZAP its scan.
+#
 # <components> is what the result is about: one component (web, api, mobile) - the component part of the
 # repository's key in the catalog. A comma list (web,api) uploads the same file once per component.
 #
