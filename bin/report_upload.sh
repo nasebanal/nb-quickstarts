@@ -57,6 +57,8 @@
 #                       at it first. A folder is sent as a zip; up to 20 MiB (over it, that upload fails)
 #   REPORT_ORIGINAL     set by each module's Makefile, not by you: the report to attach (a file or a folder). A
 #                       Locust run directory needs none (its report.html is used)
+case "${1:-}" in -h|--help) sed -n '2,/^[^#]/{/^[^#]/d;s/^# \{0,1\}//;p;}' "$0"; exit 0 ;; esac
+
 label=$1
 kind=$2
 tool=$3
