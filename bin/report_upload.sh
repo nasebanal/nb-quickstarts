@@ -4,6 +4,11 @@
 # Usage: bin/report_upload.sh <make-target-to-run-first> <kind> <tool> <components> <file|dir> [extra nb flags...]
 #   e.g. bin/report_upload.sh pytest:test unit pytest api pytest/report/junit.xml
 #
+# Assurance tells results of one run apart by kind and sub-kind (--label) only: not by tool, and not by the
+# component below, which only picks the spec. Two results of one kind therefore need different labels, or the
+# later one replaces the earlier (and the dashboard shows only one of them): the modules whose kind another one
+# also reports pass --label api / web (unit: pytest and vitest; contract: Specmatic and vitest), ZAP its scan.
+#
 # <components> is what the result is about: one component (web, api, mobile) - the component part of the
 # repository's key in the catalog. A comma list (web,api) uploads the same file once per component.
 #
@@ -14,7 +19,8 @@
 # <file|dir> is a JUnit XML file, or - for Locust - a directory holding
 # *_stats.csv (a `locust/logs/<timestamp>` run directory, or `locust/logs`
 # itself, in which case the newest run is used). `nb` reduces the report to a
-# small summary client-side; only that summary is sent, never the raw file.
+# small summary client-side; only that summary is sent, never the raw file -
+# unless NB_ATTACH_REPORTS=1 (below).
 #
 # Settings (.env or the environment):
 #   NB_TOKEN            required - a PAT or service-account token for the Assurance
@@ -43,6 +49,13 @@
 #                       by names, for every kind (a new major API version is a new spec;
 #                       the version comes from the contract's info.version, 1.0.0 -> v1).
 #                       One-off: make specmatic:report-upload NB_API_VERSION=v2
+#   NB_ATTACH_REPORTS=1  optional, off by default - also send the tool's own report (`nb ... --attach`), which
+#                       Evolution then offers for download. The catalog repository must allow it (Repository
+#                       Management -> Attaching original reports); otherwise the result is kept, the report is
+#                       refused and the upload fails. A report can hold tokens, cookies or request data: look at
+#                       it first. A folder is sent as a zip; up to 20 MiB (over it, nothing is sent)
+#   REPORT_ORIGINAL     set by each module's Makefile, not by you: the report to attach (a file or a folder). A
+#                       Locust run directory needs none (its report.html is used)
 label=$1
 kind=$2
 tool=$3
@@ -81,6 +94,19 @@ fi
 if [ -z "$target" ] || { [ ! -e "$target" ]; }; then
   echo "No report yet - run 'make $label' first."
   exit 1
+fi
+
+# NB_ATTACH_REPORTS=1: send the tool's own report with the result. A missing one is not a failure - the
+# summary still goes up.
+if [ "${NB_ATTACH_REPORTS:-}" = 1 ]; then
+  original=${REPORT_ORIGINAL:-}
+  if [ -z "$original" ] && [ -d "$target" ]; then original=$target/report.html; fi
+  if [ -n "$original" ] && [ -e "$original" ]; then
+    echo "Attaching the original report: $original"
+    set -- "$@" --attach "$original"
+  else
+    echo "⚠️  No original report to attach (${original:-none}) - uploading the summary only."
+  fi
 fi
 
 # The run key comes from when the report was run, not from when it is uploaded (bin/report_time.sh). In CI nb
