@@ -113,8 +113,8 @@ locust-run:
 	@echo "Tags: $${LOCUST_TAGS:-none}"
 	@echo "Workers: $${LOCUST_WORKERS:-1}"
 	@DISPLAY_HOST=$$(case "$${LOCUST_FILE:-locustfile_http.py}" in \
-			*mysql*) echo "mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema}" ;; \
-			*)       echo "$${LOCUST_HTTP_HOST:-http://backend:8080}" ;; \
+			(*mysql*) echo "mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema}" ;; \
+			(*)       echo "$${LOCUST_HTTP_HOST:-http://backend:8080}" ;; \
 		esac); \
 		echo "Target Host (set by locustfile): $$DISPLAY_HOST"
 	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
@@ -126,8 +126,8 @@ locust-run:
 		CSV_PREFIX="/mnt/locust/logs/$$TIMESTAMP/locust"; \
 		HTML_FILE="/mnt/locust/logs/$$TIMESTAMP/report.html"; \
 		DISPLAY_HOST=$$(case "$${LOCUST_FILE:-locustfile_http.py}" in \
-			*mysql*) echo "mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema}" ;; \
-			*)       echo "$${LOCUST_HTTP_HOST:-http://backend:8080}" ;; \
+			(*mysql*) echo "mysql://$${LOCUST_MYSQL_HOST:-mysql-server}:$${LOCUST_MYSQL_PORT:-3306}/$${LOCUST_MYSQL_DATABASE:-information_schema}" ;; \
+			(*)       echo "$${LOCUST_HTTP_HOST:-http://backend:8080}" ;; \
 		esac); \
 		echo "Target Host: $$DISPLAY_HOST" > $$LOG_DIR/target_host.txt; \
 		echo "Locust File: $${LOCUST_FILE:-locustfile_http.py}" >> $$LOG_DIR/target_host.txt; \
