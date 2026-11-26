@@ -173,11 +173,15 @@ all-report:
 # one call), playwright and specmatic (what `all:test` runs), plus zap and locust (not part of all:test, as a scan or a load run is long). A tool
 # that has not run yet has no report: it is skipped, not a failure, so one call after any mix of runs works. The
 # others do not stop on one failure; the failures are reported at the end.
-# One run key per call (commit + UTC time) so everything this call uploads is one Assurance run and every call is a
-# new run: the trend gets a point per upload instead of one per commit per day (NB_RUN_KEY overrides it).
+# One run key per call (commit + the time the newest report was run, bin/report_time.sh), so everything this call
+# uploads is one Assurance run, running the tests again adds a point to the trend, and uploading the same reports
+# again replaces that run instead of adding one (NB_RUN_KEY overrides it).
 all-report-upload:
 	@bin/ensure_nb_auth.sh || exit 1
-	@key="$${NB_RUN_KEY:-local-$$(git rev-parse --short=7 HEAD 2>/dev/null || echo nocommit)-$$(date -u +%Y%m%d-%H%M%S)}"; \
+	@ran=$$(bin/report_time.sh pytest/report/junit.xml vitest/report/junit.xml vitest/report-contract/junit.xml \
+		playwright/junit/junit.xml specmatic/junit/TEST-junit-jupiter.xml zap/report/*-report.json locust/logs) \
+		|| ran=$$(date -u +%Y%m%d-%H%M%S); \
+	key="$${NB_RUN_KEY:-local-$$(git rev-parse --short=7 HEAD 2>/dev/null || echo nocommit)-$$ran}"; \
 	echo "Run key for this upload: $$key"; \
 	has() { [ -n "$$(find "$$1" -name "$$2" 2>/dev/null | head -1)" ]; }; \
 	failed=""; uploaded=0; \
