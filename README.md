@@ -744,6 +744,7 @@ By default only a summary is sent. To make the tool's own report downloadable in
 
 1. In Evolution, **Repository Management**, set **Attaching original reports** to **Allowed** for your repository.
 2. Upload with `NB_ATTACH_REPORTS=1` (or set it in `.env`): `NB_ATTACH_REPORTS=1 nb-quickstarts all report-upload`.
+   This needs **nb 1.2.0 or later** (`npm i -g @nasebanal/cli`); uploads without it still work with 0.14.0.
 
 | Tool | Attached |
 | --- | --- |
@@ -757,8 +758,10 @@ By default only a summary is sent. To make the tool's own report downloadable in
 **Look at the reports first:** they can hold tokens, cookies or request data (a Playwright trace and a ZAP report
 in particular). Anyone who can see the results in Evolution may be able to download them. A report is at most 20 MiB
 (over it, that tool's upload stops before sending anything). If the repository does not allow attachments, the result
-is kept, the report is refused and the command reports a failure. To add reports to a run already uploaded, send the
-same reports again with this setting: the same run key replaces the results.
+is uploaded, the report is **not sent** (it never leaves your machine), `nb` says so in one line and the command
+succeeds (`nb ... --attach-if-enabled`). To add reports to a run already uploaded, allow attachments and send the
+same reports again with this setting: the same run key replaces the results. Sending a result again **without** the
+setting removes the report attached to it.
 
 **Locust** writes a whole timestamped directory per run, `locust/logs/YYYYMMDD_HHMMSS/`:
 
