@@ -51,7 +51,8 @@ help() {
       NR == 1 && $0 == "" { next }
       /^Commands:/ && !titled { print t; print ""; titled = 1 }
       /^Options:/ { options = 1 }
-      options && $0 == "" { exit }
+      options && $0 == "" { over = 1 }
+      over { next }   # not exit: the sed that feeds this would hit a broken pipe
       /^  --complete / { skip = 1; next }
       skip && /^    / { next }
       { skip = 0; print }')
