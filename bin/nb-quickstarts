@@ -36,8 +36,10 @@ done
 root=$(cd "$(dirname "$self")/.." && pwd)
 self=$(cd "$(dirname "$self")" && pwd)/$(basename "$self")
 
-# Layout (the same in nb, nb-secrets and nb-quickstarts): Usage first, then one description line, "<emoji> NASEBANAL <Name> -
-# <what it does>", then Commands and Options. The description is the first comment line above, so `nb -h` (which reads it
+# Layout (the same in nb, nb-secrets, nb-quickstarts and nb-prober): Usage first, then one description line, "<emoji> NASEBANAL
+# <Name> - <what it does>", then Commands (a line each), Options and the lines saying where the rest is. The internal
+# --complete is not listed (as `nb` leaves its own completion command out of the list), and the explanation above is for
+# readers of this file and of the README. The description is the first comment line above, so `nb -h` (which reads it
 # without running anything) and this text cannot differ. When the nb command runs this tool (`nb quickstarts ...`, which
 # sets NB_PLUGIN_NAME) the name shown, and the name the Makefile prints in its hints (QS), is the one the user typed.
 qs=nb-quickstarts
@@ -45,11 +47,20 @@ qs=nb-quickstarts
 help() {
   desc=$(sed -n '2s/^# nb-quickstarts - //p' "$self")
   text=$(sed -n '3,/^set -eu/{/^set -eu/!p;}' "$self" | sed 's/^# \{0,1\}//' |
-    awk -v t="⚡ NASEBANAL Quickstarts - $desc" 'NR == 1 && $0 == "" { next } /^Commands:/ && !done { print t; print ""; done = 1 } { print }')
+    awk -v t="⚡ NASEBANAL Quickstarts - $desc" '
+      NR == 1 && $0 == "" { next }
+      /^Commands:/ && !titled { print t; print ""; titled = 1 }
+      /^Options:/ { options = 1 }
+      options && $0 == "" { over = 1 }
+      over { next }   # not exit: the sed that feeds this would hit a broken pipe
+      /^  --complete / { skip = 1; next }
+      skip && /^    / { next }
+      { skip = 0; print }')
   if [ "$qs" = "nb quickstarts" ]; then
     text=$(printf '%s\n' "$text" | sed -e '/^Also runs as:/d' -e 's/nb-quickstarts/nb quickstarts/g')
   fi
-  printf '%s\n' "$text"
+  # Added after the renaming: the repository's address keeps its name.
+  printf '%s\n\nThe Makefile is the single source of truth: plain `make` keeps working.\nMore: https://github.com/nasebanal/nb-quickstarts\n' "$text"
 }
 
 # The real path of a symlink (following a chain of links), for --uninstall to compare with this script's own.
