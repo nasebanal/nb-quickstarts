@@ -167,11 +167,10 @@ zap-report:
 	fi; \
 	echo "$$reports" | while IFS= read -r f; do bin/open_browser.sh "$$f"; done
 
-# `nb` reads JUnit and Locust only, so each scan's JSON is first converted to
-# JUnit (bin/zap_to_junit.mjs: an alert of Low or above is a failed case, INFO
-# passes) and uploaded as kind `security`, one result per scan, for the component
-# the scan targets: `api-scan` scans apps/backend, `baseline` and `full-scan` scan
-# apps/frontend. The scan's name is the result's label (`--label`), so `baseline` and
+# Each scan's own JSON report (-J) is uploaded as it is (`nb ... --tool zap`, nb 1.3.0 or later: ZAP is read from
+# its JSON only): the counts by severity and the ZAP version come from it, and the result fails on a high alert only.
+# One result per scan, kind `security`, for the component the scan targets: `api-scan` scans apps/backend,
+# `baseline` and `full-scan` scan apps/frontend. The scan's name is the result's label (`--label`), so `baseline` and
 # `full-scan` - both `frontend` - stay two results in one Assurance run.
 # Whichever scans have been run are uploaded; one that fails to upload does not
 # stop the others.
@@ -181,12 +180,15 @@ zap-report-upload:
 		echo "No report yet - run '$(QS) zap:baseline' (or :full-scan/:api-scan) first."; \
 		exit 1; \
 	fi; \
+	if ! nb assurance report upload --help 2>/dev/null | grep -q 'junit | locust | zap'; then \
+		echo "❌ Uploading ZAP's report needs nb 1.3.0 or later (this is $$(nb --version 2>/dev/null || echo unknown)): npm i -g @nasebanal/cli"; \
+		exit 1; \
+	fi; \
 	failed=""; \
 	for f in zap/report/*-report.json; do \
 		scan=$$(basename $$f -report.json); \
 		case $$scan in api-scan) component=api;; *) component=web;; esac; \
-		node bin/zap_to_junit.mjs $$f zap/report/$$scan-junit.xml \
-			&& REPORT_ORIGINAL=zap/report/$$scan-report.html bin/report_upload.sh zap:$$scan security zap $$component zap/report/$$scan-junit.xml --label $$scan $$(node bin/zap_counts.mjs $$f) \
+		REPORT_ORIGINAL=zap/report/$$scan-report.html bin/report_upload.sh zap:$$scan security zap $$component $$f --label $$scan \
 			|| failed="$$failed $$scan"; \
 	done; \
 	if [ -n "$$failed" ]; then echo "❌ Upload failed for:$$failed"; exit 1; fi

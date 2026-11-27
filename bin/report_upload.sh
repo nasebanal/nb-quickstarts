@@ -16,7 +16,7 @@
 # repository; nothing is created by an upload. Register once (nb specs repositories upsert / nb specs specs push),
 # then either name the spec by ids or let this script name it by names (see below).
 #
-# <file|dir> is a JUnit XML file, or - for Locust - a directory holding
+# <file|dir> is a JUnit XML file, ZAP's own JSON report (tool zap: nb takes no other file for it), or - for Locust - a directory holding
 # *_stats.csv (a `locust/logs/<timestamp>` run directory, or `locust/logs`
 # itself, in which case the newest run is used). `nb` reduces the report to a
 # small summary client-side; only that summary is sent, never the raw file -
