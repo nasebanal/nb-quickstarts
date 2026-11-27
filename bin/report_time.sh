@@ -8,7 +8,7 @@
 # A <report> is a JUnit XML file (its `timestamp` attributes), a ZAP *-report.json ("created"), or - for Locust -
 # a run directory (or locust/logs, meaning the newest run in it; the first row of *_stats_history.csv). A path that
 # does not exist or carries no time is ignored. Exits 1, printing nothing, when none has a time. The file's
-# modification time is deliberately not used: a copy or a re-conversion (ZAP's JUnit file) changes it.
+# modification time is deliberately not used: a copy changes it.
 case "${1:-}" in -h|--help) sed -n '2,/^[^#]/{/^[^#]/d;s/^# \{0,1\}//;p;}' "$0"; exit 0 ;; esac
 
 # 2026-11-26T03:56:13.172+00:00 -> 20261126-035613 (the reports write UTC)
